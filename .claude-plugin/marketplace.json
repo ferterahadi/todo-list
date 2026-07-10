@@ -1,0 +1,13 @@
+{
+  "name": "todo-list",
+  "owner": {
+    "name": "The todo-list contributors"
+  },
+  "plugins": [
+    {
+      "name": "todo-list",
+      "source": "./",
+      "description": "Plan → do → check → revise project-tracking hub: 14 /todo-* skills, self-bootstrapping."
+    }
+  ]
+}

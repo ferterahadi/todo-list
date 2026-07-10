@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# Playwright MCP scratch
+.playwright-mcp/
+
+# Local-only files
+*.local
+scratchpad/
