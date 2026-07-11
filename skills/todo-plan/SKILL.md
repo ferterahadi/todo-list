@@ -67,7 +67,13 @@ If the user references a local repo, doc, or path:
 - Extract what's useful for the plan
 - Write a brief summary to `research/findings.md` inside the project folder
 
-If no external reference is given, skip this step.
+Regardless of references, check the confirmed repo for existing superpowers docs —
+`<repo>/docs/superpowers/plans/` and `<repo>/docs/superpowers/specs/` (written by the
+brainstorming / writing-plans skills in earlier target-repo sessions). Read any that touch
+this project, list them in `research/superpowers-docs.md` (absolute path + one-line
+summary), and fold their decisions into the plan instead of re-deciding.
+
+If no external reference is given and the repo has no superpowers docs, skip this step.
 
 ## Step 5 — Write plan.md
 
@@ -78,7 +84,7 @@ Fill in the project's `plan.md`:
 - **Success Criteria**: observable, checkable outcomes (the expectation) — written as a `- [ ]` list, distinct from tasks. These are what `todo-revise` compares completed work against, so make them concrete and testable, not aspirational
 - **Constraints**: deadlines, tech limits, non-negotiables
 - **Scope**: what's in / what's out
-- **Key Decisions**: choices already made so Claude doesn't re-litigate them. If the architecture/approach is still genuinely open (the user couldn't answer "how"), don't pad this section with guesses — check for an installed brainstorming/architecture skill (e.g. from superpowers) and offer to run it to converge on the decision first; otherwise record the open question explicitly as a decision-to-make task
+- **Key Decisions**: choices already made so Claude doesn't re-litigate them. If the architecture/approach is still genuinely open (the user couldn't answer "how"), don't pad this section with guesses — check for an installed brainstorming/architecture skill (e.g. from superpowers) and offer to run it to converge on the decision first; otherwise record the open question explicitly as a decision-to-make task. If such a skill writes its output into the target repo (`docs/superpowers/…`), immediately record a pointer in `research/superpowers-docs.md` and under plan.md References — a doc that lives only in the target repo is lost to the hub
 - **Verification**: the "check" gate binding for `/todo-verify`. If the project has a verification MCP layer, ask for the feature/target name and fill the `## Verification` block — `Feature`, `Gate covers` (which tasks/phases a green run may tick), and optionally `Coverage source` + a `Task↔test map`. If there's no verification layer, delete the section.
 - **Repo**: absolute path to the local codebase (confirmed in Step 3)
 - **References**: paths or links to relevant resources

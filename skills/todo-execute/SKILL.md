@@ -38,6 +38,12 @@ Read these files in order:
 1. `plan.md` — goal, context, constraints, scope, and the repo path
 2. `tasks.md` — full scope of work before touching anything
 3. `research/findings.md` if it exists — prior research already done
+4. `research/superpowers-docs.md` if it exists, then `<repo>/docs/superpowers/plans/` and
+   `<repo>/docs/superpowers/specs/` in the target repo — superpowers skills (brainstorming,
+   writing-plans) drop design docs there during target-repo sessions. List them; read the
+   ones relevant to this project's tasks. Any relevant doc not yet listed in
+   `research/superpowers-docs.md` → add a pointer bullet now (absolute path + one-line
+   summary).
 
 Do not start executing until you've read all of them. If `plan.md` is missing critical info (goal unclear, no repo path, no context), state exactly what's missing and stop — suggest running `/todo-plan <name>` first.
 
@@ -92,6 +98,12 @@ Never batch steps 2–4 across multiple tasks. Rules of the road:
   scripts) go to `artifacts/`
 - Keep artifacts self-contained — another Claude session should be able to read them cold
 - Drop research notes or discoveries in `research/` if relevant
+- **Superpowers docs get a hub pointer immediately**: whenever a superpowers skill
+  (brainstorming → `docs/superpowers/specs/`, writing-plans → `docs/superpowers/plans/`)
+  writes a doc into the target repo, add a bullet to the project's
+  `research/superpowers-docs.md` in the same task — absolute path + one-line summary.
+  A plan/spec that exists only in the target repo is invisible to the hub; the hub's
+  Stop hook flags unreferenced docs, but record the pointer yourself, don't rely on it
 - When plan.md doesn't answer a question, that IS the answer — record the ambiguity
   (Step 6), don't improvise a decision the plan never made
 
