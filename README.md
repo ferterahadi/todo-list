@@ -41,7 +41,7 @@ It installs as a Claude Code plugin.
 Two commands — this repo doubles as its own marketplace:
 
 ```bash
-claude plugin marketplace add <owner>/todo-list
+claude plugin marketplace add ferterahadi/todo-list
 ```
 ```
 /plugin install todo-list@todo-list
