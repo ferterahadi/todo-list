@@ -194,6 +194,24 @@ End with:
    surface).
 3. **Batch hint**: if haiku-tier items span projects (state syncs, doc fixes), suggest
    clearing them in one cheap sweep before starting expensive work.
+4. **Session plan** — turn the tiers into commands the user can run as-is. Group the
+   board's items by recommended model, then emit one line per group; a task's model is
+   set by the *session* it runs in, so this is the actionable form of the whole board:
+
+   ```
+   ## ▶ Session plan
+
+   now (this session)      dispatch the 5 haiku items to Haiku subagents — say "go" and I'll sweep them
+   claude --model sonnet   → /todo-execute rmq-vertical-scaler tasks 5.3,6.1   (or `parallel` — file-disjoint)
+   claude --model opus     → /todo-revise api-token-rotation 3                 (R3 · high effort)
+   claude --model opus     → /todo-execute payments-retry tasks 2.1            (fable-5 rec'd; opus + verify gate ok — see token read)
+   ```
+
+   Rules: haiku items never need a new session (offer the sweep inline); one line per
+   model × project pair, carrying the exact task/revision numbers from the board; if the
+   session is already on the right model for a group, say so instead of telling the user
+   to relaunch. Mid-session switching is `/model` in an interactive terminal, or the
+   model picker in the app/web UI.
 
 ## Notes
 
