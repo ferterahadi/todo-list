@@ -112,9 +112,10 @@ The plugin repo:
   marketplace.json   makes this repo installable as a marketplace
 skills/todo-*/       the 14 /todo-* skills (each a SKILL.md) + skills/README.md
 hooks/
-  hooks.json         registers the two hooks below (auto)
+  hooks.json         registers the three hooks below (auto)
   bootstrap-hub.sh   SessionStart: seed the hub on first run
   infographic-staleness.sh   Stop: nudge stale infographics
+  superpowers-doc-sync.sh    Stop: ensure superpowers plans/specs are tracked in the hub
 seed/                copied to $TODO_HUB on first run ↓
 ```
 
@@ -123,7 +124,7 @@ The hub (created at `$TODO_HUB`, default `~/todo`) from `seed/`:
 ```
 index.md             the registry: short-name → path / repo / status / infographic
 CLAUDE.md            instructions Claude reads when working in the hub
-templates/           plan.md · tasks.md · planning-prompt.md — copied for new projects
+templates/           plan.md · tasks.md · planning-prompt.md · artifacts-README.md — copied for new projects
 projects/
   work/              work projects
   self-initiative/   self-driven / research projects
