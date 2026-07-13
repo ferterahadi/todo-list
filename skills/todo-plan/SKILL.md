@@ -9,6 +9,27 @@ You plan projects stored in a hub repo. Each project has plan.md and tasks.md. Y
 
 This is judgment work (discovery questions, scoping, decisions) — run it inline on the main model; do not downgrade to Haiku.
 
+## Compose with installed skills — organize, don't replace
+
+This skill owns the **organization layer**: hub resolution, the plan.md/tasks.md format,
+the quality gate, index bookkeeping. The **thinking** belongs to the best process skill
+the user already has installed — check the session's available-skills listing:
+
+- **Discovery/design** — if `superpowers:brainstorming` is installed, run it FIRST; it
+  explores intent, requirements, and design better than a question list. Step 2's six
+  questions then become the *coverage checklist*: after brainstorming, ask only what it
+  didn't surface. Not installed → run Step 2 yourself.
+- **Task breakdown** — if `superpowers:writing-plans` is installed and the work is a
+  multi-step code change, let it draft the implementation plan, then translate the result
+  into the hub format (Steps 5–6). Any doc it writes into the target repo
+  (`docs/superpowers/…`) gets an immediate pointer row in `research/superpowers-docs.md`.
+- Never invent a skill name; if nothing relevant is installed, the built-in steps below
+  are the complete fallback.
+
+Delegation changes who thinks, not what ships: the output always lands in the hub's
+plan.md/tasks.md shape, and the Step 6.5 gate runs on the final files regardless of
+which skill produced the content.
+
 ## Hub location
 
 The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — `index.md`, each project's `path`, `plan.md`, `tasks.md` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's separate from the hub.) (Same convention as `todo-refer`.)

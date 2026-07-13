@@ -68,7 +68,7 @@ For each in-scope project (via the Haiku gather subagent when 3+, else inline):
   grep -nE '^(#{2,3} |\s*- \[ \])' tasks.md    # phase headers + open items only
   ```
   Use the shared counting rules: **skip the `## Status` legend block** and
-  **skip anything inside HTML comments** (same awk snippet as `todo-sort` /
+  **skip anything inside HTML comments** (same awk snippet as `todo-list` sort mode /
   `todo-update-state`).
 - **Open Revisions**: every `### R<n> … [open]` heading with its `Gap:` line
   (`grep -A1 -E '^### R[0-9]+.*\[open\]' tasks.md`).
@@ -177,7 +177,7 @@ cells of `▓`/`░` (`round(done/total*10)`):
 - Number rows by their task/revision identifiers so `/todo-execute <name>` and
   `/todo-revise <name> <n>` can target them directly.
 - Blocked tasks get a `⛔ blocked` model cell with the blocker one-liner as the why.
-- Order cards most-complete first (same instinct as `/todo-sort`), but don't edit
+- Order cards most-complete first (same instinct as `/todo-list sort`), but don't edit
   `index.md` order — this is display only.
 
 ## Step 5 — Summarize and point at execution
@@ -190,7 +190,7 @@ End with:
    skill pairing lets any of them drop a tier (e.g. "2 of 3 fable-5 items are gated by
    the verification gate — could run opus · high instead").
 2. **Fan-out candidates**: if one project has 2+ file-disjoint sonnet/haiku tasks, name
-   them as a `/todo-execute-parallel` group (the biggest efficiency win this skill can
+   them as a `/todo-execute <name> parallel` group (the biggest efficiency win this skill can
    surface).
 3. **Batch hint**: if haiku-tier items span projects (state syncs, doc fixes), suggest
    clearing them in one cheap sweep before starting expensive work.
@@ -199,7 +199,7 @@ End with:
 
 - Recommendations are **advisory routing**, not overrides. Execution skills keep their
   own rules (`todo-execute` runs inline on the session model; `todo-verify` stays pinned
-  to Sonnet high; `todo-execute-parallel` inherits the session model). The triage tells
+  to Sonnet high; `todo-execute` parallel mode inherits the session model). The triage tells
   the user which session model to *pick* before invoking those skills, or which tasks
   are safe to hand to a cheap dispatch.
 - Fable 5 and Mythos 5 share the underlying model; this hub routes to **Fable 5** (the

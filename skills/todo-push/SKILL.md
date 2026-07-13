@@ -9,6 +9,11 @@ One shot: take whatever is uncommitted on the current branch, land it on `main` 
 real PR. Sequence: checkout a branch off main → run tests → commit → push →
 `gh pr create` → `gh pr merge --merge` → back on main.
 
+This skill executes a shipping decision that's already been made. If the user is at
+"implementation is done — now what?" and `superpowers:finishing-a-development-branch`
+is installed, run that first — it walks the merge/PR/cleanup choice; this skill is the
+execution arm for its "PR and merge" outcome.
+
 ## How this runs — direct Haiku subagent (not Workflow)
 
 This skill executes on **Claude Haiku (latest)** for cost, regardless of the calling

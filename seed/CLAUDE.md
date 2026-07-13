@@ -39,13 +39,22 @@ Keep `artifacts/` navigable — a cold session should reach any output from one 
 
 ## Skills drive the work
 
+**House rule — enhance, don't replace.** The `/todo-*` skills are the *organization
+layer* (paths, formats, statuses, bookkeeping). When a craft or process skill is
+installed — superpowers brainstorming / test-driven-development / systematic-debugging,
+code-review, dataviz, frontend-design — the todo skills invoke it for the thinking and
+keep only the organizing. Nothing here overrides an installed skill's discipline; check
+the session's skill listing and never invent a skill that isn't there.
+
 Prefer the `/todo-*` skills over hand edits:
 - `/todo-add` scaffold a project + index row · `/todo-plan` write plan.md/tasks.md
-- `/todo-execute` work the checklist · `/todo-update-state` flip status/checkboxes
-- `/todo-execute-parallel` fan independent tasks to worktree agents · serial merge queue lands PRs
+- `/todo-execute` work the checklist (add `parallel` to fan independent tasks to worktree agents · serial merge queue lands PRs)
+- `/todo-update-state` flip status/checkboxes · `/todo-list` overview (`sort` reorders by completion)
 - `/todo-verify` reconcile the verification result · `/todo-revise` fix gaps
+- `/todo-review` review a diff against the plan · `/todo-resume` pick up where a project left off
+- `/todo-sync` reconcile index status vs repo reality · `/todo-archive` compact tasks.md + retire done projects
 - `/todo-triage` tabulate open tasks/revisions across projects + recommend a model per item
-- `/todo-infographic`, `/todo-list`, `/todo-sort`, `/todo-refer`, `/todo-learn`
+- `/todo-infographic`, `/todo-refer`, `/todo-learn`
 
 Status lifecycle: planning → ready → in-progress → done
 

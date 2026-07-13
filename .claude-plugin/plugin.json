@@ -1,6 +1,6 @@
 {
   "name": "todo-list",
-  "description": "A plan → do → check → revise project-tracking hub for Claude Code: 14 /todo-* skills that plan, execute, verify, and revise work against markdown checklists. Self-bootstrapping — no setup.",
+  "description": "A plan → do → check → revise project-tracking hub for Claude Code: 16 /todo-* skills that plan, execute, verify, and revise work against markdown checklists. Self-bootstrapping — no setup.",
   "version": "1.0.0",
   "author": {
     "name": "The todo-list contributors"

@@ -1,24 +1,46 @@
 # todo-list
 
-A set of [Claude Code](https://claude.com/claude-code) skills for keeping track of projects.
-Plans and checklists stay as plain markdown, and the `/todo-*` skills work through them in a
-`plan → do → check → revise` cycle. It's prompt files — no build step, no runtime.
+**A project tracker that Claude Code works through for you.** You describe a project once;
+Claude plans it, executes the checklist, verifies the result, and fixes the gaps — with
+every plan and task list stored as plain markdown you can read and edit yourself.
 
-It works as one hub — a monorepo for all your projects — where every plan and checklist
-lives together instead of being scattered across each project's own repo. Each `<project>/`
-folder points at wherever its real code lives, so the hub tracks the work while your actual
-repos stay untouched.
+It's a [Claude Code](https://claude.com/claude-code) plugin made of prompt files (skills).
+No build step, no runtime, no database.
 
-The skills reference Claude models by name (Haiku for the mechanical steps, Sonnet and Opus
-for the judgment calls), so it's meant for Claude Code running Claude. It may work with
-other setups; that isn't something I've tested.
+## What it does
 
-It installs as a Claude Code plugin.
+Most people scatter plans across notes apps, issue trackers, and each repo's own docs.
+This plugin gives you **one hub** — a single folder (default `~/todo`) that tracks *all*
+your projects:
+
+```
+~/todo/
+  index.md                     ← the registry: every project, one row each
+  projects/
+    work/api-rate-limiting/    ← one folder per project:
+      plan.md                       goal, scope, decisions   (source of truth)
+      tasks.md                      the checklist Claude works through
+      artifacts/                    outputs Claude produces
+```
+
+Each project folder **points at** wherever its real code lives. The hub tracks the work;
+your actual repos stay untouched (until you ask Claude to execute).
+
+**It enhances your other skills, it doesn't replace them.** The `/todo-*` skills are the
+organization layer — paths, formats, statuses, bookkeeping. When you have craft or
+process skills installed (superpowers brainstorming / TDD / systematic-debugging,
+code-review, dataviz, …), the todo skills invoke *those* for the thinking: `/todo-plan`
+runs discovery through `superpowers:brainstorming` when it's there, `/todo-execute`
+front-loads `test-driven-development` on code tasks, `/todo-review` drives your installed
+`code-review`. No relevant skill installed? Every todo skill carries its own complete
+fallback.
 
 ## The loop
 
+Four skills form a `plan → do → check → revise` cycle:
+
 ```
-        ┌─────────────────────────────────────────────────┐
+        ┌──────────────────────────────────────────────────┐
         │                                                  │
    /todo-plan  ──▶  /todo-execute  ──▶  /todo-verify  ──▶  /todo-revise
      plan            do (build)         check (gate)       fix the gaps
@@ -28,13 +50,26 @@ It installs as a Claude Code plugin.
                                                opens Revisions
 ```
 
-- **plan** — `/todo-plan` runs discovery and writes `plan.md` (goal, scope, decisions) and
-  `tasks.md` (the checklist).
-- **do** — `/todo-execute` works the checklist top to bottom, writing outputs to `artifacts/`.
-  `/todo-execute-parallel` fans file-disjoint tasks out to worktree agents.
-- **check** — `/todo-verify` drives an optional [verification MCP](#verification-mcp-optional)
-  and reconciles the result into todo state.
-- **revise** — `/todo-revise` reworks completed items against a captured gap, then re-verifies.
+|Stage|Skill|What happens|
+|-|-|-|
+|plan|`/todo-plan`|Discovery, then writes `plan.md` (goal, scope, decisions) + `tasks.md` (checklist)|
+|do|`/todo-execute`|Works the checklist top to bottom; outputs land in `artifacts/`. Add `parallel` to fan file-disjoint tasks out to worktree agents|
+|check|`/todo-verify`|Runs an optional [verification MCP](#verification-mcp-optional), reconciles pass/fail into todo state|
+|revise|`/todo-revise`|Captures each gap as a Revision entry, reworks it, re-verifies|
+
+Between do and check, `/todo-review` optionally audits the diff *against the plan* —
+scope drift, violated constraints, ticked tasks with no evidence — before the
+verification gate runs.
+
+A typical project, end to end:
+
+```
+/todo-add "add rate limiting to the API"   # scaffold + register it
+/todo-plan api-rate-limiting               # Claude researches and writes the plan
+/todo-execute api-rate-limiting            # Claude works the checklist
+/todo-verify api-rate-limiting             # check gate: did it actually pass?
+/todo-revise api-rate-limiting             # fix whatever the gate caught
+```
 
 ## Install
 
@@ -50,11 +85,26 @@ claude plugin marketplace add ferterahadi/todo-list
 On your next session it:
 
 - registers the `/todo-*` skills (auto-discovered), and
-- creates a hub at `~/todo` from bundled seed content — `index.md`, `templates/`, and a
+- creates the hub at `~/todo` from bundled seed content — `index.md`, `templates/`, and a
   small example project — via a SessionStart hook. It runs once, then stays quiet.
 
-The hook creates a `~/todo` directory on first run; to put the hub elsewhere, set
-`TODO_HUB` first (below).
+To put the hub somewhere other than `~/todo`, set `TODO_HUB` *before* first run
+([optional config](#optional-config) below).
+
+### Try it
+
+The hub ships with an example project:
+
+```
+/todo-list                              # see the project index
+/todo-refer example-feature             # load its plan + tasks as context
+/todo-execute example-feature           # work its checklist
+/todo-infographic example-feature       # render a one-page visual of the plan
+```
+
+> Slash commands are namespaced by the plugin — `/todo-list:todo-plan` — but each skill's
+> natural-language triggers ("plan this project", "what's on my list") fire without the
+> prefix.
 
 ### Removing it
 
@@ -65,17 +115,15 @@ claude plugin marketplace remove todo-list       # remove the marketplace entry
 
 (Both also work from the interactive `/plugin` menu.)
 
-What's left on disk is the hub folder (`~/todo`, or wherever `TODO_HUB` points) — your own
-plans and notes. Delete it whenever:
+What's left on disk is the hub folder — your own plans and notes. Delete it whenever:
 
 ```bash
-rm -rf ~/todo
+rm -rf ~/todo    # or wherever TODO_HUB points
 ```
 
 ### Optional config
 
-- **Move the hub.** The hub defaults to `~/todo`. To put it elsewhere, set `TODO_HUB`
-  (e.g. in `~/.claude/CLAUDE.md` or your shell profile) *before* first run:
+- **Move the hub.** Set `TODO_HUB` (e.g. in your shell profile) before first run:
 
   ```bash
   export TODO_HUB=~/my/hub/path
@@ -85,77 +133,71 @@ rm -rf ~/todo
   inside another repo. See [`.env.example`](.env.example).
 - **Version the hub.** The hub is a plain directory. `git init` it if you want history.
 
-## Quickstart
+## All 16 skills
 
-The hub ships with an example project. In Claude Code:
+The loop skills above, plus support skills grouped by role:
 
-```
-/todo-list                              # see the project index
-/todo-refer example-feature             # load its plan + tasks as context
-/todo-execute example-feature           # work its checklist
-/todo-infographic example-feature       # render a one-page visual of the plan
-```
+**Track** — get projects in, see where they stand
 
-Start your own with `/todo-add "add rate limiting to the API"`, then `/todo-plan <name>`.
+|Skill|Purpose|
+|-|-|
+|`todo-add`|Scaffold a new project folder + register it in `index.md`|
+|`todo-list`|Overview of the index grouped by status; `sort` mode reorders rows by task completion|
+|`todo-triage`|Tabulate open work across projects + recommend a model per task|
+|`todo-update-state`|Tick tasks / flip status by hand, without an execution pass|
 
-> Slash commands are namespaced by the plugin — `/todo-list:todo-plan` — but each skill's
-> natural-language triggers ("plan this project", "what's on my list") fire without the
-> prefix.
+**Work** — the loop
 
-## Layout
+|Skill|Purpose|
+|-|-|
+|`todo-plan`|Discovery → write `plan.md` and `tasks.md`|
+|`todo-execute`|Work `tasks.md` top to bottom; `parallel` mode fans tasks to git-worktree agents, lands PRs via a serial merge queue|
+|`todo-review`|Audit a diff against the plan (scope, constraints, evidence), then a correctness pass|
+|`todo-verify`|The check gate: drive a verification MCP, tick tasks / flip status, open Revisions|
+|`todo-revise`|Gap-driven rework of completed items, then re-verify|
 
-The plugin repo:
+**Bridge** — connect the hub to real repos
+
+|Skill|Purpose|
+|-|-|
+|`todo-refer`|Load a project's plan+tasks as grounding context from any repo|
+|`todo-resume`|Reconstruct where work stopped (tasks, blockers, worktree/PR state) + name the next command|
+|`todo-push`|Full git shipping workflow: branch → commit → push → PR → merge|
+|`todo-infographic`|Turn a plan into a one-page HTML infographic|
+|`todo-learn`|Capture a correction as a durable rule in a repo's own skill files|
+
+**Hygiene** — keep the hub honest and small
+
+|Skill|Purpose|
+|-|-|
+|`todo-sync`|Audit recorded status vs tasks + git/PR reality; fix drift on confirmation|
+|`todo-archive`|Compact closed detail out of `tasks.md`, retire done projects to an Archive section — lossless|
+
+Status lifecycle: `planning → ready → in-progress → done`.
+
+Some skills note a suggested Claude model (Haiku for mechanical steps, Sonnet/Opus for
+judgment calls) — advisory conventions, not requirements. Because of those model names,
+this is built for Claude Code running Claude; other setups are untested.
+
+## Repo layout
 
 ```
 .claude-plugin/
   plugin.json        the plugin manifest
   marketplace.json   makes this repo installable as a marketplace
-skills/todo-*/       the 14 /todo-* skills (each a SKILL.md) + skills/README.md
+skills/todo-*/       the 16 /todo-* skills (each a SKILL.md) + skills/README.md
 hooks/
   hooks.json         registers the three hooks below (auto)
   bootstrap-hub.sh   SessionStart: seed the hub on first run
   infographic-staleness.sh   Stop: nudge stale infographics
   superpowers-doc-sync.sh    Stop: ensure superpowers plans/specs are tracked in the hub
-seed/                copied to $TODO_HUB on first run ↓
+seed/                copied to $TODO_HUB on first run
 ```
 
-The hub (created at `$TODO_HUB`, default `~/todo`) from `seed/`:
-
-```
-index.md             the registry: short-name → path / repo / status / infographic
-CLAUDE.md            instructions Claude reads when working in the hub
-templates/           plan.md · tasks.md · planning-prompt.md · artifacts-README.md — copied for new projects
-projects/
-  work/              work projects
-  self-initiative/   self-driven / research projects
-```
-
-Each project folder holds `plan.md` (source of truth), `tasks.md` (the checklist),
-`research/` (raw notes), and `artifacts/` (outputs).
-
-## The skills
-
-| Skill | Purpose |
-|---|---|
-| `todo-add` | Scaffold a new project folder + register it in `index.md` |
-| `todo-plan` | Discovery → write `plan.md` and `tasks.md` |
-| `todo-execute` | Work `tasks.md`, write outputs to `artifacts/` |
-| `todo-execute-parallel` | Fan file-disjoint tasks to worktree agents, land PRs via a serial merge queue |
-| `todo-verify` | The check gate: drive a verification MCP, tick tasks / flip status, open Revisions |
-| `todo-revise` | Gap-driven rework of completed items, then re-verify |
-| `todo-update-state` | Mark tasks/projects done, move status |
-| `todo-list` | Read-only overview of the index, grouped by status |
-| `todo-sort` | Reorder `index.md` rows by task completion |
-| `todo-triage` | Tabulate open work + recommend a model per item |
-| `todo-refer` | Load a project's plan+tasks as grounding context (cross-repo) |
-| `todo-infographic` | Turn a plan into a one-page HTML infographic |
-| `todo-push` | General git shipping workflow: branch → commit → push → PR → merge |
-| `todo-learn` | Capture a correction as a durable rule in a repo's own skill files |
-
-Status lifecycle: `planning → ready → in-progress → done`.
-
-Some skills note a suggested Claude model (e.g. mechanical steps on Haiku, judgment work on
-Sonnet). Those are advisory conventions, not requirements — adjust to taste.
+The seeded hub adds `CLAUDE.md` (instructions Claude reads when working in the hub),
+`templates/` (copied for new projects), and `projects/work/` + `projects/self-initiative/`
+sections. Each project folder holds `plan.md`, `tasks.md`, `research/` (raw notes), and
+`artifacts/` (outputs).
 
 ## Verification MCP (optional)
 

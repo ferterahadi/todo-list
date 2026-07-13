@@ -79,7 +79,7 @@ you flip here: after flipping, apply the same two-line tombstone collapse.
 
 To report progress (e.g. "5/8 done"), count the checkboxes — but skip the `## Status` legend block that the `tasks.md` template includes (its `- [ ] Not started` / `- [x] Done` lines are documentation, not real tasks), and skip anything inside HTML comments (the template's `## Revisions` section ships a commented-out example with a `- [ ]` line). Count only checkboxes under the actual work sections (`## Tasks`, `## Phase …`, or real `## Revisions` entries).
 
-A quick count from the shell (same snippet `todo-sort` and `todo-infographic` use):
+A quick count from the shell (same snippet `todo-list` sort mode and `todo-infographic` use):
 
 ```bash
 # completed/total real tasks — skips the ## Status legend and HTML-commented examples
