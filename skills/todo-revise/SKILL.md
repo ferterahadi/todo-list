@@ -115,7 +115,7 @@ Rules:
 
 ## Step 5 — Execute the fix
 
-Work each open revision like `todo-execute` does: complete it fully, write outputs to `artifacts/`, drop notes in `research/` if useful.
+Work each open revision like `todo-execute` does: complete it fully, write outputs to `artifacts/` (following the artifact conventions — dated `YYYY-MM-DD-<kind>-<slug>.md` name, backlink header blockquote, and a row in `artifacts/README.md`), drop notes in `research/` if useful.
 
 **Match the fix to an installed skill** — a revision exists because the first pass drifted, so front-load procedure instead of retrying bare: a code-correctness gap → run `code-review` on the fix diff before presenting it; a UI/"looks wrong" gap → load a frontend-design or design-critique skill if installed; a chart/visual gap → `dataviz`. Only use skills that actually exist in the session's listing — skip silently if none fits. Hit a credential/service/API blocker → record it in `artifacts/blockers.md` and move on; never silently skip. Check the revision's `- [ ]` → `- [x]` when the code/work is done (not yet verified).
 

@@ -70,8 +70,8 @@ If the user references a local repo, doc, or path:
 Regardless of references, check the confirmed repo for existing superpowers docs —
 `<repo>/docs/superpowers/plans/` and `<repo>/docs/superpowers/specs/` (written by the
 brainstorming / writing-plans skills in earlier target-repo sessions). Read any that touch
-this project, list them in `research/superpowers-docs.md` (absolute path + one-line
-summary), and fold their decisions into the plan instead of re-deciding.
+this project, list them as rows in `research/superpowers-docs.md` (a table: doc path +
+source + one-line summary), and fold their decisions into the plan instead of re-deciding.
 
 If no external reference is given and the repo has no superpowers docs, skip this step.
 

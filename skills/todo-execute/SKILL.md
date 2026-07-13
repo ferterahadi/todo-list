@@ -96,12 +96,18 @@ Never batch steps 2–4 across multiple tasks. Rules of the road:
 - Complete each task fully before moving to the next
 - Target-repo code changes go in the Step 4 worktree; hub outputs (docs, analysis,
   scripts) go to `artifacts/`
+- **Follow the artifact conventions** (hub CLAUDE.md → "Artifact conventions"): name a
+  dated output `YYYY-MM-DD-<kind>-<slug>.md` (`kind` ∈ analysis/finding/handoff/session/design),
+  open it with the backlink header blockquote (`> **Kind:** … · **Source:** tasks.md#R7 · **Date:** … · **Index:** [README.md](README.md)`),
+  and add a row to `artifacts/README.md` — create that manifest from
+  `$TODO_HUB/templates/artifacts-README.md` if it doesn't exist yet. Living docs
+  (`journal.md`, `blockers.md`) keep their stable names.
 - Keep artifacts self-contained — another Claude session should be able to read them cold
 - Drop research notes or discoveries in `research/` if relevant
 - **Superpowers docs get a hub pointer immediately**: whenever a superpowers skill
   (brainstorming → `docs/superpowers/specs/`, writing-plans → `docs/superpowers/plans/`)
-  writes a doc into the target repo, add a bullet to the project's
-  `research/superpowers-docs.md` in the same task — absolute path + one-line summary.
+  writes a doc into the target repo, add a row to the table in the project's
+  `research/superpowers-docs.md` in the same task — doc path + source + one-line summary.
   A plan/spec that exists only in the target repo is invisible to the hub; the hub's
   Stop hook flags unreferenced docs, but record the pointer yourself, don't rely on it
 - When plan.md doesn't answer a question, that IS the answer — record the ambiguity

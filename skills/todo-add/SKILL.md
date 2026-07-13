@@ -60,7 +60,8 @@ Create `projects/<work|self-initiative>/<short-name>/` with:
 
 - `plan.md` — copied from `templates/plan.md`, with the `[Name]` placeholder replaced by a human-readable title derived from the description (e.g. "RabbitMQ Dead-Letter Queue Support"). Leave the rest of the template structure intact for `todo-plan` to fill.
 - `tasks.md` — copied from `templates/tasks.md`, with the `[Project Name]` placeholder replaced by the same title. Leave the placeholder tasks for `todo-plan` to replace.
-- `research/` and `artifacts/` directories. Add a `.gitkeep` file in each so the empty directories are tracked by git.
+- `research/` directory with a `.gitkeep` so the empty directory is tracked by git.
+- `artifacts/` directory containing `README.md` — copied from `templates/artifacts-README.md`, with the title placeholder replaced by the same human-readable title. This is the artifact manifest (backtrack hub); it seeds the folder so no `.gitkeep` is needed there.
 
 Read the templates fresh from `templates/` rather than hardcoding their contents — they may have changed.
 

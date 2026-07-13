@@ -28,6 +28,15 @@ Each project folder contains:
 - `research/` — raw notes and findings
 - `artifacts/` — your outputs go here
 
+## Artifact conventions
+
+Keep `artifacts/` navigable — a cold session should reach any output from one place.
+
+- **Naming.** Dated outputs are `YYYY-MM-DD-<kind>-<slug>.md`, `<kind>` ∈ `analysis · finding · handoff · session · design`. Living docs appended over time keep stable names: `journal.md`, `blockers.md`, `infographic.html` (plus any project-specific source-of-truth doc).
+- **Header.** Every artifact opens with a one-line blockquote that backlinks its origin: `> **Kind:** … · **Source:** tasks.md#R7 (or a Phase) · **Date:** YYYY-MM-DD · **Index:** [README.md](README.md)`.
+- **Manifest.** `artifacts/README.md` is the backtrack hub — a table of every artifact (`date · file · kind · source · one-line`) plus a living-docs table. Add a row whenever you create an artifact. Template: `templates/artifacts-README.md`.
+- **Superpowers pointers.** `research/superpowers-docs.md` is a table (`doc · source · one-line`) of design docs that live in the target repo under `docs/superpowers/`; it satisfies the `superpowers-doc-sync` hook.
+
 ## Skills drive the work
 
 Prefer the `/todo-*` skills over hand edits:
