@@ -26,11 +26,13 @@ Use the `Agent` tool with `model: sonnet`, `effort: high`. Spawn **one subagent 
 ```
 /todo-infographic event-fanout   ← one project by short-name
 /todo-infographic projects/work/...                ← full path also works
-/todo-infographic all                              ← every ready/in-progress/done project
-/todo-infographic                                  ← infer from context, or do all stale ones
+/todo-infographic all                              ← every ready/in-progress/done project (explicit opt-in only)
+/todo-infographic                                  ← the project in scope for this session (NOT all stale ones)
 ```
 
-It is also fired automatically by the plugin's **Stop hook** (`infographic-staleness.sh`, auto-registered): when a project whose status is `ready` or `in-progress` has a missing or stale `artifacts/infographic.html`, the hook asks you to regenerate it before ending the turn. When triggered that way, regenerate every project the hook names, then stop.
+**Scope: single-project by default.** Generate the infographic only for the project the session is working on. Do **not** fan out to every project. `all` is an explicit opt-in — never inferred. If no single project is clearly in scope and no argument was given, ask which project rather than defaulting to all.
+
+It is also fired automatically by the plugin's **Stop hook** (`infographic-staleness.sh`, auto-registered): when a project whose status is `ready` or `in-progress` has a missing or stale `artifacts/infographic.html`, the hook lists it before ending the turn. The hook's list is a repo-wide staleness scan, **not** a scope instruction — regenerate only the listed project(s) you actually worked on this session, and leave the rest stale. If none of the listed projects relate to this session, stop without generating anything.
 
 ## Step 1 — Resolve the project(s)
 
@@ -38,7 +40,8 @@ Read `$TODO_HUB/index.md` to map short-name → `path` / `repo` / `status`.
 
 - Short name → look it up; not found → tell the user and stop.
 - Full path → use as-is.
-- `all` / no argument → operate on every project with status `ready`, `in-progress`, or `done`.
+- `all` → operate on every project with status `ready`, `in-progress`, or `done`. Only when the user explicitly passes `all`.
+- No argument → resolve to the single project in scope for this session. If that's ambiguous, ask — do **not** default to every project.
 
 ## Step 2 — Read the plan and guard against stubs
 

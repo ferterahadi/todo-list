@@ -57,9 +57,13 @@ stale="$(echo "$stale" | xargs)"
 [ -z "$stale" ] && exit 0
 
 reason="One-pager infographic(s) are missing or out of date for: ${stale}. \
-Before ending the turn, regenerate each by invoking the todo-infographic skill \
-(it reads plan.md + tasks.md, writes artifacts/infographic.html, and updates the \
-project's infographic column in index.md). Generate every listed project, then stop."
+This is a repo-wide staleness scan, NOT a scope instruction. Regenerate ONLY the \
+listed project(s) you actually worked on in this session, by invoking the \
+todo-infographic skill (it reads plan.md + tasks.md, writes \
+artifacts/infographic.html, and updates the project's infographic column in \
+index.md). Leave listed projects you did not touch this session alone — do NOT \
+regenerate all of them. If none of the listed projects relate to this session, \
+just stop without generating anything."
 
 # Emit the block decision as JSON (printf keeps it valid without jq).
 printf '{"decision":"block","reason":"%s"}\n' "$reason"
