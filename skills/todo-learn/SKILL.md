@@ -14,7 +14,7 @@ and Claude Code one shared lesson.
 The unit of learning is **one fact per correction**: what the right behavior is, *why*, and *how to apply it*. Project-scoped by default — the learning lands in the repo the work happened in, not globally — so each codebase accumulates its own corrections.
 
 This is judgment work about the right rule, topic, and scope. Use the **balanced** tier
-at **high** effort from [`../model-routing.md`](../model-routing.md). If the host cannot
+at **high** effort from [`../model-routing/SKILL.md`](../model-routing/SKILL.md). If the host cannot
 select a separate model, run in the current session.
 
 ## How the user invokes this

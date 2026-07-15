@@ -19,7 +19,7 @@ Everything is **lossless**: detail moves, nothing is deleted. Never touch `plan.
 
 This is mechanical work with strict byte-preservation rules. Decide what gets archived
 and verify the result yourself; when dispatching is available, delegate only the moves
-to a **fast**-tier subagent using [`../model-routing.md`](../model-routing.md).
+to a **fast**-tier subagent using [`../model-routing/SKILL.md`](../model-routing/SKILL.md).
 
 ## Hub location
 

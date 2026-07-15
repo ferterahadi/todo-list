@@ -15,7 +15,7 @@ and hands the user the exact next command to run.
 
 Run it inline on the current session model — assembling the picture takes judgment
 about what matters. Use at least the **balanced** tier from
-[`../model-routing.md`](../model-routing.md).
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md).
 
 ## Hub location
 

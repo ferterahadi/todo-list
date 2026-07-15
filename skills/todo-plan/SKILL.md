@@ -9,7 +9,7 @@ You plan projects stored in a hub repo. Each project has plan.md and tasks.md. Y
 
 This is judgment work involving discovery, scope, and decisions. Run it inline on the
 current session model; use at least the **balanced** tier from
-[`../model-routing.md`](../model-routing.md).
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md).
 
 ## Compose with installed skills — organize, don't replace
 

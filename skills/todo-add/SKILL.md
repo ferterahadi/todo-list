@@ -8,7 +8,7 @@ description: Use when the user invokes /todo-add, says "add a new project", "cre
 You scaffold a new project in a hub repo and register it in `index.md`. This is the entry point that runs *before* `todo-plan`: it creates the project folder and the index row, leaving the plan content empty for `todo-plan` to fill in. Keep this skill focused on scaffolding — do not write plan content, edit tasks, or execute anything.
 
 This is light, mechanical work. Use the **fast** tier from
-[`../model-routing.md`](../model-routing.md) when dispatching is available; otherwise
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md) when dispatching is available; otherwise
 run it inline.
 
 ## Hub location

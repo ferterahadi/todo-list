@@ -41,7 +41,10 @@ as an optional intent check between do and check, and `todo-resume` / `todo-sync
 Install all skills in both agents from the repo root:
 
 ```bash
-npx skills add . --skill '*' --agent claude-code --agent codex
+npx skills add . --skill model-routing todo-add todo-archive todo-execute \
+  todo-infographic todo-learn todo-list todo-plan todo-push todo-refer \
+  todo-resume todo-review todo-revise todo-sync todo-triage todo-update-state \
+  todo-verify --agent claude-code --agent codex --global --yes
 ```
 
 See the [root README](../README.md) for native plugin installation when lifecycle hooks

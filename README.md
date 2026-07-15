@@ -77,9 +77,13 @@ One command installs all skills for both agents from the same source:
 
 ```bash
 npx skills add ferterahadi/todo-list \
-  --skill '*' \
+  --skill model-routing todo-add todo-archive todo-execute todo-infographic \
+    todo-learn todo-list todo-plan todo-push todo-refer todo-resume todo-review \
+    todo-revise todo-sync todo-triage todo-update-state todo-verify \
   --agent claude-code \
-  --agent codex
+  --agent codex \
+  --global \
+  --yes
 ```
 
 For a local checkout, replace `ferterahadi/todo-list` with `.`. The installer uses
@@ -211,7 +215,7 @@ Use the preferred Codex model when it appears in the local model picker or
 `codex debug models`; otherwise use the fallback. Fable and Opus both map to the
 flagship Codex model, with reasoning effort separating highest-risk work from normal
 deep work. The mapping is advisory and centralized in
-[`skills/model-routing.md`](skills/model-routing.md).
+[`skills/model-routing/SKILL.md`](skills/model-routing/SKILL.md).
 
 ## Repo layout
 
@@ -222,7 +226,7 @@ deep work. The mapping is advisory and centralized in
 .codex-plugin/
   plugin.json        Codex plugin manifest
 skills/todo-*/       the 16 shared skills (each a SKILL.md)
-skills/model-routing.md   provider model mapping
+skills/model-routing/  shared provider model mapping skill
 hooks/
   hooks.json         registers the three hooks below (auto)
   bootstrap-hub.sh   SessionStart: seed the hub on first run

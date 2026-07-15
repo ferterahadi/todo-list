@@ -15,7 +15,7 @@ The hub repo root is `$TODO_HUB` — an environment variable pointing at your cl
 
 The infographic generation — the token-heavy, creative design and HTML work in Step 3 —
 uses the **balanced** tier with **high** reasoning effort from
-[`../model-routing.md`](../model-routing.md). Delegate the build when dispatching is
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md). Delegate the build when dispatching is
 available; otherwise build inline. The orchestrating session does the light work:
 resolve projects, check stubs, register the result, and confirm.
 

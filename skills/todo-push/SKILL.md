@@ -16,7 +16,7 @@ execution arm for its "PR and merge" outcome.
 
 ## Execution tier
 
-Use the **fast** tier from [`../model-routing.md`](../model-routing.md). Delegate to a
+Use the **fast** tier from [`../model-routing/SKILL.md`](../model-routing/SKILL.md). Delegate to a
 general-purpose subagent with shell and GitHub CLI access when the host supports it;
 otherwise execute inline. The invoking session must wait for the shipping result before
 continuing. Select Haiku on Claude Code or GPT-5.6 Luna on Codex only when the host

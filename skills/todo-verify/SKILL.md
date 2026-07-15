@@ -17,7 +17,7 @@ Revisions.
 
 This involves real judgment — driving the run, handling collisions, and interpreting the
 result. Use the **balanced** tier at **high** effort from
-[`../model-routing.md`](../model-routing.md). The final mechanical `tasks.md`/`index.md`
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md). The final mechanical `tasks.md`/`index.md`
 checkbox and status edits may be delegated to the **fast** tier exactly as
 `todo-update-state` does. If the host cannot select a dispatch model, keep the work in
 the current session.

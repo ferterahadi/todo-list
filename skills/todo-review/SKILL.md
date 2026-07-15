@@ -20,7 +20,7 @@ become the user's call — fixes land via `/todo-revise` (drifted done work) or 
 in the working tree if the user asks.
 
 This is judgment work. Run it inline on the current session model; use at least the
-**balanced** tier from [`../model-routing.md`](../model-routing.md).
+**balanced** tier from [`../model-routing/SKILL.md`](../model-routing/SKILL.md).
 
 ## Hub location
 

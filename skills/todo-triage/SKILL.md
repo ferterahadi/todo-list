@@ -8,7 +8,7 @@ description: Use when the user invokes /todo-triage, says "what's left", "tabula
 You tabulate **what's left** across the hub — open tasks and open Revisions — and
 recommend a provider-neutral execution tier for each item: **frontier**, **deep**,
 **balanced**, or **fast**. Resolve each tier to the current host through
-[`../model-routing.md`](../model-routing.md). The output is a decision aid: the user
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md). The output is a decision aid: the user
 picks the session model or dispatch target per task instead of running everything on
 the most expensive model by default.
 
@@ -127,7 +127,7 @@ security-sensitive", "mechanical checkbox sync"). No paragraphs.
 ### Effort tier (the second dial)
 
 Model and reasoning effort are independent levers. Recommend one effort per item and
-resolve the tier to the current host using `model-routing.md`:
+resolve the tier to the current host using `model-routing/SKILL.md`:
 
 - **low** — mechanical or fully spec'd work; thinking longer can't change the answer.
 - **medium** — default for routine implementation.
@@ -208,7 +208,7 @@ End with:
    <frontier host model>    → /todo-execute payments-retry tasks 2.1
    ```
 
-   Resolve placeholders from `model-routing.md` and show commands only for the current
+   Resolve placeholders from `model-routing/SKILL.md` and show commands only for the current
    host. For example, Claude Code uses `claude --model <name>`; Codex uses
    `codex --model <model-id> -c model_reasoning_effort=<effort>`. Fast items never need
    a new session when they can be dispatched inline. Emit one line per
@@ -223,7 +223,7 @@ End with:
   at high effort; `todo-execute` parallel mode inherits the session model). The triage tells
   the user which session model to *pick* before invoking those skills, or which tasks
   are safe to hand to a cheap dispatch.
-- Model names live only in `model-routing.md`; keep this skill's decision logic in tiers.
+- Model names live only in `model-routing/SKILL.md`; keep this skill's decision logic in tiers.
 - Idempotent and read-only: run it as often as you like; nothing changes on disk.
 - If every in-scope project has zero open items, say so and celebrate briefly — don't
   invent work.

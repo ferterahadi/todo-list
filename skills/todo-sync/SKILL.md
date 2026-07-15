@@ -15,7 +15,7 @@ corrections the user confirms (via the same edit rules as `/todo-update-state`).
 
 Hybrid, matching the hub's house pattern: evidence-gathering across 3+ projects is
 mechanical — delegate it to a **fast**-tier subagent using
-[`../model-routing.md`](../model-routing.md) when dispatching is available; for 1–2
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md) when dispatching is available; for 1–2
 projects gather inline. The drift *verdicts* are judgment — always yours, inline on the
 main model.
 

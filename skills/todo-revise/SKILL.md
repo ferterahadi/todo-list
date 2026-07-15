@@ -11,7 +11,7 @@ The point is that feedback is **per-item and structured**: every gap is tied to 
 
 This involves real judgment and code work. Run it inline on the current session model,
 like `todo-execute`, using at least the **balanced** tier from
-[`../model-routing.md`](../model-routing.md). Do not delegate the core revision judgment
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md). Do not delegate the core revision judgment
 to the fast tier.
 
 ## Hub location

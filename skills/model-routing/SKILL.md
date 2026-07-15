@@ -1,3 +1,8 @@
+---
+name: model-routing
+description: Use when choosing a Claude Code or Codex model for todo-list work, translating Fable, Opus, Sonnet, or Haiku tiers to GPT models, or selecting reasoning effort.
+---
+
 # Cross-platform model routing
 
 Route by capability tier first. Provider model names are implementations of the tier,

@@ -35,7 +35,7 @@ explicit invariants, terse examples.
 - **`plan.md` stays the source of truth.** Derived views (the infographic, the index row)
   reflect it; they don't replace it.
 - **Model routing is tier-first.** Use `frontier`, `deep`, `balanced`, or `fast` in skill
-  instructions and keep provider names in `skills/model-routing.md`.
+  instructions and keep provider names in `skills/model-routing/SKILL.md`.
 - **Keep skills self-contained.** A reader (human or model) should understand one SKILL.md
   without loading the others.
 
@@ -66,7 +66,10 @@ There's no automated suite — these are prompt files. To exercise a change:
 1. Install the skills from your local checkout for both agents:
 
    ```bash
-   npx skills add . --skill '*' --agent claude-code --agent codex
+   npx skills add . --skill model-routing todo-add todo-archive todo-execute \
+     todo-infographic todo-learn todo-list todo-plan todo-push todo-refer \
+     todo-resume todo-review todo-revise todo-sync todo-triage todo-update-state \
+     todo-verify --agent claude-code --agent codex --global --yes
    ```
 
 2. To test the Claude Code hooks and bootstrap path, install the full plugin:

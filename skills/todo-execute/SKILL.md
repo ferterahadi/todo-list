@@ -18,7 +18,7 @@ Two modes, one skill:
 - **Parallel** — fan file-disjoint task groups out to agents in git worktrees, land PRs via a serial merge queue. See [Parallel mode](#parallel-mode) at the end; it reuses steps 1–2 for orientation, then follows its own steps P1–P7.
 
 This involves real judgment and code work. Run it inline on the current session model;
-use at least the **balanced** tier from [`../model-routing.md`](../model-routing.md).
+use at least the **balanced** tier from [`../model-routing/SKILL.md`](../model-routing/SKILL.md).
 
 ## Hub location
 

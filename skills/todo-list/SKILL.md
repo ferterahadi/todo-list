@@ -13,7 +13,7 @@ Two modes, one skill:
 - **Sort** — changes **row order only** inside each section table. It never edits content (paths, repos, statuses, infographic links), never touches headers, intro prose, or the `## Status Legend`.
 
 Both modes are light, mechanical work. Use the **fast** tier from
-[`../model-routing.md`](../model-routing.md) if dispatching; otherwise run inline.
+[`../model-routing/SKILL.md`](../model-routing/SKILL.md) if dispatching; otherwise run inline.
 
 ## Hub location
 
