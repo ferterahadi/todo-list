@@ -11,7 +11,7 @@
 # and in target-repo sessions where the docs are created.
 #
 # Output contract (Stop hook): emit {"decision":"block","reason":"..."} to keep
-# the turn going so Claude records the pointers; emit nothing (exit 0) to allow
+# the turn going so the agent records the pointers; emit nothing (exit 0) to allow
 # the stop.
 set -euo pipefail
 

@@ -1,6 +1,6 @@
 # Tasks: [Project Name]
 
-> Point Claude here to execute. Each task = one clear action, **one line** (~150 chars max).
+> Point your coding agent here to execute. Each task = one clear action, **one line** (~150 chars max).
 > Detail, findings, and rationale go to `research/` or `artifacts/journal.md` with a pointer —
 > never inline here. This file is read whole by six skills; every long line taxes all of them.
 
@@ -17,7 +17,7 @@
 - [ ] Task 3
 
 ## Notes
-Anything Claude should know before starting.
+Anything the executing agent should know before starting.
 
 ## Revisions
 <!-- Managed by /todo-revise. One entry per gap found in completed work, backlinked to its source task. -->
@@ -27,4 +27,3 @@ Anything Claude should know before starting.
      - Actual: what was built instead
      - Fix: the concrete approach
      - [ ] implement + re-verify -->
-

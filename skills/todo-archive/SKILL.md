@@ -17,9 +17,9 @@ housekeeping sweeps other skills only *offer*:
 Everything is **lossless**: detail moves, nothing is deleted. Never touch `plan.md`,
 `research/`, or project code.
 
-This is mechanical work with strict byte-preservation rules, so delegate the edits to a
-subagent on **Claude Haiku (latest)** (`Agent` tool, `model: haiku`) — but YOU decide
-what gets archived and verify the result; the subagent only executes the moves.
+This is mechanical work with strict byte-preservation rules. Decide what gets archived
+and verify the result yourself; when dispatching is available, delegate only the moves
+to a **fast**-tier subagent using [`../model-routing.md`](../model-routing.md).
 
 ## Hub location
 
@@ -85,7 +85,7 @@ Hard rules:
 - Task checkboxes under `## Tasks` / `## Phase …` are NEVER moved or collapsed — only
   `## Revisions` entry *detail* is archived. The checklist is the project's live state.
 - Every line outside the collapsed entries is reproduced byte-for-byte — remind the
-  Haiku subagent of this explicitly.
+  edit subagent of this explicitly.
 
 ## Step 3 — Retire done projects from index.md
 

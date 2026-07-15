@@ -12,7 +12,8 @@ Two modes, one skill:
 - **View (default)** — **read-only**: never edit `index.md`, `tasks.md`, statuses, or any project file. To change state use `/todo-update-state`.
 - **Sort** — changes **row order only** inside each section table. It never edits content (paths, repos, statuses, infographic links), never touches headers, intro prose, or the `## Status Legend`.
 
-Both modes are light, mechanical work, so they run on **Claude Haiku (latest)**. Use the `Agent` tool with `model: haiku` if dispatching.
+Both modes are light, mechanical work. Use the **fast** tier from
+[`../model-routing.md`](../model-routing.md) if dispatching; otherwise run inline.
 
 ## Hub location
 
@@ -82,7 +83,10 @@ If the user names a status ("show in-progress", "what's planning"), list only ma
 
 Reorders the project tables in `index.md` so rows in each table are sorted by **how complete the project is**, most-done first. The completion number is computed, not stored — it decides order only and is never written into the table.
 
-Delegate the work to a subagent on **Claude Haiku (latest)** (`Agent` tool, `model: haiku`) — it's mechanical counting and reordering, but the write-back must reproduce every non-reordered line byte-for-byte, so remind the subagent of that explicitly. Hand it the absolute hub root (`$TODO_HUB`) so it reads and writes there, not into the cwd.
+Delegate the work to a **fast**-tier subagent when available — it is mechanical counting
+and reordering, but the write-back must reproduce every non-reordered line byte-for-byte,
+so state that explicitly. Hand it the absolute hub root (`$TODO_HUB`) so it reads and
+writes there, not into the cwd.
 
 ### What "completion" means
 
@@ -110,7 +114,13 @@ Do not merge tables, re-rank across them, or change which table a project is in.
 ### Sort steps
 
 1. **Read `$TODO_HUB/index.md`**. Capture every row of every section table verbatim (all columns), and note the row order.
-2. **Dispatch the Haiku subagent** (`Agent` tool, `model: haiku`). Hand it the hub root (`$TODO_HUB`) and the task: for each project row, resolve its `tasks.md` from the `path` column, compute completion via the awk above, then rewrite each section table in `index.md` sorted by the rules above — preserving headers, column content, and every other line of the file byte-for-byte. Tell it to return the new order per table with each project's `done/total` so you can report it.
+2. **Dispatch the fast-tier subagent** when available. Hand it the hub root (`$TODO_HUB`)
+   and the task: for each project row, resolve its `tasks.md` from the `path` column,
+   compute completion via the awk above, then rewrite each section table in `index.md`
+   sorted by the rules above — preserving headers, column content, and every other line
+   byte-for-byte. Tell it to return the new order per table with each project's
+   `done/total` so you can report it. If dispatching is unavailable, perform this step
+   inline with the same preservation rule.
 3. **Relay the result.** Report, per table, the new top-to-bottom order with each project's `done/total` (and any projects counted as 0% because tasks.md was missing/empty). Keep it terse. Don't paste the whole file.
 
 ### Sort notes

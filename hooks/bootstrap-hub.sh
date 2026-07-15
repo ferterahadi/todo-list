@@ -2,7 +2,7 @@
 # SessionStart hook (todo-list plugin): bootstrap the project hub on first run.
 #
 # Creates the hub at $TODO_HUB (default ~/todo) from the plugin's bundled seed/
-# content — index.md, templates/, an example project, and the hub CLAUDE.md — if
+# content — index.md, templates/, an example project, and shared agent instructions — if
 # it doesn't exist yet. Idempotent and SILENT once the hub is present, so it adds
 # no noise to normal sessions.
 set -euo pipefail
@@ -14,7 +14,8 @@ case "$HUB" in "~"*) HUB="${HOME}${HUB#\~}" ;; esac
 # Already bootstrapped? Do nothing, say nothing.
 [ -f "$HUB/index.md" ] && exit 0
 
-SEED="${CLAUDE_PLUGIN_ROOT:-}/seed"
+PLUGIN="${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}"
+SEED="$PLUGIN/seed"
 [ -d "$SEED" ] || exit 0   # nothing to seed from — bail quietly
 
 mkdir -p "$HUB"

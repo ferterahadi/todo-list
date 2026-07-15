@@ -13,8 +13,9 @@ and hands the user the exact next command to run.
 **Read-only**: never edit `index.md`, `tasks.md`, hub files, or repo code. Resuming the
 *work* is the follow-on command's job.
 
-Run it inline on the main model — assembling the picture takes judgment about what
-matters; do not downgrade to Haiku.
+Run it inline on the current session model — assembling the picture takes judgment
+about what matters. Use at least the **balanced** tier from
+[`../model-routing.md`](../model-routing.md).
 
 ## Hub location
 

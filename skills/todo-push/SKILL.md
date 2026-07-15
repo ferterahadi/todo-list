@@ -14,27 +14,13 @@ This skill executes a shipping decision that's already been made. If the user is
 is installed, run that first — it walks the merge/PR/cleanup choice; this skill is the
 execution arm for its "PR and merge" outcome.
 
-## How this runs — direct Haiku subagent (not Workflow)
+## Execution tier
 
-This skill executes on **Claude Haiku (latest)** for cost, regardless of the calling
-session's model. A plain `SKILL.md` runs inline with no per-call model override, so the
-git/gh work is delegated to a subagent that is pinned to Haiku.
-
-Pin it with the **`Agent` tool's `model` parameter** — `model: 'haiku'` — and run it
-**synchronously**: `run_in_background: false`, `subagent_type: 'general-purpose'` (needs
-full Bash/`gh` access). Do **not** use the `Workflow` tool for this.
-
-Why not `Workflow`: an earlier version of this skill assumed a `Workflow` `agent()` call
-was the only way to pin a model per call. It isn't — the `Agent` tool takes the same
-`model` override directly. `Workflow` is the heavier path: it spins up an orchestration
-script, runs the agent in the **background**, and makes you wait on a task-notification
-round-trip. A direct synchronous `Agent` call does the identical Haiku pin with none of
-that scheduling overhead — that latency was most of why the handoff felt slower than
-just doing the commit/PR inline.
-
-`model: 'haiku'` resolves to whatever Claude currently ships as its Haiku tier. If a
-future Haiku release replaces it, this pin follows the tier, not the exact version; call
-that out to the user if it ever becomes relevant.
+Use the **fast** tier from [`../model-routing.md`](../model-routing.md). Delegate to a
+general-purpose subagent with shell and GitHub CLI access when the host supports it;
+otherwise execute inline. The invoking session must wait for the shipping result before
+continuing. Select Haiku on Claude Code or GPT-5.6 Luna on Codex only when the host
+supports per-dispatch model selection. Never invent unsupported parameters.
 
 ## Warm-start the subagent — the speed lever
 
@@ -44,44 +30,33 @@ isn't the git commands — it's the subagent re-running `git status` / `git diff
 **you (the calling session) usually already have**, because `/todo-push` is almost always
 invoked right after you did the work.
 
-So before invoking, **prepend to the prompt whatever you already know**, so Haiku
+So before invoking, **prepend to the prompt whatever you already know**, so the worker
 *executes* instead of *investigates*:
 
 - what changed and the rough scope (you likely just edited these files)
 - the intended branch name and commit intent (why the change exists)
 - the base branch (`main`/`master`) if you already know it
-- the repo's test command (from CLAUDE.md/Makefile/package.json you already read)
+- the repo's test command (from AGENTS.md, CLAUDE.md, Makefile, or package.json)
 - anything the user just told you — target repo path, a split/bundle decision, "skip tests"
 
-Rule: pass what's **already in context**; don't run expensive fresh discovery on the
-calling (pricey) model just to feed Haiku — that moves the cost you were trying to save.
-If it's a cold invoke and you genuinely know nothing, pass the repo path and let the
-subagent discover; it still runs synchronously on Haiku, just with a few more round-trips.
+Rule: pass what is **already in context**; do not run expensive fresh discovery only to
+feed the worker. If it is a cold invoke and you genuinely know nothing, pass the repo
+path and let the worker discover the missing facts.
 
-## Invoke like this
+## Dispatch contract
 
-```
-Agent({
-  subagent_type: 'general-purpose',
-  model: 'haiku',
-  run_in_background: false,
-  description: 'Ship changes to main',
-  prompt: PROMPT,
-})
-```
-
-Where `PROMPT` = the **warm-start context you already have** (bullets above) followed by
-the **standard task text below**, as one self-contained string. Everything the subagent
-needs must be in that string — it has no access to this conversation.
+Dispatch one general-purpose worker with shell and GitHub CLI access. Its prompt is the
+**warm-start context** above followed by the **standard task text** below as one
+self-contained string. The worker may have no conversation history, so include every
+fact it needs. Wait for its result before taking the next step.
 
 ## Handling a NEEDS_DECISION return
 
-The pinned subagent has no channel to the user, so it never asks questions. If its result
-starts with `NEEDS_DECISION:`, it stopped before mutating anything. You (the invoking
-session) must then ask the user with AskUserQuestion using the subagent's proposed
-groupings as options, fold the answer into `PROMPT` (e.g. "Ship only group A: <files>"
-or "Bundle everything into one PR"), and re-invoke the **same synchronous `Agent` call**.
-Never resolve the decision yourself.
+The worker has no channel to the user, so it never asks questions. If its result starts
+with `NEEDS_DECISION:`, it stopped before mutating anything. The invoking session must
+ask the user through the host's structured choice prompt when available, using the
+worker's proposed groupings as options. Fold the answer into the prompt and dispatch the
+same task again. Never resolve the decision yourself.
 
 ## The task text to give the subagent
 
@@ -107,7 +82,7 @@ Context the caller already gathered may be prepended above this task. Trust it �
      don't branch/commit only to discover at push time that the PR can't be opened.
 
 2. Run tests before committing anything, using whatever this repo defines
-   (make test, npm test, cargo test, pytest, etc — check CLAUDE.md/README/Makefile/
+   (make test, npm test, cargo test, pytest, etc — check AGENTS.md/CLAUDE.md/README/Makefile/
    package.json for the right command, or use the command named in the prepended
    context). Keep it cheap: if the diff clearly touches only a subset of
    packages/workspaces and the tooling supports scoping (e.g. `go test ./pkg/...`,
@@ -141,7 +116,7 @@ Context the caller already gathered may be prepended above this task. Trust it �
    infra changes needing a live terraform plan/deploy to fully verify).
 
 7. Merge: `gh pr merge --merge --delete-branch`. Use a real merge commit unless
-   CLAUDE.md or the repo's recent merged PRs show a consistent squash/rebase pattern —
+   AGENTS.md, CLAUDE.md, or the repo's recent merged PRs show a consistent squash/rebase pattern —
    follow that instead and say so.
    - Conflict / behind main (common when a parallel session merged first): if the
      merge fails as not-mergeable, or `gh pr view <branch> --json mergeStateStatus -q

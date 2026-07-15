@@ -15,11 +15,12 @@ Division of labor: **the verification MCP attests; you transcribe its verdict in
 `tasks.md` + `index.md`.** The run is the hard gate that flips status; coverage only emits
 Revisions.
 
-This involves real judgment — driving the run, handling collisions, interpreting the
-result — so it's pinned to **Claude Sonnet (latest)** at **high reasoning effort**
-(`model: sonnet`, `effort: high`) rather than running inline on whatever the calling
-session is. The final mechanical `tasks.md`/`index.md` checkbox + status edits may still
-be delegated to a Haiku (latest) sub-agent exactly as `todo-update-state` does.
+This involves real judgment — driving the run, handling collisions, and interpreting the
+result. Use the **balanced** tier at **high** effort from
+[`../model-routing.md`](../model-routing.md). The final mechanical `tasks.md`/`index.md`
+checkbox and status edits may be delegated to the **fast** tier exactly as
+`todo-update-state` does. If the host cannot select a dispatch model, keep the work in
+the current session.
 
 ## The verification MCP (pluggable)
 
@@ -128,7 +129,7 @@ If `Coverage source` is not set, skip this step.
 ## Step 5 — Reconcile and write back
 
 Apply these rules. Mechanical `tasks.md` / `index.md` edits may be delegated to a
-Haiku (latest) sub-agent (as `todo-update-state` does); the interpretation is yours.
+fast-tier subagent (as `todo-update-state` does); the interpretation is yours.
 
 | Verification result | tasks.md | index.md status | Revisions |
 |---|---|---|---|
@@ -168,7 +169,7 @@ two skills interlock. Append to (or create) the `## Revisions` block at the bott
   extraction, not a full read: `grep -nA1 '^### R[0-9]\+' tasks.md` gives every entry's
   heading + Gap line; read a specific entry's body by line range only if you need it.
   Likewise, find the `Gate covers` task lines to tick via `grep -n '\- \[ \]' tasks.md`
-  filtered to the covered phase — hand the Haiku edit sub-agent the exact line text as
+  filtered to the covered phase — hand the edit subagent the exact line text as
   its anchor, never the whole file.
 - Leave `plan.md`, `research/`, `artifacts/` untouched — this skill edits `tasks.md`
   (checkboxes + `## Revisions`) and `index.md` (status) only.

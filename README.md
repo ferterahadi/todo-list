@@ -1,11 +1,11 @@
 # todo-list
 
-**A project tracker that Claude Code works through for you.** You describe a project once;
-Claude plans it, executes the checklist, verifies the result, and fixes the gaps — with
+**A project tracker that Claude Code or Codex works through for you.** Describe a project once;
+the agent plans it, executes the checklist, verifies the result, and fixes the gaps — with
 every plan and task list stored as plain markdown you can read and edit yourself.
 
-It's a [Claude Code](https://claude.com/claude-code) plugin made of prompt files (skills).
-No build step, no runtime, no database.
+It is a cross-platform Agent Skills package with native Claude Code and Codex plugin
+manifests. No build step, runtime, or database.
 
 ## What it does
 
@@ -19,12 +19,12 @@ your projects:
   projects/
     work/api-rate-limiting/    ← one folder per project:
       plan.md                       goal, scope, decisions   (source of truth)
-      tasks.md                      the checklist Claude works through
-      artifacts/                    outputs Claude produces
+      tasks.md                      the checklist the agent works through
+      artifacts/                    outputs the agent produces
 ```
 
 Each project folder **points at** wherever its real code lives. The hub tracks the work;
-your actual repos stay untouched (until you ask Claude to execute).
+your actual repos stay untouched until you ask the agent to execute.
 
 **It enhances your other skills, it doesn't replace them.** The `/todo-*` skills are the
 organization layer — paths, formats, statuses, bookkeeping. When you have craft or
@@ -65,13 +65,28 @@ A typical project, end to end:
 
 ```
 /todo-add "add rate limiting to the API"   # scaffold + register it
-/todo-plan api-rate-limiting               # Claude researches and writes the plan
-/todo-execute api-rate-limiting            # Claude works the checklist
+/todo-plan api-rate-limiting               # research and write the plan
+/todo-execute api-rate-limiting            # work the checklist
 /todo-verify api-rate-limiting             # check gate: did it actually pass?
 /todo-revise api-rate-limiting             # fix whatever the gate caught
 ```
 
-## Install
+## Install skills in Claude Code and Codex
+
+One command installs all skills for both agents from the same source:
+
+```bash
+npx skills add ferterahadi/todo-list \
+  --skill '*' \
+  --agent claude-code \
+  --agent codex
+```
+
+For a local checkout, replace `ferterahadi/todo-list` with `.`. The installer uses
+symlinks by default so both agents share one copy. This path installs skills only; use a
+native plugin install when you also want lifecycle hooks and automatic hub bootstrapping.
+
+### Full Claude Code plugin
 
 Two commands — this repo doubles as its own marketplace:
 
@@ -82,13 +97,19 @@ claude plugin marketplace add ferterahadi/todo-list
 /plugin install todo-list@todo-list
 ```
 
-On your next session it:
+On the next Claude Code session it:
 
 - registers the `/todo-*` skills (auto-discovered), and
 - creates the hub at `~/todo` from bundled seed content — `index.md`, `templates/`, and a
   small example project — via a SessionStart hook. It runs once, then stays quiet.
 
-To put the hub somewhere other than `~/todo`, set `TODO_HUB` *before* first run
+### Codex plugin package
+
+The repository includes `.codex-plugin/plugin.json`. Its `skills/` and `hooks/hooks.json`
+use Codex's native plugin layout. Install through a Codex marketplace when publishing the
+full package; use the cross-agent command above during local development.
+
+To put the hub somewhere other than `~/todo`, set `TODO_HUB` *before* the first hook run
 ([optional config](#optional-config) below).
 
 ### Try it
@@ -102,9 +123,9 @@ The hub ships with an example project:
 /todo-infographic example-feature       # render a one-page visual of the plan
 ```
 
-> Slash commands are namespaced by the plugin — `/todo-list:todo-plan` — but each skill's
-> natural-language triggers ("plan this project", "what's on my list") fire without the
-> prefix.
+> Claude Code slash commands are namespaced by the plugin, for example
+> `/todo-list:todo-plan`. In Codex, mention `$todo-plan` explicitly or use the skill's
+> natural-language trigger.
 
 ### Removing it
 
@@ -175,17 +196,33 @@ The loop skills above, plus support skills grouped by role:
 
 Status lifecycle: `planning → ready → in-progress → done`.
 
-Some skills note a suggested Claude model (Haiku for mechanical steps, Sonnet/Opus for
-judgment calls) — advisory conventions, not requirements. Because of those model names,
-this is built for Claude Code running Claude; other setups are untested.
+## Model routing
+
+Skills route work by capability tier, then resolve the tier for the active provider:
+
+|Tier|Claude Code|Codex preferred|Codex fallback|
+|-|-|-|-|
+|frontier|Fable 5, high|GPT-5.6 Sol, max|GPT-5.5, xhigh|
+|deep|Opus latest, high|GPT-5.6 Sol, high|GPT-5.5, high|
+|balanced|Sonnet latest, medium/high|GPT-5.6 Terra, medium/high|GPT-5.4, medium/high|
+|fast|Haiku latest, low|GPT-5.6 Luna, low|GPT-5.4 Mini, low|
+
+Use the preferred Codex model when it appears in the local model picker or
+`codex debug models`; otherwise use the fallback. Fable and Opus both map to the
+flagship Codex model, with reasoning effort separating highest-risk work from normal
+deep work. The mapping is advisory and centralized in
+[`skills/model-routing.md`](skills/model-routing.md).
 
 ## Repo layout
 
 ```
 .claude-plugin/
-  plugin.json        the plugin manifest
+  plugin.json        Claude Code plugin manifest
   marketplace.json   makes this repo installable as a marketplace
-skills/todo-*/       the 16 /todo-* skills (each a SKILL.md) + skills/README.md
+.codex-plugin/
+  plugin.json        Codex plugin manifest
+skills/todo-*/       the 16 shared skills (each a SKILL.md)
+skills/model-routing.md   provider model mapping
 hooks/
   hooks.json         registers the three hooks below (auto)
   bootstrap-hub.sh   SessionStart: seed the hub on first run
@@ -194,7 +231,8 @@ hooks/
 seed/                copied to $TODO_HUB on first run
 ```
 
-The seeded hub adds `CLAUDE.md` (instructions Claude reads when working in the hub),
+The seeded hub adds `AGENTS.md` as the shared instructions and a small `CLAUDE.md`
+pointer for Claude Code,
 `templates/` (copied for new projects), and `projects/work/` + `projects/self-initiative/`
 sections. Each project folder holds `plan.md`, `tasks.md`, `research/` (raw notes), and
 `artifacts/` (outputs).

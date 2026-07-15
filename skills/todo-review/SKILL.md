@@ -19,7 +19,8 @@ comparison the generic review can't do.
 become the user's call — fixes land via `/todo-revise` (drifted done work) or directly
 in the working tree if the user asks.
 
-This is judgment work — run it inline on the main model; do not downgrade to Haiku.
+This is judgment work. Run it inline on the current session model; use at least the
+**balanced** tier from [`../model-routing.md`](../model-routing.md).
 
 ## Hub location
 

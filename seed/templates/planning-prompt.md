@@ -22,7 +22,7 @@ Do the following end to end:
 
 3. **Write plan.md** — fill in the project's plan.md with goal, context, constraints, scope, and key decisions based on what I told you and what you found.
 
-4. **Write tasks.md** — break the work into a concrete checklist. Each task should be specific enough that a future Claude session can execute it without asking questions.
+4. **Write tasks.md** — break the work into a concrete checklist. Each task should be specific enough that a future agent session can execute it without asking questions.
 
 5. **Confirm** — show me plan.md and tasks.md and ask if anything needs adjusting before we finalize.
 

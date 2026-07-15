@@ -7,7 +7,9 @@ description: Use when the user invokes /todo-plan, says "plan this project", or 
 
 You plan projects stored in a hub repo. Each project has plan.md and tasks.md. Your job: fill them in through structured discovery.
 
-This is judgment work (discovery questions, scoping, decisions) — run it inline on the main model; do not downgrade to Haiku.
+This is judgment work involving discovery, scope, and decisions. Run it inline on the
+current session model; use at least the **balanced** tier from
+[`../model-routing.md`](../model-routing.md).
 
 ## Compose with installed skills — organize, don't replace
 
@@ -52,11 +54,11 @@ Read `$TODO_HUB/index.md`.
 ## Step 2 — Ask questions first
 
 Before reading or writing anything, gather answers to all six discovery questions.
-**Use the `AskUserQuestion` tool for the enumerable ones** — clickable options beat
-walls of prompt text for a visual reader — and plain text for the open-ended ones,
-all in the same turn:
+Use the host's structured choice prompt for enumerable questions when available —
+clickable options beat walls of prompt text for a visual reader — and plain text for
+open-ended questions, all in the same turn:
 
-Via `AskUserQuestion` (options + the built-in "Other" for free text):
+Via structured choices (include a free-text path when the host supports it):
 - **Repo path** — offer the `repo` value from index.md as the first option
   ("Confirmed: `~/code/…`") plus "Different path" (if index.md shows `-`, skip the
   widget and just ask).
@@ -101,23 +103,23 @@ If no external reference is given and the repo has no superpowers docs, skip thi
 Fill in the project's `plan.md`:
 
 - **Goal**: one sentence — what success looks like
-- **Context**: background a future Claude session needs to execute without asking questions
+- **Context**: background a future agent session needs to execute without asking questions
 - **Success Criteria**: observable, checkable outcomes (the expectation) — written as a `- [ ]` list, distinct from tasks. These are what `todo-revise` compares completed work against, so make them concrete and testable, not aspirational
 - **Constraints**: deadlines, tech limits, non-negotiables
 - **Scope**: what's in / what's out
-- **Key Decisions**: choices already made so Claude doesn't re-litigate them. If the architecture/approach is still genuinely open (the user couldn't answer "how"), don't pad this section with guesses — check for an installed brainstorming/architecture skill (e.g. from superpowers) and offer to run it to converge on the decision first; otherwise record the open question explicitly as a decision-to-make task. If such a skill writes its output into the target repo (`docs/superpowers/…`), immediately record a pointer in `research/superpowers-docs.md` and under plan.md References — a doc that lives only in the target repo is lost to the hub
+- **Key Decisions**: choices already made so the next agent doesn't re-litigate them. If the architecture/approach is still genuinely open (the user couldn't answer "how"), don't pad this section with guesses — check for an installed brainstorming/architecture skill (e.g. from superpowers) and offer to run it to converge on the decision first; otherwise record the open question explicitly as a decision-to-make task. If such a skill writes its output into the target repo (`docs/superpowers/…`), immediately record a pointer in `research/superpowers-docs.md` and under plan.md References — a doc that lives only in the target repo is lost to the hub
 - **Verification**: the "check" gate binding for `/todo-verify`. If the project has a verification MCP layer, ask for the feature/target name and fill the `## Verification` block — `Feature`, `Gate covers` (which tasks/phases a green run may tick), and optionally `Coverage source` + a `Task↔test map`. If there's no verification layer, delete the section.
 - **Repo**: absolute path to the local codebase (confirmed in Step 3)
 - **References**: paths or links to relevant resources
 
-Write with enough detail that a cold Claude session can pick this up without talking to the user.
+Write with enough detail that a cold agent session can pick this up without talking to the user.
 
 ## Step 6 — Write tasks.md
 
 Break the work into a concrete checklist:
 
 - Each task must be specific and actionable — "implement X" not "think about X"
-- A future Claude session should be able to execute each task without asking questions
+- A future agent session should be able to execute each task without asking questions
 - Order by dependency (prerequisites first)
 - Group under headers if the project has distinct phases
 - **One line per task (~150 chars max).** Supporting detail, mechanics, and rationale go
@@ -182,7 +184,8 @@ Rules for the render:
   don't paste the checklist.
 - Decisions numbered ①②③, one clause each. Constraints as chips: ⛔ hard, ⚠️ soft.
 
-Then ask via `AskUserQuestion`: "Does this plan look right?" with options
+Then ask via the host's structured choice prompt when available: "Does this plan look
+right?" with options
 "Looks right — lock it in" / "Adjust something" / "Show me the full plan.md".
 Apply changes. Once confirmed:
 

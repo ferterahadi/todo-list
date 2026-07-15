@@ -1,8 +1,8 @@
 # Contributing to todo-list
 
-Thanks for your interest. This project is a set of [Claude Code](https://claude.com/claude-code)
-skills — plain markdown, no build system — so contributing is mostly writing and refining
-prompts.
+Thanks for your interest. This project is a set of cross-platform Agent Skills for
+Claude Code and Codex — plain markdown, no build system — so contributing is mostly
+writing and refining prompts.
 
 ## How a skill works
 
@@ -12,16 +12,16 @@ Each skill lives in `skills/<name>/SKILL.md` and starts with YAML frontmatter:
 ---
 name: todo-example
 description: Use when the user invokes /todo-example, says "...", or wants X. One or two
-  sentences describing exactly when Claude should reach for this skill.
+  sentences describing exactly when an agent should reach for this skill.
 ---
 ```
 
 - **`name`** must match the folder name and is what the user types as `/name`.
-- **`description`** is the trigger. Claude picks a skill by matching the user's intent
+- **`description`** is the trigger. The agent picks a skill by matching the user's intent
   against these — make it specific, list the phrasings that should fire it, and say what it
   does *not* do. This is the single most important line for the skill working at all.
 
-The body is the instructions Claude follows when the skill runs. Write it as a clear,
+The body is the instructions the agent follows when the skill runs. Write it as a clear,
 ordered procedure. Look at the existing skills for the house style: numbered steps,
 explicit invariants, terse examples.
 
@@ -34,21 +34,22 @@ explicit invariants, terse examples.
   to `research/` or `artifacts/` with a pointer.
 - **`plan.md` stays the source of truth.** Derived views (the infographic, the index row)
   reflect it; they don't replace it.
-- **Model pins are advisory.** Where a skill suggests a Claude model/effort, treat it as a
-  cost/quality hint, not a hard dependency.
+- **Model routing is tier-first.** Use `frontier`, `deep`, `balanced`, or `fast` in skill
+  instructions and keep provider names in `skills/model-routing.md`.
 - **Keep skills self-contained.** A reader (human or model) should understand one SKILL.md
   without loading the others.
 
 ## Repo layout
 
-This repo is a Claude Code plugin *and* its own marketplace:
+This repo packages the same skills for both agents:
 
-- `.claude-plugin/plugin.json` — the manifest; bump `version` when you cut a release.
+- `.claude-plugin/plugin.json` — Claude Code manifest; bump `version` on release.
 - `.claude-plugin/marketplace.json` — makes the repo installable.
+- `.codex-plugin/plugin.json` — Codex manifest; keep its version aligned.
 - `skills/todo-*/SKILL.md` — the skills (auto-discovered).
 - `hooks/` — `hooks.json` (auto-registered) plus `bootstrap-hub.sh` (SessionStart, seeds
   the hub) and `infographic-staleness.sh` (Stop).
-- `seed/` — copied to `$TODO_HUB` on first run: `index.md`, `CLAUDE.md`, `templates/`, and
+- `seed/` — copied to `$TODO_HUB` on first run: `index.md`, `AGENTS.md`, `CLAUDE.md`, `templates/`, and
   the example project. Anything a fresh hub should contain goes here.
 
 ## Adding a skill
@@ -62,7 +63,13 @@ This repo is a Claude Code plugin *and* its own marketplace:
 
 There's no automated suite — these are prompt files. To exercise a change:
 
-1. Install the plugin from your local checkout, then reinstall after edits:
+1. Install the skills from your local checkout for both agents:
+
+   ```bash
+   npx skills add . --skill '*' --agent claude-code --agent codex
+   ```
+
+2. To test the Claude Code hooks and bootstrap path, install the full plugin:
 
    ```bash
    claude plugin marketplace add /absolute/path/to/todo-list
@@ -71,9 +78,9 @@ There's no automated suite — these are prompt files. To exercise a change:
    /plugin install todo-list@todo-list
    ```
 
-2. Invoke the skill from Claude Code against the example project the hub seeds
-   (`example-feature`), or a scratch project you scaffold with `/todo-add`.
-3. Confirm it does what the description promises and touches only the files it should.
+3. Invoke the skill from Claude Code or Codex against `example-feature`, or a scratch
+   project scaffolded with `todo-add`.
+4. Confirm it does what the description promises and touches only the files it should.
 
 To test the bootstrap hook in isolation, run it against a throwaway hub:
 

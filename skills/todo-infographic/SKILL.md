@@ -11,11 +11,20 @@ You turn a project's `plan.md` + `tasks.md` into a **one-page, self-contained HT
 
 The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — `index.md`, each project's `path`, `plan.md`, `tasks.md`, `artifacts/infographic.html` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to each build subagent so it reads and writes there, not into the cwd. (Same convention as `todo-refer`.)
 
-## The model this runs on
+## Execution tier
 
-The infographic generation — the token-heavy, creative design + HTML work in Step 3 — is delegated to a subagent so it runs on **Claude Sonnet (latest)** with **high reasoning effort**. Don't build the HTML inline in the orchestrating session. The orchestrating session does the light work (resolve projects, stub-check, register in index.md, confirm); the actual build is dispatched.
+The infographic generation — the token-heavy, creative design and HTML work in Step 3 —
+uses the **balanced** tier with **high** reasoning effort from
+[`../model-routing.md`](../model-routing.md). Delegate the build when dispatching is
+available; otherwise build inline. The orchestrating session does the light work:
+resolve projects, check stubs, register the result, and confirm.
 
-Use the `Agent` tool with `model: sonnet`, `effort: high`. Spawn **one subagent per project** (run them in parallel when building several), each handed that project's `plan.md` + `tasks.md` content and the Step 3 spec below; it writes `artifacts/infographic.html` and returns a one-line confirmation. Then you (orchestrator) handle Steps 4–5.
+When dispatching, spawn **one subagent per project** and run them in parallel only when
+the user explicitly requested several projects. Give each subagent that project's
+`plan.md`, `tasks.md`, any existing HTML, and the Step 3 specification. It writes
+`artifacts/infographic.html` and returns a one-line confirmation. Then the orchestrator
+handles Steps 4–5. Use the host-specific balanced model only when the host supports
+per-dispatch model selection; never invent unsupported parameters.
 
 **Compose with design skills.** Instruct each build subagent to load the `artifact-design` skill (if installed) before designing, and `dataviz` before drawing any chart-like element — progress bars, stat cards, phase meters all count. These skills are distilled design procedure; loading them is cheaper than a redesign round. If a design-critique / frontend-design skill is installed, the subagent runs one self-critique pass against it before writing the final file — one pass, not a loop.
 
@@ -49,9 +58,11 @@ For each target project read `plan.md` and `tasks.md`.
 
 **Stub check (important):** if `plan.md` still contains the template text `What success looks like in one sentence.` or has no real Goal/Scope content, it is an unfilled stub. **Do not generate an infographic for a stub.** Report it: e.g. "reserve-mcp-integration is marked `ready` but plan.md is still the template — run `/todo-plan <name>` to fill it first." Then skip that project.
 
-## Step 3 — Build the infographic (Sonnet, latest, subagent)
+## Step 3 — Build the infographic (balanced tier, high effort)
 
-This step runs inside the dispatched Sonnet (latest) subagent (see "The model this runs on"). Produce `artifacts/infographic.html` inside the project folder. Self-contained: no network, no external assets, everything inline — must open offline. Print-friendly.
+Produce `artifacts/infographic.html` inside the project folder through the execution path
+above. Keep it self-contained: no network, no external assets, everything inline. It
+must open offline and print cleanly.
 
 **Theme: existing vs. new — decide first.**
 

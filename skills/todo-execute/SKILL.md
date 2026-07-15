@@ -1,6 +1,11 @@
 ---
 name: todo-execute
-description: Use when the user invokes /todo-execute, says "execute this project", "work through tasks", or names a hub project and wants work done — including concurrently: "execute these tasks in parallel", "work multiple features of the same repo at once", "fan this out with worktrees". Sequential by default; parallel mode fans file-disjoint tasks out to worktree agents.
+description: >-
+  Use when the user invokes /todo-execute, says "execute this project", "work through
+  tasks", or names a hub project and wants work done, including concurrently with
+  phrases such as "execute these tasks in parallel", "work multiple features of the
+  same repo at once", or "fan this out with worktrees". Sequential by default; parallel
+  mode fans file-disjoint tasks out to worktree agents.
 ---
 
 # Project Execution Skill
@@ -12,7 +17,8 @@ Two modes, one skill:
 - **Sequential (default)** — work `tasks.md` top to bottom yourself, inline. Steps 1–7 below.
 - **Parallel** — fan file-disjoint task groups out to agents in git worktrees, land PRs via a serial merge queue. See [Parallel mode](#parallel-mode) at the end; it reuses steps 1–2 for orientation, then follows its own steps P1–P7.
 
-This involves real judgment and code work — run it inline on the main model; do not downgrade to Haiku.
+This involves real judgment and code work. Run it inline on the current session model;
+use at least the **balanced** tier from [`../model-routing.md`](../model-routing.md).
 
 ## Hub location
 
@@ -113,13 +119,13 @@ Never batch steps 2–4 across multiple tasks. Rules of the road:
 - Complete each task fully before moving to the next
 - Target-repo code changes go in the Step 4 worktree; hub outputs (docs, analysis,
   scripts) go to `artifacts/`
-- **Follow the artifact conventions** (hub CLAUDE.md → "Artifact conventions"): name a
+- **Follow the artifact conventions** (hub AGENTS.md → "Artifact conventions"): name a
   dated output `YYYY-MM-DD-<kind>-<slug>.md` (`kind` ∈ analysis/finding/handoff/session/design),
   open it with the backlink header blockquote (`> **Kind:** … · **Source:** tasks.md#R7 · **Date:** … · **Index:** [README.md](README.md)`),
   and add a row to `artifacts/README.md` — create that manifest from
   `$TODO_HUB/templates/artifacts-README.md` if it doesn't exist yet. Living docs
   (`journal.md`, `blockers.md`) keep their stable names.
-- Keep artifacts self-contained — another Claude session should be able to read them cold
+- Keep artifacts self-contained — another agent session should be able to read them cold
 - Drop research notes or discoveries in `research/` if relevant
 - **Superpowers docs get a hub pointer immediately**: whenever a superpowers skill
   (brainstorming → `docs/superpowers/specs/`, writing-plans → `docs/superpowers/plans/`)
@@ -202,17 +208,17 @@ inside one agent). Judge overlap from plan.md scope notes and a quick read of th
 - [ ] `gh auth status` succeeded in the target repo THIS session (output seen, not
   assumed).
 
-## Step P2 — No model pinning
+## Step P2 — Inherit the session model
 
-Parallel mode does not pin or recommend models for either wave. Implement and review
-agents run on the inherited session model — omit `model` on the Agent calls in
-steps P3 and P4. The todo-push sub-step stays pinned to Haiku (latest) by its own skill —
-don't override that.
+Parallel mode does not override models for either wave. Implement and review agents run
+on the inherited session model. The `todo-push` sub-step uses its own **fast**-tier
+routing; do not override it.
 
 ## Step P3 — Implement wave (one agent per feature, all in one message, in parallel)
 
-One background `general-purpose` Agent per feature, on the inherited session model
-(no `model` param). Each prompt is self-contained — agents start with zero history.
+Start one background implementation subagent per feature on the inherited session model;
+do not request a model override. Each prompt is self-contained — subagents may start
+with zero history.
 Every prompt MUST contain these slots:
 
 1. **Intent** — plan.md `## Goal` + relevant context/constraints, and the exact task
@@ -223,7 +229,8 @@ Every prompt MUST contain these slots:
    git -C <repo> worktree add <repo>-wt/<feat> -b feat/<name> origin/<base>
    cd <repo>-wt/<feat>   ← all work happens here
    ```
-   Then install dependencies the way the repo does (check its README/CLAUDE.md).
+   Then install dependencies the way the repo does (check its AGENTS.md, CLAUDE.md,
+   README, and build files).
 3. **Implement** the feature's tasks, with unit tests, committed in the worktree.
    Tell the agent to use installed process skills for the craft
    (`superpowers:test-driven-development` for the code, `systematic-debugging` on
@@ -239,8 +246,8 @@ and stop that feature — same rule as sequential Step 6, but the blocker lands 
 ## Step P4 — Review wave (no model pin — inherited session model)
 
 The moment a feature's implement agent returns, spawn its review agent — pipeline,
-don't wait for the other features. Review agents are spawned by YOU with no `model`
-param (inherited session model), same as the implement wave. Review agent prompt
+don't wait for the other features. Spawn review subagents yourself on the inherited
+session model without a model override, same as the implement wave. Review prompt
 slots:
 
 1. **Intent** — the same intent block from step P3, verbatim.
@@ -309,6 +316,6 @@ Report per feature: PR link, merge result, coverage numbers, blockers. Keep it s
   a model — both inherit the session model.
 - Agents never write hub files; the orchestrator is the only hub writer.
 - A feature = file-disjoint task group; overlapping tasks share one agent.
-- Worktrees are of the target repo. `Agent isolation: 'worktree'` worktrees the
-  CURRENT repo (usually the hub) — don't use it for this; agents run the
-  `git worktree add` themselves inside the target repo.
+- Worktrees are of the target repo. Do not use host-managed isolation that creates a
+  worktree for the current repo, which is usually the hub. Subagents run the explicit
+  `git worktree add` command inside the target repo.

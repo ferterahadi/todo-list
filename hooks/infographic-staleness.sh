@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Stop hook: nudge Claude to (re)generate one-pager infographics that are missing
+# Stop hook: nudge the agent to (re)generate one-pager infographics that are missing
 # or stale. A project's artifacts/infographic.html is "stale" when plan.md or
 # tasks.md is newer than it. Only projects with status ready / in-progress and a
 # real (non-stub) plan.md are considered — done projects are left alone.
 #
 # Output contract (Stop hook): emit {"decision":"block","reason":"..."} to keep the
-# turn going so Claude regenerates; emit nothing (exit 0) to allow the stop.
+# turn going so the agent regenerates; emit nothing (exit 0) to allow the stop.
 set -euo pipefail
 
-ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 INDEX="$ROOT/index.md"
 
 # Read the hook payload; if we're already inside a stop-hook continuation, don't

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/bootstrap-hub.sh\"",
+            "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/bootstrap-hub.sh\"",
             "timeout": 15,
             "statusMessage": "Bootstrapping the todo hub"
           }
@@ -17,13 +17,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/infographic-staleness.sh\"",
+            "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/infographic-staleness.sh\"",
             "timeout": 15,
             "statusMessage": "Checking project infographics are up to date"
           },
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/superpowers-doc-sync.sh\"",
+            "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/superpowers-doc-sync.sh\"",
             "timeout": 15,
             "statusMessage": "Checking superpowers plans/specs are tracked in the hub"
           }

@@ -7,7 +7,8 @@ description: Use when the user invokes /todo-refer, says "refer to project X", "
 
 You load a hub project's context into the **current** session so a follow-on command (commonly `/code-review`) is grounded in that project's goal, decisions, and tasks. This is **read-only** and **cross-repo**: the session may be scoped to a *different* repository (e.g. `notify-service`), so you always reach the hub by **absolute path**, never via the current working directory.
 
-Run it inline on the main model; do not downgrade to Haiku.
+Run it inline on the current session model; use at least the **balanced** tier from
+[`../model-routing.md`](../model-routing.md).
 
 ## Hub location
 

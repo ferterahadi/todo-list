@@ -4,7 +4,7 @@
 What success looks like in one sentence.
 
 ## Context
-Why this matters. Background Claude needs to execute well.
+Why this matters. Background the executing agent needs.
 
 ## Success Criteria
 How we'll know it's done and good. Observable, checkable outcomes — not tasks.
@@ -18,7 +18,7 @@ How we'll know it's done and good. Observable, checkable outcomes — not tasks.
 **Out:** what's excluded
 
 ## Key Decisions
-Document choices already made so Claude doesn't re-litigate them.
+Document choices already made so the executing agent doesn't re-litigate them.
 
 ## Verification
 <!-- The "check" gate. Read by /todo-verify to reconcile your verification MCP's result into todo state.

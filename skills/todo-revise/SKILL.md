@@ -9,7 +9,10 @@ You run the **Review → Gap → Revise → Verify** loop. This is the rework co
 
 The point is that feedback is **per-item and structured**: every gap is tied to the original task, with expected-vs-actual captured, so the rework is never free-floating and the *why* is preserved.
 
-This involves real judgment and code work — run it inline on the main model (like `todo-execute`); do not delegate it to a cheaper subagent.
+This involves real judgment and code work. Run it inline on the current session model,
+like `todo-execute`, using at least the **balanced** tier from
+[`../model-routing.md`](../model-routing.md). Do not delegate the core revision judgment
+to the fast tier.
 
 ## Hub location
 
@@ -123,8 +126,9 @@ Work each open revision like `todo-execute` does: complete it fully, write outpu
 
 Present the result of each revision back to the user against the gap's `Expected` —
 reuse the Step 3 side-by-side table with a third column showing what the fix now does,
-so accept/reject is a visual comparison, not a re-read. Then collect the verdict via
-`AskUserQuestion`: "Does R<n> now match what you expected?" with options
+so accept/reject is a visual comparison, not a re-read. Then collect the verdict through
+the host's structured choice prompt when available: "Does R<n> now match what you
+expected?" with options
 "Accepted" / "Still off — here's the gap" / "Park it for now".
 
 - **Accepted** → flip the revision heading to `[done]`, and re-confirm the source task's state via the same checkbox logic `todo-update-state` uses (re-check it if it had been reopened). Then **archive the entry's detail** (see "Archival rule" below). Report it. If the project's `plan.md` has a `## Verification` block, suggest `/todo-verify <short-name>` to re-run the verification gate against the reworked code.

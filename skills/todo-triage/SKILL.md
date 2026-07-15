@@ -6,10 +6,11 @@ description: Use when the user invokes /todo-triage, says "what's left", "tabula
 # Project Triage Skill
 
 You tabulate **what's left** across the hub — open tasks and open Revisions — and
-recommend which Claude model should handle each item: **Fable 5**, **Opus (latest)**,
-**Sonnet (latest)**, or **Haiku (latest)**. The output is a decision aid: the user picks
-the session model (or dispatch target) per task instead of running everything on the
-most expensive model by default.
+recommend a provider-neutral execution tier for each item: **frontier**, **deep**,
+**balanced**, or **fast**. Resolve each tier to the current host through
+[`../model-routing.md`](../model-routing.md). The output is a decision aid: the user
+picks the session model or dispatch target per task instead of running everything on
+the most expensive model by default.
 
 This is **read-only**. Never edit `index.md`, `tasks.md`, `plan.md`, or any project
 file. To change state use `/todo-update-state`; to do the work use `/todo-execute`.
@@ -19,13 +20,13 @@ file. To change state use `/todo-update-state`; to do the work use `/todo-execut
 Hybrid, matching the hub's house pattern:
 
 - **Gathering is mechanical** — reading `index.md`, counting checkboxes, extracting open
-  task lines. When triaging **3+ projects**, delegate gathering to a subagent on
-  **Claude Haiku (latest)** (`Agent` tool, `model: haiku`) that returns, per project:
+  task lines. When triaging **3+ projects**, delegate gathering to a **fast**-tier
+  subagent when dispatching is available. It returns, per project:
   status, `done/total`, the verbatim open task lines grouped by phase, open `## Revisions`
   headings, and any `artifacts/blockers.md` one-liners. For 1–2 projects just read inline.
 - **The recommendation is judgment** — classifying each task against the routing rubric
   requires reading the plan's context. Do this **inline on the main model**; never
-  delegate the model-per-task call to Haiku.
+  delegate the tier-per-task decision to the gathering subagent.
 
 ## Hub location
 
@@ -59,7 +60,7 @@ Read `$TODO_HUB/index.md`.
 
 ## Step 2 — Gather remaining work
 
-For each in-scope project (via the Haiku gather subagent when 3+, else inline):
+For each in-scope project (via the fast-tier gathering subagent when 3+, else inline):
 
 - **Open tasks**: every `- [ ]` line in `tasks.md`, kept verbatim, grouped under its
   phase header. **Extract — never read a large tasks.md whole** (they run up to 115KB;
@@ -91,23 +92,23 @@ classification reproducible regardless of which model runs it; the rubric table 
 is the reference, this list is the procedure:
 
 1. Does the task touch auth/tokens/crypto/payments, migrate data, change concurrent
-   behavior, or span 2+ repos? → **fable-5**
+   behavior, or span 2+ repos? → **frontier**
 2. Is there a "how" question about this task that plan.md doesn't answer? Apply the
    **quote test**: try to quote the plan sentence that answers it — no quotable sentence
-   → that's a YES → **opus**. (Don't reason your way to an answer the plan never wrote
+   → that's a YES → **deep**. (Don't reason your way to an answer the plan never wrote
    down; inability to quote IS the signal.)
-3. Does it change code or system behavior at all? → **sonnet**
-4. Otherwise (text/state/config edits whose exact content is already specified) → **haiku**
+3. Does it change code or system behavior at all? → **balanced**
+4. Otherwise (text/state/config edits whose exact content is already specified) → **fast**
 
 Then apply the modifiers below — **at most one bump total**, and record which modifier
 fired in the "why" cell.
 
-| Model | Route here when | Typical signals |
+| Tier | Route here when | Typical signals |
 |---|---|---|
-| **Haiku (latest)** | Purely mechanical, zero design decisions | state flips, renames, doc formatting, config/version bumps, template scaffolds, moving files, regenerating from a spec that already exists |
-| **Sonnet (latest)** | Well-scoped implementation the plan fully specifies | single-feature code + unit tests, HTML/infographic generation, wiring a spec'd integration, writing tests for existing behavior, contained bug with known cause |
-| **Opus (latest)** | Judgment the plan doesn't fully resolve, one-repo blast radius | cross-file refactors, debugging with unknown cause, performance work, API design within one service, ambiguous requirements needing interpretation |
-| **Fable 5** | Wrong decision is expensive or dangerous | security/auth/token/crypto work, multi-repo migrations, concurrency/data-integrity changes, architecture decisions that constrain later phases, orchestrating parallel execution waves |
+| **fast** | Purely mechanical, zero design decisions | state flips, renames, doc formatting, config/version bumps, template scaffolds, moving files, regenerating from a spec that already exists |
+| **balanced** | Well-scoped implementation the plan fully specifies | single-feature code + unit tests, HTML/infographic generation, wiring a spec'd integration, writing tests for existing behavior, contained bug with known cause |
+| **deep** | Judgment the plan doesn't fully resolve, one-repo blast radius | cross-file refactors, debugging with unknown cause, performance work, API design within one service, ambiguous requirements needing interpretation |
+| **frontier** | Wrong decision is expensive or dangerous | security/auth/token/crypto work, multi-repo migrations, concurrency/data-integrity changes, architecture decisions that constrain later phases, orchestrating parallel execution waves |
 
 Modifiers that bump a task **up** one tier:
 - The plan flags it as the riskiest phase, or a Revision exists because a cheaper pass
@@ -125,17 +126,17 @@ security-sensitive", "mechanical checkbox sync"). No paragraphs.
 
 ### Effort tier (the second dial)
 
-Model and reasoning effort are independent levers — the `Agent` tool takes both
-(`model`, `effort`), and effort is often the bigger token dial. Recommend one per item:
+Model and reasoning effort are independent levers. Recommend one effort per item and
+resolve the tier to the current host using `model-routing.md`:
 
 - **low** — mechanical or fully spec'd work; thinking longer can't change the answer.
 - **medium** — default for routine implementation.
 - **high** — debugging unknown causes, security-sensitive reasoning, anything a
-  Revision already proved subtle. (House precedent: `todo-verify` and `todo-infographic`
-  run Sonnet **high** — mid-tier model + high effort often beats a bigger model at
-  low effort, cheaper.)
+  Revision already proved subtle. House precedent: `todo-verify` and `todo-infographic`
+  run the balanced tier at **high** effort.
 
-Render it in the model cell: `sonnet · high`, `haiku · low`.
+Render the tier and resolved host model in the model cell, for example
+`balanced · Sonnet · high` or `balanced · <resolved Codex model> · high`.
 
 ### Skill pairing (procedure beats raw intelligence)
 
@@ -144,7 +145,7 @@ distilled procedure — pairing the right one lets a *cheaper* model succeed whe
 bare expensive model would flail and retry, which is the real token win.
 
 **Only recommend skills that actually exist** — check the session's available-skills
-listing (and `~/.claude/skills/` / installed plugins like superpowers) first. Never
+listing plus `.agents/skills/`, `.claude/skills/`, and installed plugins first. Never
 invent a skill name; if no installed skill fits, the cell is `—`.
 
 | Task smells like | Pair with (if installed) |
@@ -166,12 +167,12 @@ cells of `▓`/`░` (`round(done/total*10)`):
 ```
 ### 🔄 rmq-vertical-scaler-quorum-queue   ▓▓▓▓▓▓▓░░░ 14/20 · 2 open revisions
 
-| # | remaining task | phase | model · effort | skill | why |
+| # | remaining task | phase | tier · model · effort | skill | why |
 |---|---|---|---|---|---|
-| 5.2 | Failover drill under quorum loss | Phase 5 | **fable-5 · high** | verify | data-integrity, gates 5.3–5.5 |
-| 5.3 | Grafana panel for quorum lag | Phase 5 | sonnet · medium | dataviz | spec'd in plan, contained |
-| R3 | Re-verify scaler after CRD fix ⟵ Task 4.1 | Revisions | opus · high | code-review | rework of drifted work |
-| 6.1 | Bump chart appVersion + changelog | Phase 6 | haiku · low | — | mechanical version bump |
+| 5.2 | Failover drill under quorum loss | Phase 5 | **frontier · resolved model · highest** | verify | data-integrity, gates 5.3–5.5 |
+| 5.3 | Grafana panel for quorum lag | Phase 5 | balanced · resolved model · medium | dataviz | spec'd in plan, contained |
+| R3 | Re-verify scaler after fix ⟵ Task 4.1 | Revisions | deep · resolved model · high | code-review | rework of drifted work |
+| 6.1 | Bump version + changelog | Phase 6 | fast · resolved model · low | — | mechanical version bump |
 ```
 
 - Number rows by their task/revision identifiers so `/todo-execute <name>` and
@@ -185,14 +186,14 @@ cells of `▓`/`░` (`round(done/total*10)`):
 End with:
 
 1. **Totals line**, e.g.
-   `31 items left — 3 fable-5 · 7 opus · 14 sonnet · 5 haiku · 2 blocked`
+   `31 items left — 3 frontier · 7 deep · 14 balanced · 5 fast · 2 blocked`
    Follow with a one-line token read: how many expensive-tier items exist and whether a
-   skill pairing lets any of them drop a tier (e.g. "2 of 3 fable-5 items are gated by
-   the verification gate — could run opus · high instead").
-2. **Fan-out candidates**: if one project has 2+ file-disjoint sonnet/haiku tasks, name
+   skill pairing lets any of them drop a tier (e.g. "2 of 3 frontier items are gated by
+   verification — could run deep · high instead").
+2. **Fan-out candidates**: if one project has 2+ file-disjoint balanced/fast tasks, name
    them as a `/todo-execute <name> parallel` group (the biggest efficiency win this skill can
    surface).
-3. **Batch hint**: if haiku-tier items span projects (state syncs, doc fixes), suggest
+3. **Batch hint**: if fast-tier items span projects (state syncs, doc fixes), suggest
    clearing them in one cheap sweep before starting expensive work.
 4. **Session plan** — turn the tiers into commands the user can run as-is. Group the
    board's items by recommended model, then emit one line per group; a task's model is
@@ -201,27 +202,28 @@ End with:
    ```
    ## ▶ Session plan
 
-   now (this session)      dispatch the 5 haiku items to Haiku subagents — say "go" and I'll sweep them
-   claude --model sonnet   → /todo-execute rmq-vertical-scaler tasks 5.3,6.1   (or `parallel` — file-disjoint)
-   claude --model opus     → /todo-revise api-token-rotation 3                 (R3 · high effort)
-   claude --model opus     → /todo-execute payments-retry tasks 2.1            (fable-5 rec'd; opus + verify gate ok — see token read)
+   now (this session)       dispatch the 5 fast items — say "go" and I'll sweep them
+   <balanced host model>    → /todo-execute rmq-vertical-scaler tasks 5.3,6.1
+   <deep host model>        → /todo-revise api-token-rotation 3
+   <frontier host model>    → /todo-execute payments-retry tasks 2.1
    ```
 
-   Rules: haiku items never need a new session (offer the sweep inline); one line per
+   Resolve placeholders from `model-routing.md` and show commands only for the current
+   host. For example, Claude Code uses `claude --model <name>`; Codex uses
+   `codex --model <model-id> -c model_reasoning_effort=<effort>`. Fast items never need
+   a new session when they can be dispatched inline. Emit one line per
    model × project pair, carrying the exact task/revision numbers from the board; if the
    session is already on the right model for a group, say so instead of telling the user
-   to relaunch. Mid-session switching is `/model` in an interactive terminal, or the
-   model picker in the app/web UI.
+   to relaunch. Use the host's model picker when available.
 
 ## Notes
 
 - Recommendations are **advisory routing**, not overrides. Execution skills keep their
-  own rules (`todo-execute` runs inline on the session model; `todo-verify` stays pinned
-  to Sonnet high; `todo-execute` parallel mode inherits the session model). The triage tells
+  own rules (`todo-execute` runs inline on the session model; `todo-verify` uses balanced
+  at high effort; `todo-execute` parallel mode inherits the session model). The triage tells
   the user which session model to *pick* before invoking those skills, or which tasks
   are safe to hand to a cheap dispatch.
-- Fable 5 and Mythos 5 share the underlying model; this hub routes to **Fable 5** (the
-  generally available one). Treat "fable-5" as the top tier above Opus.
+- Model names live only in `model-routing.md`; keep this skill's decision logic in tiers.
 - Idempotent and read-only: run it as often as you like; nothing changes on disk.
 - If every in-scope project has zero open items, say so and celebrate briefly — don't
   invent work.

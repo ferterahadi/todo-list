@@ -14,9 +14,10 @@ Detection is the deliverable; **fixing needs a yes**. Report first, then apply o
 corrections the user confirms (via the same edit rules as `/todo-update-state`).
 
 Hybrid, matching the hub's house pattern: evidence-gathering across 3+ projects is
-mechanical — delegate it to a subagent on **Claude Haiku (latest)** (`Agent` tool,
-`model: haiku`) returning per-project facts; for 1–2 projects gather inline. The
-drift *verdicts* are judgment — always yours, inline on the main model.
+mechanical — delegate it to a **fast**-tier subagent using
+[`../model-routing.md`](../model-routing.md) when dispatching is available; for 1–2
+projects gather inline. The drift *verdicts* are judgment — always yours, inline on the
+main model.
 
 ## Hub location
 
@@ -100,7 +101,7 @@ the evidence line is not reportable.
 If invoked as `/todo-sync fix`, or the user confirms after the board: apply exactly the
 confirmed corrections — status column flips in `index.md`, checkbox reconciliation in
 `tasks.md` — following `todo-update-state`'s edit + sync rules (delegate the mechanical
-edits to Haiku). Re-render the fixed rows. Never fix silently, never fix beyond what was
+edits to the fast tier when available). Re-render the fixed rows. Never fix silently, never fix beyond what was
 confirmed, and never flip a status to `done` past an unrun `## Verification` gate —
 point at `/todo-verify` instead.
 

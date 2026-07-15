@@ -1,6 +1,6 @@
 # Tasks: Example Feature — API rate limiting
 
-> Point Claude here to execute. Each task = one clear action, one line (~150 chars max).
+> Point your coding agent here to execute. Each task = one clear action, one line (~150 chars max).
 > Detail and rationale go to `research/` or `artifacts/`, never inline here.
 
 ## Status

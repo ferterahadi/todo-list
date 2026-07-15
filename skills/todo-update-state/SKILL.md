@@ -5,9 +5,11 @@ description: Use when the user invokes /todo-update-state, says "mark X as done"
 
 # Project State Skill
 
-You update the recorded state of projects in a hub repo. This is the lightweight write companion to `todo-execute` — use it when the user just wants to *record* progress (check a task off, flip a status) without Claude actually doing the work. State lives in two places, and your job is to edit them and keep them honest:
+You update the recorded state of projects in a hub repo. This is the lightweight write companion to `todo-execute` — use it when the user just wants to *record* progress (check a task off, flip a status) without the agent actually doing the work. State lives in two places, and your job is to edit them and keep them honest:
 
-This is light, mechanical work, so it runs on **Claude Haiku (latest)**. Use the `Agent` tool with `model: haiku` to do the edits.
+This is light, mechanical work. Use the **fast** tier from
+[`../model-routing.md`](../model-routing.md) when dispatching is available; otherwise
+perform the edits inline.
 
 - **`tasks.md`** in each project — task checkboxes: `- [ ]` (not done) and `- [x]` (done)
 - **`index.md`** in the hub root — the `status` column per project: `planning` → `ready` → `in-progress` → `done`
