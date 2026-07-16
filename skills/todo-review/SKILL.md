@@ -109,7 +109,9 @@ Verdict: not ready for /todo-verify — P2 is a claimed-done gap.
 
 The verdict line answers one question: **is this ready for `/todo-verify` / `/todo-push`,
 or does something go back?** Findings that survive user triage become `/todo-revise`
-gaps — offer to carry them over, don't write Revisions entries yourself.
+gaps — offer to carry them over, don't write Revisions entries yourself. The `▶ Next`
+command is an act-now pointer; if the user will act in a later session instead,
+recommend `/todo-resume <short-name>` as the entry point.
 
 ## Notes
 - Hub-read-only; repo-read-only. This skill changes nothing — it produces findings.

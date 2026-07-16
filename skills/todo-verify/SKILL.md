@@ -185,7 +185,9 @@ two skills interlock. Append to (or create) the `## Revisions` block at the bott
 - Grounded coverage % and gap counts, if coverage ran.
 - Exactly what was written: which tasks ticked, status before → after, which `R<n>`
   Revisions opened.
-- If Revisions were opened: "Run `/todo-revise <short-name>` to fix."
+- If Revisions were opened: "Run `/todo-revise <short-name>` to fix now — or
+  `/todo-resume <short-name>` when picking this up in a later session." Direct work
+  commands are act-now pointers; `/todo-resume` is the entry point for deferred pickup.
 
 ## Notes
 - This is the producer half of the Revisions loop; `todo-revise` is the consumer. Keep the

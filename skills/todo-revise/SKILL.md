@@ -192,5 +192,6 @@ untouched. If you notice 3+ done entries still carrying full detail from before 
 rule existed, offer a one-time sweep of all of them.
 
 ## Notes
+- **Session handoff:** when open revisions or tasks remain after this session's rework wraps, recommend `/todo-resume <short-name>` as the next-session entry point — it re-orients on current state and routes back here itself. Name `/todo-revise <short-name> R<n>` directly only as an immediate next step within the same session.
 - This skill edits `tasks.md` (the `## Revisions` block) and project code/artifacts — it does not rewrite `plan.md`. If a gap reveals the *plan itself* was wrong, say so and point to `/todo-plan` rather than silently editing the plan.
 - Revisions feed the infographic: the Stop hook (`infographic-staleness.sh`) will regenerate `artifacts/infographic.html` after rework lands.

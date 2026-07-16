@@ -174,6 +174,11 @@ Summarize:
 
 Keep it short. The artifacts speak for themselves.
 
+**Session handoff:** a command named in this report is an *act-now* pointer for the
+current session. When the remaining work is for a later session, recommend
+`/todo-resume <short-name>` instead — it re-orients on current tasks/revisions/git
+state and routes to the right work command itself.
+
 ---
 
 # Parallel mode
@@ -308,6 +313,8 @@ Only now, and only you: tick the completed task lines in `tasks.md`, write block
 `/todo-verify` — merged PRs + unit tests ≠ done).
 
 Report per feature: PR link, merge result, coverage numbers, blockers. Keep it short.
+The sequential Step 7 session-handoff rule applies here too: work left for a later
+session gets `/todo-resume <short-name>`, not a direct work command.
 
 ## Parallel-mode rules
 
