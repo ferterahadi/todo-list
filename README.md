@@ -107,6 +107,11 @@ On the next Claude Code session it:
 - creates the hub at `~/todo` from bundled seed content — `index.md`, `templates/`, and a
   small example project — via a SessionStart hook. It runs once, then stays quiet.
 
+**Staying up to date:** releases are versioned (see [CHANGELOG.md](CHANGELOG.md)).
+Third-party marketplaces have auto-update **off** by default — enable it once via
+`/plugin` → Marketplaces → todo-list → enable auto-update, and new releases will prompt
+`/reload-plugins` as they land. Or pull manually with `/plugin marketplace update todo-list`.
+
 ### Codex plugin package
 
 The repository includes `.codex-plugin/plugin.json`. Its `skills/` and `hooks/hooks.json`
