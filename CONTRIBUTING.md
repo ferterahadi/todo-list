@@ -91,6 +91,22 @@ To test the bootstrap hook in isolation, run it against a throwaway hub:
 CLAUDE_PLUGIN_ROOT="$(pwd)" TODO_HUB=/tmp/hub-test bash hooks/bootstrap-hub.sh
 ```
 
+## Releasing
+
+Pushing commits does **not** update installed users — Claude Code treats the `version`
+string in `.claude-plugin/plugin.json` as the release key. A change ships when you:
+
+1. **Bump `version`** in `.claude-plugin/plugin.json` (semver: MAJOR = breaking skill
+   behavior or hub-format change, MINOR = new skill/section/capability, PATCH = prompt
+   fixes and wording).
+2. **Mirror the same version** in `.codex-plugin/plugin.json`.
+3. **Move the `[Unreleased]` entries** in `CHANGELOG.md` under a new `## [x.y.z] — <date>`
+   heading. Every user-visible change lands in `[Unreleased]` in the same PR that makes it.
+4. Push. Users with auto-update enabled for the marketplace get a notification prompting
+   `/reload-plugins`; others pick it up via `/plugin marketplace update todo-list`.
+
+Unbumped commits are fine — they simply accumulate as the next release.
+
 ## Pull requests
 
 - One focused change per PR. Explain what triggered it and what behavior changes.
