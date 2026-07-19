@@ -23,10 +23,26 @@ The hub repo root is `$TODO_HUB` — an environment variable pointing at your cl
 ```
 /todo-revise api-token-rotation        ← review done items, take feedback, plan + run fixes
 /todo-revise api-token-rotation 4.5    ← jump straight to one task
+/todo-revise api-token-rotation F3     ← jump straight to an infographic section ID
 /todo-revise                              ← ask which project, or act on context
 ```
 
-Plain language counts too: "this isn't what I expected", "the picker drifted", "give me feedback on phase 4", "what's the gap here".
+Plain language counts too: "this isn't what I expected", "the picker drifted", "give me feedback on phase 4", "what's the gap here" — and infographic IDs quoted in chat: "F3 shouldn't be removed", "D2 is wrong because…".
+
+### Infographic IDs as feedback handles
+
+`artifacts/infographic.html` stamps every reviewable element with a stable ID (see `todo-infographic` § Section IDs). When the user quotes one, resolve it by opening the infographic HTML and reading the element it labels, then route:
+
+|ID|Points at|Route|
+|-|-|-|
+|`F<n>`|a file in the footprint|find the task(s) that touched that file → normal gap on that task (Step 3)|
+|`D<n>`|a decision / trade-off card|implementation diverged from the decision → normal gap; the user disputes the decision itself → plan-level, point to `/todo-plan` (see Notes)|
+|`X<n>`|a forgone item|user wants it back in → scope change, `/todo-plan`, not a revision|
+|`L<n>`|a known limitation|user rejects the accepted gap → either a new revision (handle it now) or `/todo-plan` if it reshapes scope — ask which|
+|`W1`|what & why|narrative mismatch is almost always plan-level|
+|`4.5` etc.|a task|normal Step 3 gap|
+
+Record the ID in the revision entry's Gap line (e.g. `Gap (⟵ F3): …`) so the trail from infographic to fix survives.
 
 ## Step 1 — Resolve the project
 

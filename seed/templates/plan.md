@@ -19,6 +19,19 @@ How we'll know it's done and good. Observable, checkable outcomes — not tasks.
 
 ## Key Decisions
 Document choices already made so the executing agent doesn't re-litigate them.
+Number them `D1`, `D2`, … — the infographic and feedback loop reference decisions by these IDs.
+
+## Trade-offs
+<!-- Read by /todo-infographic (trade-off ledger, forgone, limitations sections).
+     Planning-time knowledge — capture it now or it can't be rendered later. -->
+One row per Key Decision — what it gains, what it costs:
+- **D1 <decision>** — gain: <benefit> · cost: <drawback accepted>
+
+**Forgone** — alternatives rejected and scope deliberately cut, one clause of why each:
+- <alternative or cut item> — <why>
+
+**Known gaps** — limitations this build deliberately accepts (not bugs):
+- <gap>
 
 ## Verification
 <!-- The "check" gate. Read by /todo-verify to reconcile your verification MCP's result into todo state.
