@@ -154,6 +154,13 @@ never present a plan that fails one:
 
 - Set `status` to `ready`
 - Set `repo` to the confirmed absolute local path
+- Set `started` to today's date **only if the prior status was `planning`** (the normal
+  case — overwriting the tier-3 creation stamp `/todo-add` set). This is `todo-update-state`
+  Step 3.5's tier-2 signal — the `in-progress` > `ready` > `planning` > `completed` chain.
+  A later genuine flip to `in-progress` overwrites it again with the real, final start
+  date. If you're **re-planning** a project that already progressed past `ready` (status
+  was `in-progress` or `done`), leave `started` alone — it holds the real start date and
+  must never be clobbered by a replan.
 
 ## Step 8 — Confirm with a plan-at-a-glance render
 

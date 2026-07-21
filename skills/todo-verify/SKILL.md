@@ -133,7 +133,7 @@ fast-tier subagent (as `todo-update-state` does); the interpretation is yours.
 
 | Verification result | tasks.md | index.md status | Revisions |
 |---|---|---|---|
-| Run green, all gate-covered tasks pass | tick covered `[ ]`→`[x]` | → `done` **iff** every task in the project is `[x]`, else stays `in-progress` | — |
+| Run green, all gate-covered tasks pass | tick covered `[ ]`→`[x]` | → `done` **iff** every task in the project is `[x]`, else stays `in-progress` (a flip to `done` also stamps `completed` = today and `elapsed (days)` = `completed − started`, per `todo-update-state` Step 3.5 — never overwrite an existing real `started`) | — |
 | Run fails | no tick | stays `in-progress` | one entry per failing area, backlinked `⟵ Task N` |
 | Coverage gap (even if run green) | no change | unchanged | one informational entry per gap (gap type named) |
 | Run blocked (boot/creds) | no tick | unchanged | report blocker; coverage path still runs |
@@ -177,14 +177,17 @@ two skills interlock. Append to (or create) the `## Revisions` block at the bott
 ## Step 6 — Reconcile status honesty, then report
 
 **Status honesty** (mirror `todo-update-state` / `todo-revise`): open Revisions on a project marked
-`done` mean it isn't done — flag it and move `index.md` back to `in-progress`. All tasks
-`[x]` and no open Revisions → offer `done`.
+`done` mean it isn't done — flag it, move `index.md` back to `in-progress`, and clear its
+`completed` and `elapsed (days)` cells back to `-` (todo-update-state Step 3.5 — it's no
+longer true that the project finished on that date, so neither the date nor the duration
+is honest). All tasks `[x]` and no open Revisions → offer `done`,
+stamping `completed` = today and `elapsed (days)` when accepted.
 
 **Report** status-first, terse:
 - ✅ / ❌ / ⚠️ run verdict (or ⚠️ blocked + the blocker reason).
 - Grounded coverage % and gap counts, if coverage ran.
-- Exactly what was written: which tasks ticked, status before → after, which `R<n>`
-  Revisions opened.
+- Exactly what was written: which tasks ticked, status before → after (plus any
+  `started`/`completed`/`elapsed (days)` stamped or cleared), which `R<n>` Revisions opened.
 - If Revisions were opened: "Run `/todo-revise <short-name>` to fix now — or
   `/todo-resume <short-name>` when picking this up in a later session." Direct work
   commands are act-now pointers; `/todo-resume` is the entry point for deferred pickup.

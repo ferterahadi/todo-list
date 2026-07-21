@@ -69,15 +69,21 @@ Read the templates fresh from `templates/` rather than hardcoding their contents
 
 ## Step 5 — Register in index.md
 
-Add a row to the correct section table (`## Work` or `## Self-initiative`) in `index.md`. The tables have **six** columns — include them all:
+Add a row to the correct section table (`## Work` or `## Self-initiative`) in `index.md`. The tables have **nine** columns — include them all:
 
-| short-name | path | repo | status | infographic | related |
-|---|---|---|---|---|---|
-| `<short-name>` | `projects/<work\|self-initiative>/<short-name>` | `-` | `planning` | `-` | `-` |
+| short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |
+|---|---|---|---|---|---|---|---|---|
+| `<short-name>` | `projects/<work\|self-initiative>/<short-name>` | `-` | `planning` | `<today>` | `-` | `-` | `-` | `-` |
 
 - `path` is the project folder path relative to the hub root.
 - `repo` stays `-` — the local codebase path is confirmed later during `/todo-plan`.
 - `status` is `planning` — the plan isn't filled in yet.
+- `started` is today's date (`YYYY-MM-DD`) — the lowest-tier provisional stamp in the
+  `in-progress` > `ready` > `planning` > `completed` fallback chain (`todo-update-state`
+  Step 3.5). It gets overwritten by a `ready` or `in-progress` flip later; this is just the
+  earliest signal available. `completed` stays `-`.
+- `elapsed (days)` stays `-` — computed once the project reaches `done` (`completed −
+  started` in whole days).
 - `infographic` stays `-` — `/todo-infographic` fills it after the plan exists.
 - `related` — if the user's description names or clearly implies another tracked project (e.g. "the v2 of X", "follow-up to Y", "depends on Z"), look it up in `index.md` and set this to its short-name(s), comma-separated. Otherwise leave `-`; the user or a later edit can fill it in once a link becomes obvious. Never guess a relation from naming similarity alone — only set it from an explicit statement.
 

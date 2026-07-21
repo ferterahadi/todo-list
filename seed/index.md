@@ -19,13 +19,25 @@ The `related` column is a comma-separated list of other `short-name`s this proje
 builds on, or should be read alongside. `-` means none. It's manual — set it in `/todo-add` or
 edit the cell. `/todo-refer` follows it one hop for quick backtracking to prior context.
 
+The `started` / `completed` / `elapsed (days)` columns track when a project actually ran
+(dates are `YYYY-MM-DD`; `-` means not yet / unknown). `started` holds the earliest
+*reliable* signal, in priority order **`in-progress` > `ready` > `planning` > `completed`**:
+a real `ready`→`in-progress` flip is the definitive start date and is never overwritten
+afterwards; a stamp made at `ready` (plan confirmed) or `planning` (project created) is
+provisional and gets overwritten by the next higher-tier signal; a row that lands directly
+as `done` (retroactive bookkeeping) falls back to `started` = `completed`. `completed` is
+stamped when status flips to `done` and cleared if the project is reopened.
+`elapsed (days)` = `completed − started` in whole days, computed at the flip to `done` and
+cleared alongside `completed`. The stamping rules live in `todo-update-state` Step 3.5 —
+every skill that flips a status follows them.
+
 ## Work
 
-| short-name | path | repo | status | infographic | related |
-|---|---|---|---|---|---|
-| example-feature | projects/work/example-feature | ~/code/api-service | ready | - | - |
+| short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |
+|---|---|---|---|---|---|---|---|---|
+| example-feature | projects/work/example-feature | ~/code/api-service | ready | - | - | - | - | - |
 
 ## Self-initiative
 
-| short-name | path | repo | status | infographic | related |
-|---|---|---|---|---|---|
+| short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |
+|---|---|---|---|---|---|---|---|---|

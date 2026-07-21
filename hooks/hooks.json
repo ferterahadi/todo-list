@@ -8,6 +8,12 @@
             "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/bootstrap-hub.sh\"",
             "timeout": 15,
             "statusMessage": "Bootstrapping the todo hub"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/migrate-index-dates.sh\"",
+            "timeout": 15,
+            "statusMessage": "Migrating index.md to the dated table format"
           }
         ]
       }
