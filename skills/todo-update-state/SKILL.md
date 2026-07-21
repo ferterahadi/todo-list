@@ -12,7 +12,7 @@ This is light, mechanical work. Use the **fast** tier from
 perform the edits inline.
 
 - **`tasks.md`** in each project — task checkboxes: `- [ ]` (not done) and `- [x]` (done)
-- **`index.md`** in the hub root — the `status` column per project: `planning` → `ready` → `in-progress` → `done`
+- **`index.md`** in the hub root — the `status` column per project: `planning` → `ready` → `in-progress` → `done`, plus the `started` / `completed` date columns that shadow that flip (see Step 3.5)
 
 ## Hub location
 
@@ -61,6 +61,46 @@ Match on the task's text, not its position alone, so you edit the right line eve
 
 Do not touch anything the user didn't ask about. Leave `plan.md`, `research/`, and `artifacts/` alone — this skill edits state, not content.
 
+## Step 3.5 — Stamp started / completed on a status flip
+
+`started` picks the earliest reliable signal, in priority order — **`in-progress` > `ready`
+> `planning` > `completed`** (see `index.md`'s header prose for the full rationale). Whenever
+this step's edit changes the `status` cell, also update that row's `started` / `completed`
+cells, using today's date (`YYYY-MM-DD`):
+
+- **Flips to `planning`** (new project via `/todo-add`) — stamp `started` to today if it's
+  currently `-`. This is the lowest-tier provisional stamp — see the overwrite rules below.
+  A flip *back* to `planning` on an existing project (rare) leaves `started`/`completed`
+  unchanged — it's not a new project.
+- **Flips to `ready`** (from `planning`) — stamp `started` to today, **overwriting** any
+  tier-3 (`planning`) stamp already there. Still provisional — see next bullet.
+- **Flips to `in-progress`** *from `ready` or `planning`* — always stamp `started` to today,
+  **overwriting** any tier-2/tier-3 value (a direct `planning`→`in-progress` jump skips the
+  `ready` stamp but is just as real a start). This is the real, final signal: once set this
+  way it is never overwritten again.
+- **Flips to `in-progress`** *from anything else* (e.g. reopened from `done`)
+  — leave `started` alone. It already holds the best available first-start date; a later
+  resume doesn't reset it.
+- **Flips to `done`** — set `completed` to today. This one *does* overwrite — if the project
+  was reopened and is completing again, the newer date is the honest one. Then, if `started`
+  is *still* `-` at this point (none of tiers 1–3 ever fired — typically a row added
+  directly as `done`, retroactively documenting work finished elsewhere), fall back to the
+  last resort: set `started` to the same date as `completed`. Finally, compute
+  `elapsed (days)` = `completed − started` in whole days (0 if same-day) and stamp it —
+  computed at the moment `completed` is set (recomputed if the project re-completes),
+  never live-recomputed afterwards.
+- **Flips away from `done`** (reopened to `in-progress`/`ready`) — clear `completed` back to
+  `-`, and clear `elapsed (days)` back to `-` alongside it; it's no longer true that the
+  project is finished, so neither a completion date nor a duration is honest anymore.
+
+A status column edit and its date-column edit are the same logical change — make them in one pass, not as a follow-up.
+
+If a row's table predates these columns (header has no `started`), the plugin's
+SessionStart hook (`hooks/migrate-index-dates.sh`) migrates and git-backfills it on the
+next session. If you hit an unmigrated table mid-edit, widen it yourself first: insert
+`started` / `completed` / `elapsed (days)` after `status` in the header and separator, and
+`-` cells in every row, then apply the stamp.
+
 ## Step 4 — Keep status and tasks in sync
 
 After editing, the project's `status` in `index.md` and its task completion in `tasks.md` should tell the same story. When they'd otherwise disagree, reconcile — and say what you did:
@@ -90,4 +130,4 @@ awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^## /{p=($0!~/^## Status/)} p&&/^[[:spac
 
 ## Step 5 — Confirm what changed
 
-Report the edits plainly: which tasks flipped, the new completion count, and the status before → after. Keep it short. If you reconciled a mismatch in Step 4, say so explicitly so the user knows state was kept consistent.
+Report the edits plainly: which tasks flipped, the new completion count, and the status before → after. If a status flip stamped or cleared a `started`/`completed` date (Step 3.5), say so in the same line. Keep it short. If you reconciled a mismatch in Step 4, say so explicitly so the user knows state was kept consistent.

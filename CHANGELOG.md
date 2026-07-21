@@ -5,6 +5,23 @@ All notable changes to this plugin are documented here. The format follows
 [semver](https://semver.org). Installed users only receive an update when the
 `version` in `.claude-plugin/plugin.json` is bumped — see CONTRIBUTING.md § Releasing.
 
+## [1.2.0] — 2026-07-21
+
+### Added
+- Project date tracking: `started` / `completed` / `elapsed (days)` columns in `index.md`
+  section tables, stamped on status flips per `todo-update-state` Step 3.5 (priority chain
+  `in-progress` > `ready` > `planning` > `completed`; cleared on reopen).
+- `hooks/migrate-index-dates.sh` SessionStart hook: automatically widens pre-2.0
+  six-column `index.md` tables on the next session and backfills the dates from the hub's
+  git history (first/last commit touching each project path); hubs without git get `-`.
+  A backup is left at `index.md.pre-dates.bak`.
+
+### Changed
+- **Hub format (auto-migrated):** `index.md` section tables went from six to
+  nine columns. `todo-add`/`todo-plan`/`todo-execute`/`todo-verify`/`todo-sync`/`todo-list`
+  read and stamp the new columns; `todo-list` keeps them out of the default compact view.
+  Existing hubs are upgraded in place by the SessionStart migration hook — no manual step.
+
 ## [1.1.0] — 2026-07-19
 
 ### Added

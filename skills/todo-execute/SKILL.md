@@ -64,7 +64,10 @@ Do not start executing until you've read all of them. If `plan.md` is missing cr
 
 ## Step 3 — Update index.md status
 
-Set the project status to `in-progress` in index.md.
+Set the project status to `in-progress` in index.md. Apply `todo-update-state`'s Step 3.5
+date rule in the same edit: if the prior status was `ready` or `planning`, stamp/overwrite
+`started` = today (overwriting any provisional value `todo-add`/`todo-plan` set); if the
+prior status was anything else (e.g. reopened from `done`), leave `started` untouched.
 
 ## Step 4 — Isolate target-repo work in a worktree
 
@@ -164,7 +167,7 @@ Update index.md status:
 - Blockers remain or tasks are open → stay `in-progress`.
 - All tasks complete and `plan.md` has a `## Verification` block → stay `in-progress` and point the user at `/todo-verify <short-name>` — the verification run is the gate that flips `done`, not your own assessment. Code-complete + unit tests ≠ done.
 - All tasks complete, no `## Verification` block, **but the Step 4 worktree has unmerged changes** → stay `in-progress`; the work isn't landed until it's shipped. Point the user at `/todo-push` (run from `<repo>-wt/<short-name>`).
-- All tasks complete, no `## Verification` block, and nothing to ship (hub-only project) → set `done`.
+- All tasks complete, no `## Verification` block, and nothing to ship (hub-only project) → set `done`, and stamp `completed` = today plus `elapsed (days)` = `completed − started` (`todo-update-state` Step 3.5).
 
 Summarize:
 - What was completed
@@ -190,7 +193,7 @@ only you touch hub files.
 
 Entry: steps 1–2 above (resolve + orient), plus: `plan.md` must name the target repo
 path; verify it exists locally and `gh auth status` succeeds there — stop and report if
-not. Set index.md status to `in-progress`.
+not. Set index.md status to `in-progress`, applying the same Step 3 date rule above.
 
 ## Step P1 — Partition tasks into features
 

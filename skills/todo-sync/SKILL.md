@@ -100,7 +100,10 @@ the evidence line is not reportable.
 
 If invoked as `/todo-sync fix`, or the user confirms after the board: apply exactly the
 confirmed corrections — status column flips in `index.md`, checkbox reconciliation in
-`tasks.md` — following `todo-update-state`'s edit + sync rules (delegate the mechanical
+`tasks.md` — following `todo-update-state`'s edit + sync rules, **including its Step 3.5
+date-stamping** (stamp `started` on a `ready`/`planning` → `in-progress` flip, stamp
+`completed` + `elapsed (days)` on a flip into `done`, clear `completed`/`elapsed (days)` on
+a flip out of `done` — Step 3.5 is the authority on every case) (delegate the mechanical
 edits to the fast tier when available). Re-render the fixed rows. Never fix silently, never fix beyond what was
 confirmed, and never flip a status to `done` past an unrun `## Verification` gate —
 point at `/todo-verify` instead.

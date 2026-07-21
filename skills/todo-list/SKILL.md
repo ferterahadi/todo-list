@@ -31,7 +31,7 @@ Plain language counts too: "what am I working on" → view; "rank my projects by
 
 ## View mode
 
-1. **Read `$TODO_HUB/index.md`**. Parse every project row from each section table (`## Work`, `## Self-initiative`, and any other section tables present). Capture `short-name`, `path`, `repo`, `status`, and whether an `infographic` link exists.
+1. **Read `$TODO_HUB/index.md`**. Parse every project row from each section table (`## Work`, `## Self-initiative`, and any other section tables present). Capture `short-name`, `path`, `repo`, `status`, whether an `infographic` link exists, and the `started` / `completed` / `elapsed (days)` cells (present but not shown in the default compact table — see the note below).
 2. **Render the overview** (see format below). Don't dump the raw markdown table — reformat for skim-first reading.
 3. **End with a one-line summary** counting projects by status.
 
@@ -62,6 +62,8 @@ Use a compact table per section, e.g.:
 - `repo`: show the trailing folder name only (e.g. `~/code/api-service` → `api-service`); show `—` when repo is `-`.
 - `info`: `📊` if an infographic link exists, `—` otherwise.
 - Keep the project's full `short-name` — it's what the other `/todo-*` skills resolve against.
+
+`started` / `completed` / `elapsed (days)` are `index.md` columns (populated by `todo-add`/`todo-plan`/`todo-update-state`/`todo-verify`/`todo-sync` per `todo-update-state` Step 3.5) but are **not** part of the default compact table — the view stays skim-first. If the user asks for dates or duration ("when did X start", "how long did X take", "show elapsed days"), add `started` / `completed` / `elapsed (days)` columns to that request's table instead of the default `info` column, or just answer the specific project inline — don't permanently widen the default table for one ask.
 
 ### Summary line
 
