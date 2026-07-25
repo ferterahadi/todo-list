@@ -77,7 +77,7 @@ One command installs all skills for both agents from the same source:
 
 ```bash
 npx skills add ferterahadi/todo-list \
-  --skill model-routing todo-add todo-archive todo-execute todo-infographic \
+  --skill todo-llm-routing todo-add todo-archive todo-execute todo-infographic \
     todo-learn todo-list todo-plan todo-push todo-refer todo-resume todo-review \
     todo-revise todo-sync todo-triage todo-update-state todo-verify \
   --agent claude-code \
@@ -211,16 +211,17 @@ Skills route work by capability tier, then resolve the tier for the active provi
 
 |Tier|Claude Code|Codex preferred|Codex fallback|
 |-|-|-|-|
-|frontier|Fable 5, high|GPT-5.6 Sol, max|GPT-5.5, xhigh|
+|frontier|Opus latest, max|GPT-5.6 Sol, max|GPT-5.5, xhigh|
 |deep|Opus latest, high|GPT-5.6 Sol, high|GPT-5.5, high|
-|balanced|Sonnet latest, medium/high|GPT-5.6 Terra, medium/high|GPT-5.4, medium/high|
-|fast|Haiku latest, low|GPT-5.6 Luna, low|GPT-5.4 Mini, low|
+|balanced|Opus latest, medium|GPT-5.6 Terra, medium/high|GPT-5.4, medium/high|
+|fast|Opus latest, low|GPT-5.6 Luna, low|GPT-5.4 Mini, low|
 
 Use the preferred Codex model when it appears in the local model picker or
-`codex debug models`; otherwise use the fallback. Fable and Opus both map to the
-flagship Codex model, with reasoning effort separating highest-risk work from normal
-deep work. The mapping is advisory and centralized in
-[`skills/model-routing/SKILL.md`](skills/model-routing/SKILL.md).
+`codex debug models`; otherwise use the fallback. On Claude Code every tier resolves to
+Opus and reasoning effort is the only lever — per [CursorBench 3.2](https://cursor.com/cursorbench)
+the Opus 5 effort sweep is both more accurate and cheaper per task than Sonnet at any
+effort, and than Fable below max. The mapping is advisory and centralized in
+[`skills/todo-llm-routing/SKILL.md`](skills/todo-llm-routing/SKILL.md).
 
 ## Repo layout
 
@@ -231,7 +232,7 @@ deep work. The mapping is advisory and centralized in
 .codex-plugin/
   plugin.json        Codex plugin manifest
 skills/todo-*/       the 16 shared skills (each a SKILL.md)
-skills/model-routing/  shared provider model mapping skill
+skills/todo-llm-routing/  shared provider model mapping skill
 hooks/
   hooks.json         registers the three hooks below (auto)
   bootstrap-hub.sh   SessionStart: seed the hub on first run

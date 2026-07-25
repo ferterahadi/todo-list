@@ -5,6 +5,25 @@ All notable changes to this plugin are documented here. The format follows
 [semver](https://semver.org). Installed users only receive an update when the
 `version` in `.claude-plugin/plugin.json` is bumped — see CONTRIBUTING.md § Releasing.
 
+## [1.3.0] — 2026-07-25
+
+### Changed
+- **Breaking (skill rename):** `model-routing` → `todo-llm-routing`. Every `/todo-*` skill,
+  `README.md`, `skills/README.md`, and `CONTRIBUTING.md` now point at the new path. Anyone who
+  installed by name must re-run `npx skills add` with `todo-llm-routing` in place of
+  `model-routing`, and remove the stale `model-routing` skill.
+- **Claude Code routing collapsed onto Opus at all four tiers**, with reasoning effort as the
+  only lever: `frontier` = max, `deep` = high, `balanced` = medium, `fast` = low. Per
+  [CursorBench 3.2](https://cursor.com/cursorbench), the Opus 5 effort sweep Pareto-dominates
+  the rest of the Claude lineup — Sonnet 5 at max effort (60.5% @ ~$6.6) scores below Opus 5 at
+  low effort (62.3% @ ~$2.8), and Opus 5 max (69.6% @ ~$8.2) beats the previous `frontier`
+  default of Fable 5 high (65.5% @ ~$8.6) on both accuracy and cost. Sonnet and Haiku are no
+  longer defaults at any tier; Fable is worth hand-picking only at max effort.
+  Codex tier mappings are unchanged — CursorBench does not plot Terra or Luna.
+
+  Note that the quota profile shifts: all tiers now draw on the same Opus allowance, so
+  `fast`-tier work no longer relieves usage limits.
+
 ## [1.2.0] — 2026-07-21
 
 ### Added
