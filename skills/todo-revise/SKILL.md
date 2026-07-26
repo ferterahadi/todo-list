@@ -16,7 +16,7 @@ to the fast tier.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** hub path against this absolute root — `index.md`, each project's `path`, `plan.md`, `tasks.md` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's where the fixes land.) (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** hub path against this absolute root — active `index.md`, cold `archive.md`, each project's `path`, `plan.md`, and `tasks.md` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's where the fixes land.) (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 
@@ -46,9 +46,11 @@ Record the ID in the revision entry's Gap line (e.g. `Gap (⟵ F3): …`) so the
 
 ## Step 1 — Resolve the project
 
-Read `$TODO_HUB/index.md` to map short name → full `path` + `status`.
+Resolve the short-name in `$TODO_HUB/index.md` first, then `$TODO_HUB/archive.md` only
+on an exact active miss. A duplicate across both registries is corruption: stop instead
+of choosing one. Record the owning registry and section with the full `path` + `status`.
 
-- Short name → look it up; not found → tell the user and stop.
+- Short name → look it up active-first; not found in either registry → tell the user and stop.
 - Full path → use as-is.
 - No project named and not obvious from context → ask which project before doing anything.
 
@@ -58,7 +60,7 @@ Read `plan.md` (goal, constraints, repo path) in full — it's the expectation b
 
 ```bash
 grep -nE '^(#{2,3} |\s*- \[x\])' tasks.md     # phase headers + done items
-grep -nE '^### R[0-9]+' tasks.md               # existing revision headings (for numbering + flags)
+grep -niE '^### R[0-9]+[A-Za-z]*' tasks.md     # existing revision headings (for numbering + flags)
 ```
 
 Read the specific revision entry bodies you're working on by line range, not the whole file.
@@ -131,6 +133,10 @@ Rules:
 - Status tag on the heading: `[open]` → `[done]` (set `[done]` only after Step 6 verify passes).
 - Each revision carries its own `- [ ]` checkbox — that's the executable unit.
 - If a completed source task no longer holds, leave its original `[x]` as-is but note in the revision that the source is being corrected; the project status reconcile (Step 7) handles the rest.
+- If the project row came from `archive.md`, opening the first revision also reopens the
+  project: move the row verbatim back to the same section in `index.md`, set status to
+  `in-progress`, and clear `completed` / `elapsed (days)` per `todo-update-state` Step
+  3.5. Treat the row move and status edit as one atomic change.
 
 ## Step 5 — Execute the fix
 
@@ -154,7 +160,14 @@ Never claim a revision is fixed without the user accepting it or you having run 
 
 ## Step 7 — Reconcile status, then offer to persist the lesson
 
-**Status honesty** (mirror `todo-update-state` Step 4): open revisions on a project marked `done` mean it isn't truly done — flag it and suggest moving `index.md` status back to `in-progress`. All revisions `[done]` and all tasks `[x]` → offer to set `done`.
+**Status honesty** (mirror `todo-update-state` Step 4): case-insensitive open revisions
+on a project marked `done` mean it is not truly done. Flag it and offer to move an
+archived row back to `index.md` when needed, then set `in-progress`. All revisions whose
+tags start with `[done` and all tasks `[x]` → run `todo-graph`'s bounded
+`context "$TODO_HUB" "<short-name>"` gate. Offer to set `done` only when every hard
+prerequisite is settled and no incident identity/cycle issue exists. If the helper is
+unavailable or the graph is blocked, keep `in-progress` and report the exact next graph
+command. Context and lineage edges never gate.
 
 **Recurring-gap memory.** If a gap repeats a pattern you've seen before (same class of drift across items or sessions — e.g. "marked done before e2e", "ignored the plan's scope boundary"), *offer* to persist the *why* as a `feedback` memory, and write it only on the user's OK. Follow the memory format: `feedback` type, with `**Why:**` and `**How to apply:**` lines, linked to related memories like `[[definition-of-done]]`. Do not auto-write without asking; do not nag if they decline.
 
@@ -180,32 +193,34 @@ the `## Revisions` block in tasks.md speaks for itself.
 
 ## Archival rule — done revisions leave the hot file
 
-`tasks.md` is read by six skills; closed history must not tax every future read. When a
-revision flips to `[done]`:
+`tasks.md` is read repeatedly; closed history must not tax every future read. When a
+revision tag starts with `[done` in any letter case:
 
-1. **Append the full entry** (heading + all detail bullets) to `artifacts/journal.md`
-   under a dated section, creating the file if needed:
+1. **Append the full entry** (heading + its detail bullets) to `artifacts/journal.md`
+   under a dated section, creating the file if needed. Preserve the heading exactly and
+   add a stable lowercase anchor:
    ```markdown
-   ## R4 ⟵ Task 5.2 — rotate audit log   [done 2026-07-10]
+   <a id="revision-r4"></a>
+   ### R4 ⟵ Task 5.2 — rotate audit log   [DONE 2026-07-10]
    - Gap: rotate skips audit log
    - Expected: every rotation writes an audit row
    - Actual: only manual rotations logged
    - Fix: moved audit write into RotateService.execute
    - [x] implement + re-verify
    ```
-2. **Collapse the entry in `tasks.md`** to a two-line tombstone — heading stays verbatim
-   (numbering must never be reused, and `todo-verify`'s idempotency scan matches on it):
+2. **Collapse the entry in `tasks.md`** to a direct two-line tombstone. The heading stays
+   verbatim because numbering is permanent and `todo-verify` matches it:
    ```markdown
-   ### R4 ⟵ Task 5.2 — rotate audit log        [done]
-   - archived → artifacts/journal.md (2026-07-10)
+   ### R4 ⟵ Task 5.2 — rotate audit log   [DONE 2026-07-10]
+   - archived → [journal:R4](artifacts/journal.md#revision-r4) (2026-07-10)
    ```
 
-Never archive an `[open]` entry. **Annotated done tags count as done**: a heading tag
-that *starts with* `[done` (e.g. `[done — shipped via Phases 7–14, live-proven …]`) is a
-done entry — match `\[done` as a prefix, not `\[done\]` literally, or annotated entries
-silently escape the sweep. `[superseded …]` and other non-open/non-done tags are left
-untouched. If you notice 3+ done entries still carrying full detail from before this
-rule existed, offer a one-time sweep of all of them.
+Never archive an `[open]` entry. Match `[done` case-insensitively so `[DONE …]` and
+annotated forms cannot escape. Leave `[superseded …]`, `[fixed …]`, and every other
+non-done tag untouched. Before appending, check for an existing anchor or exact
+`##`/`### R<n>` journal heading; reuse only an identical entry and never duplicate it.
+The canonical repair and conflict rules live in `todo-archive`. If 3+ completed entries
+still carry detail, offer `/todo-archive <short-name>`.
 
 ## Notes
 - **Session handoff:** when open revisions or tasks remain after this session's rework wraps, recommend `/todo-resume <short-name>` as the next-session entry point — it re-orients on current state and routes back here itself. Name `/todo-revise <short-name> R<n>` directly only as an immediate next step within the same session.

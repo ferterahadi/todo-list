@@ -1,6 +1,6 @@
 ---
 name: todo-sync
-description: Use when the user invokes /todo-sync, says "is the index accurate", "does the todo match reality", "audit my project statuses", "this says done but it never shipped", or suspects hub state has drifted from what actually happened in the repos. Compares index.md status against tasks.md and target-repo git evidence, reports mismatches, and fixes them only on confirmation.
+description: Use when the user invokes /todo-sync, says "is the index accurate", "does the todo match reality", "audit my project statuses", "this says done but it never shipped", or suspects hub state has drifted from what actually happened in the repos. Compares the owning registry status against tasks.md and target-repo git evidence, reports mismatches, and fixes them only on confirmation.
 ---
 
 # Project Sync Skill
@@ -21,7 +21,7 @@ main model.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve every hub path against this absolute root regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve every hub path against this absolute root, including active `index.md` and cold `archive.md`, regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 
@@ -31,21 +31,21 @@ The hub repo root is `$TODO_HUB` — an environment variable pointing at your cl
 /todo-sync fix                  ← audit, then apply confirmed fixes
 ```
 
-Plain language counts too: "does my index match reality", "audit the hub".
+Plain language counts too: "does my registry match reality", "audit the hub".
 
 ## Step 1 — Resolve scope
 
-Read `$TODO_HUB/index.md`. Default scope: every `ready` / `in-progress` / `done` row in
-the active section tables (`planning` rows have nothing to drift against; `## Archive`
-rows are skipped). A short-name limits to that project; not found → say so and stop.
+Read `$TODO_HUB/index.md`. Default scope is every active `ready`, `in-progress`, or
+`done` row; `planning` has nothing to drift against. An explicit short-name resolves
+active-first, then by exact match in `archive.md`. Duplicate or missing names stop.
 
 ## Step 2 — Gather evidence per project
 
-Three sources, cross-checked:
+Four sources, cross-checked:
 
 1. **Recorded status** — the `status` column.
 2. **Task state** — `done/total` via the shared awk snippet (skip the `## Status`
-   legend and HTML comments, same as `todo-list` sort mode), plus open
+   legend and HTML comments, same as `todo-list` sort mode), plus case-insensitive open
    `### R<n> … [open]` revision headings.
 3. **Repo evidence** — when the row names a local repo:
    ```bash
@@ -62,6 +62,14 @@ Three sources, cross-checked:
 Hub-only projects (repo `-`) are checked on sources 1–2 plus artifacts: `done` with an
 empty `artifacts/` is suspicious; say so.
 
+4. **Project-graph evidence** — run one bounded audit for the hub, then associate its
+   incident issues and hard blockers with each in-scope project:
+   ```bash
+   python3 <todo-graph-skill-dir>/scripts/graph-report.py audit "$TODO_HUB"
+   ```
+   An in-progress project with an unsettled prerequisite is **at risk**; a done project
+   with one is graph drift. Context and lineage edges never count.
+
 ## Step 3 — Judge drift
 
 Compare the three sources. The canonical mismatches and their fixes:
@@ -74,6 +82,8 @@ Compare the three sources. The canonical mismatches and their fixes:
 | `ready`/`in-progress` | no commits, no worktree, tasks all unticked | stale — never started | status → `ready`, or ask if it's abandoned |
 | any | ticked tasks but no commits/artifacts evidencing them | unbacked claims | flag the specific tasks; suggest `/todo-review <name>` for the audit-by-diff |
 | any | lingering worktree with uncommitted changes | work at risk | surface it — `/todo-resume <name>` before anything else |
+| `in-progress` | hard prerequisite is no longer settled | execution order at risk | stop execution; `/todo-graph why <name>` |
+| `done` | hard prerequisite is unresolved or dishonest | completion graph is inconsistent | audit evidence; do not auto-reopen |
 
 Evidence gaps (couldn't check gh, repo missing locally) make a project **unverifiable**,
 not drifted — report it in its own bucket, never guess a verdict from partial evidence.
@@ -99,8 +109,9 @@ the evidence line is not reportable.
 ## Step 5 — Apply fixes (only on a yes)
 
 If invoked as `/todo-sync fix`, or the user confirms after the board: apply exactly the
-confirmed corrections — status column flips in `index.md`, checkbox reconciliation in
-`tasks.md` — following `todo-update-state`'s edit + sync rules, **including its Step 3.5
+confirmed corrections — status changes in the owning registry, checkbox reconciliation
+in `tasks.md`, and any required archive→active row move — following
+`todo-update-state`'s edit + sync rules, **including its Step 3.5
 date-stamping** (stamp `started` on a `ready`/`planning` → `in-progress` flip, stamp
 `completed` + `elapsed (days)` on a flip into `done`, clear `completed`/`elapsed (days)` on
 a flip out of `done` — Step 3.5 is the authority on every case) (delegate the mechanical

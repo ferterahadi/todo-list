@@ -1,5 +1,6 @@
 {
   "name": "todo-list",
+  "description": "Evidence-backed project loops coordinated by a typed Markdown work graph.",
   "owner": {
     "name": "The todo-list contributors"
   },
@@ -7,7 +8,7 @@
     {
       "name": "todo-list",
       "source": "./",
-      "description": "Plan → do → check → revise project-tracking hub: 16 /todo-* skills, self-bootstrapping."
+      "description": "Plan → do → check → revise project loops plus a typed dependency graph, self-bootstrapping."
     }
   ]
 }

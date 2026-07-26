@@ -18,7 +18,7 @@ the quality gate, index bookkeeping. The **thinking** belongs to the best proces
 the user already has installed — check the session's available-skills listing:
 
 - **Discovery/design** — if `superpowers:brainstorming` is installed, run it FIRST; it
-  explores intent, requirements, and design better than a question list. Step 2's six
+  explores intent, requirements, and design better than a question list. Step 2's seven
   questions then become the *coverage checklist*: after brainstorming, ask only what it
   didn't surface. Not installed → run Step 2 yourself.
 - **Task breakdown** — if `superpowers:writing-plans` is installed and the work is a
@@ -34,7 +34,7 @@ which skill produced the content.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — `index.md`, each project's `path`, `plan.md`, `tasks.md` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's separate from the hub.) (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's separate from the hub.) (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 
@@ -45,22 +45,24 @@ The hub repo root is `$TODO_HUB` — an environment variable pointing at your cl
 
 ## Step 1 — Resolve the project path
 
-Read `$TODO_HUB/index.md`.
+Resolve the project active-first in `$TODO_HUB/index.md`, then by exact short-name in
+`$TODO_HUB/archive.md`.
 
-- Short name (e.g. `queue-migration`) → look up in index.md to get the full `path` and `repo`
-- Not found in index.md → tell the user and stop
-- Full path passed directly → use as-is, still read index.md for the `repo` column
+- Short name → get the full `path`, `repo`, owning registry, and section
+- Duplicate across registries → stop; do not choose one
+- Not found in either registry → tell the user and stop
+- Full path → use as-is, still resolve its owning registry row
 
 ## Step 2 — Ask questions first
 
-Before reading or writing anything, gather answers to all six discovery questions.
+Before reading or writing anything, gather answers to all seven discovery questions.
 Use the host's structured choice prompt for enumerable questions when available —
 clickable options beat walls of prompt text for a visual reader — and plain text for
 open-ended questions, all in the same turn:
 
 Via structured choices (include a free-text path when the host supports it):
-- **Repo path** — offer the `repo` value from index.md as the first option
-  ("Confirmed: `~/code/…`") plus "Different path" (if index.md shows `-`, skip the
+- **Repo path** — offer the owning row's `repo` value as the first option
+  ("Confirmed: `~/code/…`") plus "Different path" (if the row shows `-`, skip the
   widget and just ask).
 - **Verification layer** — "Does this project have a verification MCP layer?" with
   options like "Yes — I'll name the feature/target" / "No — drop the Verification block".
@@ -72,6 +74,8 @@ As plain questions in the accompanying message:
 1. What is this project? What problem does it solve?
 2. What does done look like? What's the expected outcome? (push for observable, checkable signals — these become Success Criteria)
 3. Any prior context to read? (docs, tickets, other repos or paths)
+4. Does it require, replace, or merely relate to another tracked project? Ask for exact
+   short-names and a one-clause reason; do not infer dependencies from similar names.
 
 Wait for answers. Do not proceed until you have them.
 
@@ -109,6 +113,13 @@ Fill in the project's `plan.md`:
 - **Scope**: what's in / what's out
 - **Key Decisions**: choices already made so the next agent doesn't re-litigate them. Number them `D1`, `D2`, … — `todo-infographic` and the feedback loop reference decisions by ID. If the architecture/approach is still genuinely open (the user couldn't answer "how"), don't pad this section with guesses — check for an installed brainstorming/architecture skill (e.g. from superpowers) and offer to run it to converge on the decision first; otherwise record the open question explicitly as a decision-to-make task. If such a skill writes its output into the target repo (`docs/superpowers/…`), immediately record a pointer in `research/superpowers-docs.md` and under plan.md References — a doc that lives only in the target repo is lost to the hub
 - **Trade-offs**: planning-time knowledge the infographic renders later — capture it now or it's lost. Three parts, per the template: one `**D<n>** — gain: … · cost: …` row per Key Decision; **Forgone** — alternatives you and the user considered and rejected (plus scope deliberately cut), one clause of why each; **Known gaps** — limitations the build deliberately accepts. Record rejected alternatives *as they're rejected* during discovery, not reconstructed afterwards. If a part is genuinely empty, delete its stub line rather than padding it.
+- **Relationships**: the canonical typed project graph. Write one row per explicit
+  relationship: `depends-on` for a hard prerequisite, `related-to` for context, or
+  `supersedes` for lineage. Resolve every target by exact short-name active-first, then
+  archive. Record why the edge exists. Never store `blocks` (it is derived), promote a
+  legacy registry `related` hint into a dependency, or infer an edge from name similarity.
+  Keep the three-column table empty when there are no relationships. If an older plan has
+  no section, insert the canonical table before `## Verification` or `## References`.
 - **Verification**: the "check" gate binding for `/todo-verify`. If the project has a verification MCP layer, ask for the feature/target name and fill the `## Verification` block — `Feature`, `Gate covers` (which tasks/phases a green run may tick), and optionally `Coverage source` + a `Task↔test map`. If there's no verification layer, delete the section.
 - **Repo**: absolute path to the local codebase (confirmed in Step 3)
 - **References**: paths or links to relevant resources
@@ -145,13 +156,21 @@ never present a plan that fails one:
   endpoint), and fits on one line. "Think about X" / "handle Y properly" fail.
 - [ ] **Dependency walk**: read tasks.md top to bottom once; if any task needs an output
   produced by a LATER task, reorder now.
+- [ ] **Project-graph test**: run `todo-graph`'s bundled
+  `graph-report.py audit "$TODO_HUB"` after writing Relationships. Missing targets,
+  ambiguous identities, unknown types, self-edges, duplicate edges, or dependency cycles
+  fail the plan. Fix the table before continuing; do not reinterpret a broken edge. If
+  the helper is unavailable and the table contains a `depends-on` row, stop instead of
+  publishing an unvalidated hard dependency.
 - [ ] **Cold-session test**: for each task ask "would a fresh session need to ask the
   user anything to do this?" If yes, the answer belongs in plan.md Context — add it.
 - [ ] **Repo check**: the Repo path in plan.md was verified on disk THIS session (you
   saw the `ls`/git output in Step 3, not remembered it).
 
-## Step 7 — Update index.md
+## Step 7 — Update the active registry
 
+- If the row came from `archive.md`, move it verbatim back to the same section in
+  `index.md` before changing it. Replanning makes the project active again.
 - Set `status` to `ready`
 - Set `repo` to the confirmed absolute local path
 - Set `started` to today's date **only if the prior status was `planning`** (the normal
@@ -181,6 +200,8 @@ as a compact widget block and offer the full files only on request:
 
 **Decisions** ① quorum queues, not classic ② retry via per-queue TTL, not delayed-exchange plugin
 
+**Graph** auth-foundation ─▶ rmq-dlq-support · token-rotation (context)
+
 **Constraints** ⛔ no broker restart in prod · ⚠️ ship before the 4.1 upgrade
 
 **Verification** 🔬 `rmq-dlq` gates Phase 3   (or: — none)
@@ -191,6 +212,7 @@ Rules for the render:
 - Phases = a `─▶` pipeline with per-phase task counts — this is the tasks.md summary;
   don't paste the checklist.
 - Decisions numbered ①②③, one clause each. Constraints as chips: ⛔ hard, ⚠️ soft.
+- Graph = hard prerequisites first, then context/lineage; omit the line when empty.
 
 Then ask via the host's structured choice prompt when available: "Does this plan look
 right?" with options

@@ -9,14 +9,17 @@ projects/
   work/            — work projects
   self-initiative/ — self-driven / research projects
 templates/     — plan.md and tasks.md templates for new projects
-index.md       — central registry: resolves short-name → path / repo / status / infographic
+index.md       — hot registry: active projects only
+archive.md     — cold registry: completed rows, preserving their original sections
 skills/        — the /todo-* skills that drive the workflow
 ```
 
 ## Entry Point
 
-`index.md` is the registry. Skills resolve a short project name to its path, target repo,
-and status. Keep `tasks.md` checkboxes and the `index.md` status column in sync.
+Resolve an exact project name in `index.md` first, then `archive.md` only on a miss.
+Default hub-wide scans read the active index only. Reopening an archived project moves
+its row back to the matching section in `index.md`; never leave the same row in both.
+Keep `tasks.md` checkboxes and the owning registry row's status in sync.
 
 The hub root is the `TODO_HUB` environment variable (default `~/todo`). Resolve every hub
 path against it — skills may be invoked from inside another repo, so never assume the
@@ -28,12 +31,18 @@ Each project folder contains:
 - `research/` — raw notes and findings
 - `artifacts/` — your outputs go here
 
+`plan.md` may also contain a canonical `## Relationships` table. `depends-on` is the
+only scheduling edge; `related-to` and `supersedes` add context. The registry's legacy
+`related` column never blocks. Use `/todo-graph` for readiness, blockers, paths, impact,
+and integrity instead of inferring dependency semantics from prose.
+
 ## Artifact conventions
 
 Keep `artifacts/` navigable — a cold session should reach any output from one place.
 
 - **Naming.** Dated outputs are `YYYY-MM-DD-<kind>-<slug>.md`, `<kind>` ∈ `analysis · finding · handoff · session · design`. Living docs appended over time keep stable names: `journal.md`, `blockers.md`, `infographic.html` (plus any project-specific source-of-truth doc).
-- **Header.** Every artifact opens with a one-line blockquote that backlinks its origin: `> **Kind:** … · **Source:** tasks.md#R7 (or a Phase) · **Date:** YYYY-MM-DD · **Index:** [README.md](README.md)`.
+- **Revision anchors.** Archived revision `R4` starts with `<a id="revision-r4"></a>` in `journal.md`; its `tasks.md` tombstone links directly to `artifacts/journal.md#revision-r4`.
+- **Header.** Every artifact opens with a one-line blockquote that names its origin: `> **Kind:** … · **Source:** tasks.md revision R7 (or a Phase) · **Date:** YYYY-MM-DD · **Index:** [README.md](README.md)`.
 - **Manifest.** `artifacts/README.md` is the backtrack hub — a table of every artifact (`date · file · kind · source · one-line`) plus a living-docs table. Add a row whenever you create an artifact. Template: `templates/artifacts-README.md`.
 - **Superpowers pointers.** `research/superpowers-docs.md` is a table (`doc · source · one-line`) of design docs that live in the target repo under `docs/superpowers/`; it satisfies the `superpowers-doc-sync` hook.
 
@@ -52,11 +61,16 @@ Prefer the `/todo-*` skills over hand edits:
 - `/todo-update-state` flip status/checkboxes · `/todo-list` overview (`sort` reorders by completion)
 - `/todo-verify` reconcile the verification result · `/todo-revise` fix gaps
 - `/todo-review` review a diff against the plan · `/todo-resume` pick up where a project left off
-- `/todo-sync` reconcile index status vs repo reality · `/todo-archive` compact tasks.md + retire done projects
+- `/todo-sync` reconcile recorded status vs repo reality · `/todo-archive` compact tasks.md + move done rows to archive.md
 - `/todo-triage` tabulate open tasks/revisions across projects + recommend a model tier per item
+- `/todo-graph` derive the ready frontier across projects, explain blockers, and validate/edit typed relationships
 - `/todo-infographic`, `/todo-refer`, `/todo-learn`
 
 Status lifecycle: planning → ready → in-progress → done
+
+Execution is a graph of those per-project loops: a `ready` project is runnable only when
+every explicit `depends-on` target is settled. Run the graph gate before execution or a
+manual flip to `in-progress`.
 
 ## How to Work
 

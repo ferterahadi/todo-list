@@ -32,10 +32,10 @@ Plain language counts too: "where did we leave the token rotation work", "contin
 
 ## Step 1 — Resolve the project
 
-Read `$TODO_HUB/index.md` (same resolution rules as `todo-refer`: exact short-name
-first, then fuzzy with confirmation).
+With an explicit name, use `todo-refer`'s active-first, archive-on-exact-miss resolution.
+Say when the project is archived. With no name, read active `index.md` only.
 
-No name given → pick the `in-progress` project whose files changed most recently
+No name given → pick the active `in-progress` project whose files changed most recently
 (`ls -t` the project folders' `tasks.md`), say which one you picked, and offer the
 others. No `in-progress` projects at all → show the index like `/todo-list` and ask.
 
@@ -49,12 +49,25 @@ Read, in order — extract, don't ingest whole files (large `tasks.md` rules fro
    snippets).
 3. `artifacts/blockers.md` — every unresolved blocker, one line each.
 4. `artifacts/journal.md` — the **last dated section only** (tail the file); it records
-   the most recent closed work.
+   the most recent closed work. If the user asked about a named revision, use
+   `todo-refer`'s exact anchored lookup instead.
 5. `artifacts/README.md` — the newest 2–3 rows (most recent outputs).
+
+Then run the bounded graph context:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
+  "$TODO_HUB" "<short-name>"
+```
+
+Record unsatisfied hard prerequisites as graph blockers. Canonical `related-to`,
+`supersedes`, and legacy registry hints are context only. If an in-progress project's
+dependency regressed, call it **at risk** and prioritize `/todo-graph why <short-name>`;
+do not recommend more execution until the graph is honest.
 
 ## Step 3 — Gather the trail (repo side)
 
-If the index row names a target repo that exists locally:
+If the owning registry row names a target repo that exists locally:
 
 ```bash
 git -C <repo> worktree list                          # is <repo>-wt/<short-name> still there?
@@ -100,6 +113,7 @@ evidence, with at most one alternative:
 | Open revisions | `/todo-revise <name>` |
 | Committed-but-unshipped worktree commits | `/todo-push` (from the worktree) |
 | Only blockers remain | name the blocker — no command unblocks a missing credential |
+| Unsatisfied project dependency | `/todo-graph why <name>` |
 
 ## Notes
 - Read-only, idempotent — run it at the start of any session.

@@ -1,8 +1,9 @@
 # Contributing to todo-list
 
 Thanks for your interest. This project is a set of cross-platform Agent Skills for
-Claude Code and Codex — plain markdown, no build system — so contributing is mostly
-writing and refining prompts.
+Claude Code and Codex — plain Markdown, no build system or service. Most behavior lives
+in skill instructions; deterministic shell/Python helpers compile state outside model
+context where accuracy or token cost matters.
 
 ## How a skill works
 
@@ -30,10 +31,22 @@ explicit invariants, terse examples.
 - **Resolve hub paths against `$TODO_HUB`** (default `~/todo`) — never hardcode an absolute
   path. Skills may be invoked from inside another repo, so they can't assume the current
   working directory is the hub.
+- **Keep the hot/cold registries separate.** `index.md` contains active rows;
+  `archive.md` contains completed rows under their original section. Resolve an exact
+  short-name in the index first and search the archive only on a miss. A reopened row
+  moves back atomically; it never exists in both files.
 - **`tasks.md` is a checklist, not a journal** — one line per task (~150 chars). Detail goes
   to `research/` or `artifacts/` with a pointer.
+- **Use stable revision anchors.** Journal entry `R4` gets
+  `<a id="revision-r4"></a>` and its tombstone links to
+  `artifacts/journal.md#revision-r4`. Readers accept historical level-two or level-three
+  revision headings and case-insensitive status tags.
 - **`plan.md` stays the source of truth.** Derived views (the infographic, the index row)
   reflect it; they don't replace it.
+- **Project relationships are typed.** Canonical `depends-on`, `related-to`, and
+  `supersedes` rows live in `plan.md` `## Relationships`. Only `depends-on` gates work;
+  `blocks` is derived and never stored. The registry's legacy `related` values remain
+  context-only.
 - **Model routing is tier-first.** Use `frontier`, `deep`, `balanced`, or `fast` in skill
   instructions and keep provider names in `skills/todo-llm-routing/SKILL.md`.
 - **Keep skills self-contained.** A reader (human or model) should understand one SKILL.md
@@ -47,10 +60,11 @@ This repo packages the same skills for both agents:
 - `.claude-plugin/marketplace.json` — makes the repo installable.
 - `.codex-plugin/plugin.json` — Codex manifest; keep its version aligned.
 - `skills/todo-*/SKILL.md` — the skills (auto-discovered).
-- `hooks/` — `hooks.json` (auto-registered) plus `bootstrap-hub.sh` (SessionStart, seeds
-  the hub) and `infographic-staleness.sh` (Stop).
-- `seed/` — copied to `$TODO_HUB` on first run: `index.md`, `AGENTS.md`, `CLAUDE.md`, `templates/`, and
-  the example project. Anything a fresh hub should contain goes here.
+- `hooks/` — `hooks.json` plus SessionStart bootstrap, date migration, and
+  archive-candidate reporting; Stop hooks handle infographic and external-doc drift.
+- `seed/` — copied to `$TODO_HUB` on first run: `index.md`, `archive.md`, `AGENTS.md`,
+  `CLAUDE.md`, templates, and the example project. Anything a fresh hub should contain
+  goes here.
 
 ## Adding a skill
 
@@ -61,13 +75,14 @@ This repo packages the same skills for both agents:
 
 ## Testing a change
 
-There's no automated suite — these are prompt files. To exercise a change:
+Most behavior lives in skill instructions, with contract tests for deterministic helpers
+and packaging. To exercise a change:
 
 1. Install the skills from your local checkout for both agents:
 
    ```bash
    npx skills add . --skill todo-llm-routing todo-add todo-archive todo-execute \
-     todo-infographic todo-learn todo-list todo-plan todo-push todo-refer \
+     todo-graph todo-infographic todo-learn todo-list todo-plan todo-push todo-refer \
      todo-resume todo-review todo-revise todo-sync todo-triage todo-update-state \
      todo-verify --agent claude-code --agent codex --global --yes
    ```
@@ -90,6 +105,17 @@ To test the bootstrap hook in isolation, run it against a throwaway hub:
 ```bash
 CLAUDE_PLUGIN_ROOT="$(pwd)" TODO_HUB=/tmp/hub-test bash hooks/bootstrap-hub.sh
 ```
+
+Run `hooks/archive-candidates.sh` against throwaway fixtures as well. A clean or missing
+hub must print nothing and exit zero. A candidate hub emits one deterministic line and
+still exits zero. Cover `[done]` and `[DONE …]`, suffixed IDs such as `R72b`, unique
+level-two and level-three journal targets, missing/duplicate targets, and an already
+linked tombstone.
+
+Run `tests/graph-contract.sh` for graph changes. It must prove that legacy `related`
+hints never block, archived completion is checked against live task/revision evidence,
+cycles and missing targets fail closed, exact names do not collapse (`api` ≠ `api-v2`),
+and rejected link validation leaves the hub byte-for-byte unchanged.
 
 ## Releasing
 

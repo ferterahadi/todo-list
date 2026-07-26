@@ -33,6 +33,12 @@ One row per Key Decision — what it gains, what it costs:
 **Known gaps** — limitations this build deliberately accepts (not bugs):
 - <gap>
 
+## Relationships
+<!-- Canonical project-graph edges. /todo-graph derives "blocks" from depends-on;
+     never store it. Legacy index.md related values remain non-blocking context hints. -->
+| relation | target | reason |
+|---|---|---|
+
 ## Verification
 <!-- The "check" gate. Read by /todo-verify to reconcile your verification MCP's result into todo state.
      Delete this section if the project has no verification MCP layer. -->

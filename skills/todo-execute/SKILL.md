@@ -22,7 +22,7 @@ use at least the **balanced** tier from [`../todo-llm-routing/SKILL.md`](../todo
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — `index.md`, each project's `path`, `plan.md`, `tasks.md`, `artifacts/` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 
@@ -35,15 +35,39 @@ The hub repo root is `$TODO_HUB` — an environment variable pointing at your cl
 
 ## Step 1 — Resolve the project path
 
-Read `$TODO_HUB/index.md`.
+Resolve the short-name in `$TODO_HUB/index.md` first, then `$TODO_HUB/archive.md` only
+on an exact active miss.
 
-- Short name (e.g. `queue-migration`) → look up in index.md to get the full `path`
-- Not found → tell the user and stop
+- Short name → get the full `path`, status, owning registry, and section
+- Duplicate across registries → stop; do not choose one
+- Not found in either registry → tell the user and stop
 - Full path passed directly → use as-is
 
-Check the project `status` in index.md:
+Check the project status:
 - `ready` or `in-progress` → proceed
 - `planning` → warn the user that plan.md/tasks.md may be empty, ask if they want to continue anyway
+- archived `done` → invocation is intent to resume execution; say that you will reopen it,
+  then apply Step 3 atomically before doing work
+
+## Step 1.5 — Enforce the project-graph gate
+
+Before loading full project context, run the bounded graph query:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
+  "$TODO_HUB" "<short-name>"
+```
+
+- Any unsatisfied `depends-on` edge → stop before changing status or creating a worktree.
+  Name the exact blockers and point at `/todo-graph why <short-name>`.
+- An identity, edge, or cycle issue incident to this project → stop and point at
+  `/todo-graph audit`; graph corruption makes execution order untrustworthy.
+- An `in-progress` project whose dependency regressed is **at risk**. Do not silently
+  demote it or continue.
+- `related-to`, `supersedes`, and legacy registry `related` hints never block.
+
+If the graph helper is unavailable, say so and stop rather than guessing dependencies
+from prose. This cheap gate exists to avoid loading and executing a blocked project.
 
 ## Step 2 — Orient yourself
 
@@ -62,12 +86,15 @@ Do not start executing until you've read all of them. If `plan.md` is missing cr
 
 **Parallel mode branches off here** — jump to [Parallel mode](#parallel-mode).
 
-## Step 3 — Update index.md status
+## Step 3 — Activate the project and update status
 
-Set the project status to `in-progress` in index.md. Apply `todo-update-state`'s Step 3.5
-date rule in the same edit: if the prior status was `ready` or `planning`, stamp/overwrite
-`started` = today (overwriting any provisional value `todo-add`/`todo-plan` set); if the
-prior status was anything else (e.g. reopened from `done`), leave `started` untouched.
+If the row came from `archive.md`, move it verbatim back to the same section in
+`index.md`. Set status to `in-progress` there and apply `todo-update-state` Step 3.5 in
+the same atomic edit: clear `completed` / `elapsed (days)`, preserve the original
+`started`, and never leave a non-done row in `archive.md`.
+
+For an already-active row, set status to `in-progress`. If the prior status was `ready`
+or `planning`, stamp/overwrite `started` = today; otherwise preserve it.
 
 ## Step 4 — Isolate target-repo work in a worktree
 
@@ -162,7 +189,11 @@ If a task is ambiguous and `plan.md` doesn't resolve it:
 
 ## Step 7 — Report when done
 
-Update index.md status:
+Re-run the Step 1.5 graph context immediately before any status flip to `done`.
+Dependencies can regress during a long execution session; a newly unsatisfied hard edge
+keeps the project `in-progress` and is reported as at risk.
+
+Update the active `index.md` row:
 
 - Blockers remain or tasks are open → stay `in-progress`.
 - All tasks complete and `plan.md` has a `## Verification` block → stay `in-progress` and point the user at `/todo-verify <short-name>` — the verification run is the gate that flips `done`, not your own assessment. Code-complete + unit tests ≠ done.
@@ -193,7 +224,8 @@ only you touch hub files.
 
 Entry: steps 1–2 above (resolve + orient), plus: `plan.md` must name the target repo
 path; verify it exists locally and `gh auth status` succeeds there — stop and report if
-not. Set index.md status to `in-progress`, applying the same Step 3 date rule above.
+not. Set the active row's status to `in-progress`, applying the same Step 3 date rule
+above.
 
 ## Step P1 — Partition tasks into features
 
@@ -311,7 +343,7 @@ git -C <repo> pull --ff-only        ← once, if primary sits on <base> and is c
 ## Step P7 — Reconcile hub state and report
 
 Only now, and only you: tick the completed task lines in `tasks.md`, write blockers to
-`artifacts/blockers.md`, and set index.md status per sequential Step 7 (a
+`artifacts/blockers.md`, and set the active registry status per sequential Step 7 (a
 `## Verification` block in plan.md means stay `in-progress` and point at
 `/todo-verify` — merged PRs + unit tests ≠ done).
 

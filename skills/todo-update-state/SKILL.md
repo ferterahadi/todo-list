@@ -1,22 +1,23 @@
 ---
 name: todo-update-state
-description: Use when the user invokes /todo-update-state, says "mark X as done", "tick off task Y", "uncheck that", "set this to in-progress", "mark this project done", or wants to record progress without a full execution pass. Edits tasks.md checkboxes + index.md status in sync.
+description: Use when the user invokes /todo-update-state, says "mark X as done", "tick off task Y", "uncheck that", "set this to in-progress", "mark this project done", or wants to record progress without a full execution pass. Edits tasks.md checkboxes and the owning active or archived registry row in sync.
 ---
 
 # Project State Skill
 
-You update the recorded state of projects in a hub repo. This is the lightweight write companion to `todo-execute` — use it when the user just wants to *record* progress (check a task off, flip a status) without the agent actually doing the work. State lives in two places, and your job is to edit them and keep them honest:
+You update the recorded state of projects in a hub repo. This is the lightweight write companion to `todo-execute` — use it when the user just wants to *record* progress (check a task off, flip a status) without the agent actually doing the work. Your job is to keep checklist state and the owning registry row honest:
 
 This is light, mechanical work. Use the **fast** tier from
 [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md) when dispatching is available; otherwise
 perform the edits inline.
 
 - **`tasks.md`** in each project — task checkboxes: `- [ ]` (not done) and `- [x]` (done)
-- **`index.md`** in the hub root — the `status` column per project: `planning` → `ready` → `in-progress` → `done`, plus the `started` / `completed` date columns that shadow that flip (see Step 3.5)
+- **`index.md` / `archive.md`** in the hub root — active and completed project rows,
+  including `status`, `started`, and `completed` columns (see Step 3.5)
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — `index.md` and each project's `path`/`tasks.md` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to the edit subagent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's `path`/`tasks.md` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to the edit subagent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 
@@ -30,16 +31,18 @@ The user will usually say what they want in plain language: "mark the migration 
 
 ## Step 1 — Resolve the project
 
-Read `$TODO_HUB/index.md` to map short names → full paths and current status.
+Resolve exact short-names in `$TODO_HUB/index.md` first, then `$TODO_HUB/archive.md`
+only on an active miss. Record the owning file and section with the full path and status.
 
-- Short name → look it up in `index.md` to get the `path`
+- Short name → look it up active-first to get the `path`
 - Full path passed directly → use as-is
-- Not found → tell the user and stop
+- Duplicate across both registries → stop; the hub is corrupt and choosing one loses state
+- Not found in either registry → tell the user and stop
 - No project named and it's not obvious from context → ask which project before changing anything
 
 ## Step 2 — Show current state before editing
 
-Read the project's `tasks.md` and report the current checklist with each task's checkbox state, plus the current `status` from `index.md`. This grounds the edit so the user (and you) act on what's actually there, not what you assume. Number the tasks so the user can refer to them ("task 3").
+Read the project's `tasks.md` and report the current checklist with each task's checkbox state, plus the current `status` and whether its row is active or archived. This grounds the edit so the user (and you) act on what's actually there, not what you assume. Number the tasks so the user can refer to them ("task 3").
 
 If `tasks.md` is missing or empty, say so — there's nothing to check off yet, and `/todo-plan <name>` is the way to create tasks.
 
@@ -57,7 +60,28 @@ Match on the task's text, not its position alone, so you edit the right line eve
 - "done" → check every task in `tasks.md` and set `status: done` in `index.md`
 - "not done" / "reopen" → the user will usually mean the status, not unchecking every task; confirm whether they want tasks unchecked too before doing it, since that's destructive to recorded progress.
 
-**Change status only** — update just the `status` column for that project's row in `index.md` to one of `planning` / `ready` / `in-progress` / `done`.
+**Change status only** — update the owning row's `status` column to one of `planning` /
+`ready` / `in-progress` / `done`; the archived-project reopen rule below still applies.
+
+Before a flip to `in-progress` or `done`, run:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
+  "$TODO_HUB" "<short-name>"
+```
+
+Refuse the status flip when a hard prerequisite is unsatisfied or an incident graph
+identity/cycle issue exists. Name the blocker and point at `/todo-graph why <short-name>`
+or `/todo-graph audit`. Context and lineage edges never gate state. A direct state edit
+must not bypass the same dependency gate that `/todo-execute` enforces.
+If the helper is unavailable, stop before a flip to `in-progress` or `done`; do not infer
+dependency safety from the registry's legacy `related` cell.
+
+**Reopen an archived project** — any status change away from `done` is also a registry
+move. Remove the row verbatim from its section in `archive.md`, append it to the same
+section in `index.md`, then update status and dates there. Preserve custom section names;
+if a legacy row's source section is unknown, ask before moving it. The row move, status
+change, and Step 3.5 date clearing are one atomic edit.
 
 Do not touch anything the user didn't ask about. Leave `plan.md`, `research/`, and `artifacts/` alone — this skill edits state, not content.
 
@@ -103,7 +127,9 @@ next session. If you hit an unmigrated table mid-edit, widen it yourself first: 
 
 ## Step 4 — Keep status and tasks in sync
 
-After editing, the project's `status` in `index.md` and its task completion in `tasks.md` should tell the same story. When they'd otherwise disagree, reconcile — and say what you did:
+After editing, the project's status in its owning registry row and its task completion in
+`tasks.md` should tell the same story. When they'd otherwise disagree, reconcile — and
+say what you did:
 
 - All tasks now checked, but status isn't `done` → offer to set it `done` (or just set it and report, if the user already said "mark done").
 - A task got unchecked on a project marked `done` → it's no longer truly done; flag it and suggest moving status back to `in-progress`.
@@ -111,11 +137,12 @@ After editing, the project's `status` in `index.md` and its task completion in `
 
 Don't silently override the user's explicit instruction — if they said "set status to ready" while tasks are all checked, do what they asked and just note the mismatch.
 
-**Size housekeeping (offer, don't auto-do):** if the `tasks.md` you touched exceeds
-~20KB, mention it and offer the archival sweep from `todo-revise`'s "Archival rule" —
-move `[done]` revision detail to `artifacts/journal.md`, leaving heading + one
-`archived →` line per entry. Same discipline for closed `[done]` revision checkboxes
-you flip here: after flipping, apply the same two-line tombstone collapse.
+**Archive housekeeping:** if the `tasks.md` you touched exceeds 20,480 bytes, mention it
+and offer `/todo-archive <short-name>`. When this skill itself flips a revision tag to a
+case-insensitive `[done…]`, immediately apply `todo-archive`'s canonical single-entry
+rule: add `<a id="revision-r<n>"></a>` before the exact journal entry and leave
+`[journal:R<n>](artifacts/journal.md#revision-r<n>)` in the two-line tombstone. Never
+archive ordinary task checkboxes.
 
 ## Counting tasks
 

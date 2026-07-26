@@ -1,128 +1,170 @@
 ---
 name: todo-archive
-description: Use when the user invokes /todo-archive, says "compact tasks.md", "archive this project", "clean up the hub", "tidy the index", "this tasks file is huge", or when a skill notices a tasks.md over ~20KB or done projects cluttering the index. Moves closed detail to artifacts/journal.md and retires done projects to an Archive section — lossless, never deletes.
+description: Use when the user invokes /todo-archive, says "compact tasks.md", "archive this project", "clean up the hub", "tidy the index", "this tasks file is huge", or a SessionStart archive-candidate report appears. Losslessly moves completed revision detail to anchored journal entries, leaves direct tombstones, and moves completed project rows from active index.md to cold archive.md.
 ---
 
 # Project Archive Skill
 
-You keep the hub's hot files small. `tasks.md` is read by six skills and `index.md` by
-all of them — closed history must not tax every future read. This skill owns the two
-housekeeping sweeps other skills only *offer*:
+Keep repeatedly read files small without deleting history:
 
-1. **Compact a project's `tasks.md`** — move `[done]` revision detail to
-   `artifacts/journal.md`, leaving two-line tombstones.
-2. **Retire done projects** — move their `index.md` rows to an `## Archive` section so
-   the active tables stay short.
+1. Move completed `## Revisions` detail from `tasks.md` to
+   `artifacts/journal.md`, leaving a direct two-line tombstone.
+2. Move completed project rows from active `index.md` to cold `archive.md`.
 
-Everything is **lossless**: detail moves, nothing is deleted. Never touch `plan.md`,
-`research/`, or project code.
-
-This is mechanical work with strict byte-preservation rules. Decide what gets archived
-and verify the result yourself; when dispatching is available, delegate only the moves
-to a **fast**-tier subagent using [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md).
+Never move ordinary task checkboxes, project folders, `plan.md`, `research/`, or project
+code. This is mechanical work with strict byte-preservation rules. Decide scope and
+verify it yourself; delegate only the approved moves to a **fast**-tier subagent using
+[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md).
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — `index.md`, each project's `path`, `tasks.md`, `artifacts/` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
+Resolve every path against `$TODO_HUB` (default `~/todo`) regardless of the current
+working directory. `index.md` is active-only; `archive.md` is completed-project cold
+storage. Project-relative paths remain unchanged in both registries.
 
-## How the user invokes this
+## Invocation
 
+```text
+/todo-archive                     scan the whole hub and propose a sweep
+/todo-archive api-token-rotation  compact one project
+/todo-archive registry            retire completed project rows only
 ```
-/todo-archive                     ← scan the whole hub, propose a sweep
-/todo-archive api-token-rotation  ← compact one project's tasks.md
-/todo-archive index               ← retire done projects from index.md only
+
+Plain language counts: "this tasks file is enormous", "clean up my done projects".
+
+## Step 1 — Run the deterministic report
+
+Run the bundled read-only helper, resolving the script relative to this `SKILL.md`:
+
+```bash
+bash <todo-archive-skill-dir>/scripts/archive-report.sh audit "$TODO_HUB"
+bash <todo-archive-skill-dir>/scripts/archive-report.sh audit "$TODO_HUB" api-token-rotation
+bash <todo-archive-skill-dir>/scripts/archive-report.sh audit "$TODO_HUB" registry
 ```
 
-Plain language counts too: "this tasks file is enormous", "clean up my done projects".
+The same helper powers the plugin's SessionStart report. Its compact output identifies:
 
-## Step 1 — Scan and propose
+- completed revision entries still carrying detail, matched case-insensitively on a
+  heading tag that starts with `[done`;
+- tombstones needing a direct-link or stable-anchor repair;
+- broken tombstones whose journal target is missing or ambiguous;
+- duplicate short-names across active and archived registries;
+- state conflicts such as archived non-`done` / open-revision rows or active `done`
+  rows with an open revision;
+- registry rows whose project `tasks.md` is missing;
+- `tasks.md` files over 20,480 bytes;
+- active `done` rows eligible to move to `archive.md`.
 
-Read `$TODO_HUB/index.md`. For each in-scope project, check:
+Show the files, byte counts, entry counts, link repairs, broken pointers, and row moves
+before editing. A specific-project invocation needs one-line confirmation; a hub-wide
+sweep needs the full proposal. Never mutate during this scan.
 
-- `tasks.md` size (`wc -c`) — flag anything **> ~20KB**.
-- Count of `[done]`-tagged revision entries still carrying full detail (heading plus 2+
-  detail bullets, i.e. not yet a tombstone):
-  ```bash
-  grep -nE '^### R[0-9]+.*\[done' tasks.md    # done headings (prefix match — see rule below)
-  ```
-- `done`-status rows sitting in the active section tables.
+## Step 2 — Compact completed revisions
 
-Show the user what you found and what you'd do (files, byte counts, row moves) **before
-editing anything**. Nothing here is destructive, but the user should see the sweep's
-scope. If they invoked the skill on a specific project, a one-line confirmation is
-enough; a hub-wide sweep gets the full proposal.
+For each revision heading whose terminal tag starts with `[done` in any letter case
+(`[done]`, `[DONE 2026-07-13]`, `[Done — shipped]`):
 
-## Step 2 — Compact tasks.md (per project)
+1. Append the complete entry—heading plus its revision detail—to a dated section in
+   `artifacts/journal.md`. Preserve every entry byte and add one stable anchor immediately
+   before it:
 
-Apply the archival rule (shared with `todo-revise` — this is the batch form). For each
-revision entry whose heading tag **starts with** `[done` — match `\[done` as a prefix,
-not `\[done\]` literally, or annotated entries like `[done — shipped via Phases 7–14]`
-silently escape the sweep:
-
-1. **Append the full entry** (heading + all detail bullets) to `artifacts/journal.md`
-   under a dated section, creating the file if needed:
    ```markdown
-   ## R4 ⟵ Task 5.2 — rotate audit log   [done 2026-07-13]
+   <a id="revision-r4"></a>
+   ### R4 ⟵ Task 5.2 — rotate audit log   [DONE 2026-07-13]
    - Gap: rotate skips audit log
    - Expected: every rotation writes an audit row
    - Actual: only manual rotations logged
    - Fix: moved audit write into RotateService.execute
    - [x] implement + re-verify
    ```
-2. **Collapse the entry in `tasks.md`** to a two-line tombstone — heading stays verbatim
-   (numbering must never be reused, and `todo-verify`'s idempotency scan matches on it):
+
+2. Keep the original heading verbatim in `tasks.md` and replace only its detail with the
+   direct tombstone:
+
    ```markdown
-   ### R4 ⟵ Task 5.2 — rotate audit log        [done]
-   - archived → artifacts/journal.md (2026-07-13)
+   ### R4 ⟵ Task 5.2 — rotate audit log   [DONE 2026-07-13]
+   - archived → [journal:R4](artifacts/journal.md#revision-r4) (2026-07-13)
    ```
 
-Hard rules:
+The anchor is lowercase `revision-r<n>` even when the heading uses uppercase or a
+suffixed identifier such as `R72b`. Revision numbering is permanent and never reused.
 
-- **Never archive an `[open]` entry.** `[superseded …]` and other non-open/non-done tags
-  are left untouched.
-- Entries already tombstoned (single `archived →` bullet) are skipped — the sweep is
-  idempotent.
-- Task checkboxes under `## Tasks` / `## Phase …` are NEVER moved or collapsed — only
-  `## Revisions` entry *detail* is archived. The checklist is the project's live state.
-- Every line outside the collapsed entries is reproduced byte-for-byte — remind the
-  edit subagent of this explicitly.
+### Repair legacy tombstones
 
-## Step 3 — Retire done projects from index.md
+For every `link_repairs` candidate:
 
-For each row with status `done` in an active section table (`## Work`,
-`## Self-initiative`, …), **and no open Revisions** (check its `tasks.md` for
-`### R<n> … [open]` — a done project with open revisions isn't done; flag it and skip,
-suggesting `/todo-revise`):
+1. Find exactly one matching `## R<n>` or `### R<n>` journal heading, using an exact
+   boundary so `R1` cannot match `R10`.
+2. Insert `<a id="revision-r<n>"></a>` immediately before it if absent.
+3. Replace only the old plain `archived → artifacts/journal.md` line with the canonical
+   direct link above.
 
-- Move the row, verbatim, to an `## Archive` section table at the bottom of `index.md` —
-  same columns, created from the same header if it doesn't exist yet.
-- Do NOT move or rename the project folder — the `path` column stays valid, and every
-  skill can still resolve the project. Archive is an index-level shelf, not a deletion.
+If the journal contains zero or multiple exact headings, classify it as broken and stop
+for that entry. Never guess or create a link to a nearby aggregate section.
 
-Skills that iterate "every project" (`todo-list`, `todo-triage`) naturally skip the
-Archive section because they scope to active statuses; `todo-refer` and
-`/todo-update-state` still resolve archived rows by short-name, so nothing breaks.
+### Safety rules
 
-## Step 4 — Report
+- Never archive an `[open]` entry. Leave `[superseded …]`, `[fixed …]`, and every other
+  non-done tag untouched.
+- Any entry already containing an `archived →` pointer is tombstoned even when unrelated
+  comments or sections follow it. Repair its link if needed; never append its detail again.
+- If an interrupted run left both task detail and a journal copy, compare the exact entry.
+  Reuse the existing copy only when it matches; otherwise report the conflict.
+- Move only the revision's heading and detail bullets. Preserve adjacent blockquotes,
+  comments, section headings, and every line outside the entry byte-for-byte.
+- Ordinary checkboxes under `## Tasks` or `## Phase …` never move.
 
-Per project: bytes before → after for `tasks.md`, entries archived, rows moved. One
-compact table, then a one-line total, e.g.:
+## Step 3 — Retire completed projects
 
+Ensure `$TODO_HUB/archive.md` exists with the same section tables and nine-column schema
+as `index.md`. For each active row whose status is `done` and whose `tasks.md` has no
+case-insensitive `[open]` revision:
+
+Move the row verbatim to the same section in `archive.md`, creating that section with
+the same table header when necessary. Apply the destination insert and source removal
+as one atomic two-file edit. If the editing surface cannot do that, append and verify
+the destination first, then remove the source; a temporary duplicate is recoverable,
+while a row missing from both registries is not.
+
+Preserve custom section names. Before moving, search both registries for the short-name;
+duplicates are corruption, so stop instead of choosing one. Do not move or rename the
+project folder.
+
+Repair registry conflicts before retirement:
+
+- Archived status other than `done`, or a case-insensitive terminal `[open…]`
+  revision → move the row back to its original `index.md` section, set
+  `in-progress`, and clear `completed` / `elapsed (days)` atomically.
+- Active `done` row with an open revision → keep it active, set `in-progress`, and
+  clear the completion fields.
+- Missing `tasks.md` or duplicate registry names → stop for that project; do not move
+  the row or infer its state.
+
+`/todo-archive registry` uses the unfiltered deterministic audit above, then limits
+edits to rows whose `registry_action` is not `-`; it does not look for a project named
+`registry`.
+
+For a legacy `## Archive` table still inside `index.md`, infer `Work` only from a
+`projects/work/` path and `Self-initiative` only from `projects/self-initiative/`.
+Move unknown paths under `## Other` and flag them for confirmation before any later
+reopen.
+
+This skill may repair a stale archived row reported by the audit. For a user-requested
+status change away from `done`, `todo-update-state` owns the same atomic reverse move.
+
+## Step 4 — Verify and report
+
+Re-run the deterministic report. Broken tombstones and duplicate registry rows must be
+zero; repaired or moved items must no longer appear as candidates.
+
+Report one compact row per project:
+
+```text
+project             tasks.md        revisions → journal   links   registry
+api-token-rotation  96KB → 11KB     12                    2       -
+queue-migration     -                -                     -       index → archive
 ```
-| project | tasks.md | entries → journal | index row |
-|---|---|---|---|
-| api-token-rotation | 96KB → 11KB | 12 | — |
-| queue-migration | — | — | → Archive |
 
-Sweep complete — 85KB out of the hot path, nothing deleted.
-```
-
-## Notes
-- **Reversible by construction**: journal.md holds the full entries; a tombstone plus its
-  journal section reconstructs the original. Index rows move, never vanish.
-- If the user asks to archive a project that isn't `done`, don't — explain the status
-  gate and point at `/todo-update-state` (if it really is finished) or `/todo-revise`
-  (if open revisions are the blocker).
-- Other skills (`todo-revise` Step 6, `todo-update-state` housekeeping) archive
-  single entries as they close them; this skill is the batch sweep they point at when
-  backlog has accumulated.
+Include total bytes removed from `tasks.md`. `archive.md` is a cold file: default list,
+triage, sync, and execution scans read only `index.md`; exact historical lookup falls back
+to `archive.md`.

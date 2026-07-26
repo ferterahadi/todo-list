@@ -20,10 +20,13 @@
 Anything the executing agent should know before starting.
 
 ## Revisions
-<!-- Managed by /todo-revise. One entry per gap found in completed work, backlinked to its source task. -->
-<!-- ### R1 ⟵ Task N — what it touches        [open|done]
+<!-- Managed by /todo-revise. One gap per entry; canonical tags are lowercase, while readers accept historical case variants. -->
+<!-- ### R1 ⟵ Task N — what it touches        [open]
      - Gap: what's wrong
      - Expected: what the plan/user wanted
      - Actual: what was built instead
      - Fix: the concrete approach
      - [ ] implement + re-verify -->
+<!-- Closed entries collapse to:
+### R1 ⟵ Task N — what it touches        [done]
+- archived → [journal:R1](artifacts/journal.md#revision-r1) (YYYY-MM-DD) -->

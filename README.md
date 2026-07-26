@@ -4,8 +4,12 @@
 the agent plans it, executes the checklist, verifies the result, and fixes the gaps — with
 every plan and task list stored as plain markdown you can read and edit yourself.
 
+When one project starts waiting on another, say so once. The agent then schedules around
+it: what's ready, what's blocked and why, what finishing a thing would unlock.
+
 It is a cross-platform Agent Skills package with native Claude Code and Codex plugin
-manifests. No build step, runtime, or database.
+manifests. No build step, runtime, or database — the graph compiler is Python 3 standard
+library, the hooks are Bash.
 
 ## What it does
 
@@ -15,12 +19,15 @@ your projects:
 
 ```
 ~/todo/
-  index.md                     ← the registry: every project, one row each
+  index.md                     ← the active registry: every live project, one row each
+  archive.md                   ← the cold registry: completed rows, kept not deleted
   projects/
     work/api-rate-limiting/    ← one folder per project:
-      plan.md                       goal, scope, decisions   (source of truth)
+      plan.md                       goal, scope, decisions, relationships (source of truth)
       tasks.md                      the checklist the agent works through
+      research/                     raw notes
       artifacts/                    outputs the agent produces
+        journal.md                  closed revision detail, one anchor per revision
 ```
 
 Each project folder **points at** wherever its real code lives. The hub tracks the work;
@@ -71,15 +78,82 @@ A typical project, end to end:
 /todo-revise api-rate-limiting             # fix whatever the gate caught
 ```
 
+Stopped halfway? `/todo-resume api-rate-limiting` rebuilds the open tasks, Revisions,
+blockers, and git/worktree state, then names the next command.
+
+## The graph
+
+One project is a loop. Several projects that wait on each other are a graph — and
+`/todo-graph` is the only thing that reads it. Relationships are declared, never guessed
+from names or prose:
+
+```
+/todo-graph link api-migration depends-on auth-foundation "consumes its token contract"
+```
+
+That validates both project identities and cycle risk, then writes a visible table into
+`api-migration/plan.md` — the graph lives in the same markdown as everything else:
+
+```markdown
+## Relationships
+
+| relation | target | reason |
+|---|---|---|
+| depends-on | `auth-foundation` | consumes its token contract |
+```
+
+Three relations exist; only one of them changes what runs next:
+
+```
+  partner-rollout ──depends-on──▶ api-migration ──depends-on──▶ auth-foundation
+      blocked                        blocked                      in-progress
+                                        │                              ▲
+                                   related-to                          │
+                                        ▼                       the ready frontier:
+                                  gateway-notes                 the only project
+                            (context — never blocks)            work can start on
+```
+
+|Relation|Meaning|Scheduling effect|
+|-|-|-|
+|`depends-on`|Source requires target|Target must settle before source is runnable|
+|`related-to`|Useful neighboring context|None|
+|`supersedes`|Source replaces or continues target|None|
+
+Once edges exist, the graph answers the scheduling questions directly:
+
+```
+/todo-graph                                     # the ready frontier
+/todo-graph api-migration                       # one project's graph context
+/todo-graph why api-migration                   # shortest blocker chains
+/todo-graph impact auth-foundation              # direct + transitive dependents
+/todo-graph path auth-foundation api-migration  # prerequisite-to-dependent route
+/todo-graph audit                               # cycles, broken links, status conflicts
+/todo-graph export [json]                       # TSV by default, JSON on request
+```
+
+Remove an edge with `/todo-graph unlink api-migration depends-on auth-foundation`.
+
+What keeps it honest:
+
+- A prerequisite counts as **settled** only when its row says `done`, `tasks.md` exists
+  with every task checked, and no Revision is still open.
+- Queries are read-only and bounded. Only `link` / `unlink` write, and only to the source
+  project's `plan.md`. Explicit `export` is the one unbounded output.
+- The compiler scans the markdown outside the model's context, so a large hub costs
+  tokens for the answer, not for the corpus.
+- A dependency path is not a critical path — the graph stores no durations.
+
 ## Install skills in Claude Code and Codex
 
 One command installs all skills for both agents from the same source:
 
 ```bash
 npx skills add ferterahadi/todo-list \
-  --skill todo-llm-routing todo-add todo-archive todo-execute todo-infographic \
-    todo-learn todo-list todo-plan todo-push todo-refer todo-resume todo-review \
-    todo-revise todo-sync todo-triage todo-update-state todo-verify \
+  --skill todo-llm-routing todo-add todo-archive todo-execute todo-graph \
+    todo-infographic todo-learn todo-list todo-plan todo-push todo-refer \
+    todo-resume todo-review todo-revise todo-sync todo-triage todo-update-state \
+    todo-verify \
   --agent claude-code \
   --agent codex \
   --global \
@@ -104,8 +178,14 @@ claude plugin marketplace add ferterahadi/todo-list
 On the next Claude Code session it:
 
 - registers the `/todo-*` skills (auto-discovered), and
-- creates the hub at `~/todo` from bundled seed content — `index.md`, `templates/`, and a
-  small example project — via a SessionStart hook. It runs once, then stays quiet.
+- creates the hub at `~/todo` from bundled seed content — `index.md`, `archive.md`,
+  `templates/`, and a small example project — via a SessionStart hook. It runs once, then
+  stays quiet.
+
+Already have a hub from an earlier version? Nothing is overwritten: bootstrap only adds a
+missing `archive.md`, and a separate migration hook widens pre-1.2 registry tables to the
+dated format, backfilling `started` / `completed` from the hub's git history and leaving
+an `index.md.pre-dates.bak` backup.
 
 **Staying up to date:** releases are versioned (see [CHANGELOG.md](CHANGELOG.md)).
 Third-party marketplaces have auto-update **off** by default — enable it once via
@@ -163,25 +243,26 @@ rm -rf ~/todo    # or wherever TODO_HUB points
   inside another repo. See [`.env.example`](.env.example).
 - **Version the hub.** The hub is a plain directory. `git init` it if you want history.
 
-## All 16 skills
+## All 18 skills
 
-The loop skills above, plus support skills grouped by role:
+The loop and graph skills above, plus support skills grouped by role:
 
 **Track** — get projects in, see where they stand
 
 |Skill|Purpose|
 |-|-|
 |`todo-add`|Scaffold a new project folder + register it in `index.md`|
-|`todo-list`|Overview of the index grouped by status; `sort` mode reorders rows by task completion|
+|`todo-list`|Overview of the index grouped by status; `archive` reads the cold registry, `sort` reorders rows by task completion|
 |`todo-triage`|Tabulate open work across projects + recommend a model per task|
 |`todo-update-state`|Tick tasks / flip status by hand, without an execution pass|
 
-**Work** — the loop
+**Work** — the loop, and the graph over the loops
 
 |Skill|Purpose|
 |-|-|
 |`todo-plan`|Discovery → write `plan.md` and `tasks.md`|
 |`todo-execute`|Work `tasks.md` top to bottom; `parallel` mode fans tasks to git-worktree agents, lands PRs via a serial merge queue|
+|`todo-graph`|Compile the typed relationships into ready frontier, blocker chains, impact, paths, audits, validated edits, and exports|
 |`todo-review`|Audit a diff against the plan (scope, constraints, evidence), then a correctness pass|
 |`todo-verify`|The check gate: drive a verification MCP, tick tasks / flip status, open Revisions|
 |`todo-revise`|Gap-driven rework of completed items, then re-verify|
@@ -190,7 +271,7 @@ The loop skills above, plus support skills grouped by role:
 
 |Skill|Purpose|
 |-|-|
-|`todo-refer`|Load a project's plan+tasks as grounding context from any repo|
+|`todo-refer`|Load a project's plan+tasks as grounding context from any repo; `R<n>` loads one past Revision instead|
 |`todo-resume`|Reconstruct where work stopped (tasks, blockers, worktree/PR state) + name the next command|
 |`todo-push`|Full git shipping workflow: branch → commit → push → PR → merge|
 |`todo-infographic`|Turn a plan into a one-page HTML infographic|
@@ -201,9 +282,29 @@ The loop skills above, plus support skills grouped by role:
 |Skill|Purpose|
 |-|-|
 |`todo-sync`|Audit recorded status vs tasks + git/PR reality; fix drift on confirmation|
-|`todo-archive`|Compact closed detail out of `tasks.md`, retire done projects to an Archive section — lossless|
+|`todo-archive`|Move closed revision detail to the journal, retire done rows to `archive.md` — lossless|
 
-Status lifecycle: `planning → ready → in-progress → done`.
+**Support** — shared configuration the others read
+
+|Skill|Purpose|
+|-|-|
+|`todo-llm-routing`|Map the frontier/deep/balanced/fast tiers to the active provider's model — see [Model routing](#model-routing)|
+
+Status lifecycle: `planning → ready → in-progress → done`. Each skill's full contract
+lives in [`skills/`](skills/).
+
+## Done doesn't mean deleted
+
+Archiving compacts the hub; it never discards work.
+
+- **Projects.** `/todo-archive` previews the eligible completed rows and waits for your
+  confirmation before moving them from `index.md` to `archive.md`. The project folder
+  stays exactly where it was.
+- **Revisions.** Once a Revision carries a terminal `[done…]` tag, its detail moves to an
+  anchored entry in `artifacts/journal.md`, and `tasks.md` keeps the heading plus a direct
+  link to that entry. Ordinary task checkboxes never move.
+- **The SessionStart check** only reports what a sweep would compact. It never archives
+  anything on its own.
 
 ## Model routing
 
@@ -231,21 +332,23 @@ effort, and than Fable below max. The mapping is advisory and centralized in
   marketplace.json   makes this repo installable as a marketplace
 .codex-plugin/
   plugin.json        Codex plugin manifest
-skills/todo-*/       the 16 shared skills (each a SKILL.md)
-skills/todo-llm-routing/  shared provider model mapping skill
+skills/todo-*/       the 18 shared skills (each a SKILL.md)
+  todo-graph/scripts/graph-report.py   the deterministic graph compiler (stdlib only)
 hooks/
-  hooks.json         registers the three hooks below (auto)
-  bootstrap-hub.sh   SessionStart: seed the hub on first run
+  hooks.json                 registers the five hooks below (auto)
+  bootstrap-hub.sh           SessionStart: seed the hub on first run
+  migrate-index-dates.sh     SessionStart: widen legacy index tables, backfill dates
+  archive-candidates.sh      SessionStart: report what a /todo-archive sweep would compact
   infographic-staleness.sh   Stop: nudge stale infographics
   superpowers-doc-sync.sh    Stop: ensure superpowers plans/specs are tracked in the hub
 seed/                copied to $TODO_HUB on first run
+tests/               contract checks for the package, archive rules, and graph compiler
 ```
 
 The seeded hub adds `AGENTS.md` as the shared instructions and a small `CLAUDE.md`
-pointer for Claude Code,
-`templates/` (copied for new projects), and `projects/work/` + `projects/self-initiative/`
-sections. Each project folder holds `plan.md`, `tasks.md`, `research/` (raw notes), and
-`artifacts/` (outputs).
+pointer for Claude Code, `index.md` + `archive.md` as the active and cold registries,
+`templates/` (copied for new projects), and `projects/work/` +
+`projects/self-initiative/` sections.
 
 ## Verification MCP (optional)
 

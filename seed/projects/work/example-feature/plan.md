@@ -35,6 +35,11 @@ rate.
 1. **Token bucket, not fixed window** — smoother bursts, standard `Retry-After` semantics.
 2. **Redis for shared state** — already available; survives a gateway restart.
 
+## Relationships
+
+| relation | target | reason |
+|---|---|---|
+
 ## Verification
 <!-- The "check" gate. Read by /todo-verify. Delete this section if the project has no
      verification MCP layer. This block is illustrative. -->

@@ -1,130 +1,97 @@
 ---
 name: todo-list
-description: Use when the user invokes /todo-list, says "list my projects", "what's in the index", "show the todo", "what am I working on", "show project status", or asks for an overview of tracked work — or says "sort the index", "sort projects by completion", "reorder index.md", "rank my projects by progress". The view is read-only; sort mode reorders index.md rows by task completion and changes nothing else.
+description: Use when the user invokes /todo-list, asks to list projects or status, asks to show completed/archived projects, or says "sort the index", "rank projects by progress", or "reorder index.md". Default view reads active index.md only; archive view reads cold archive.md; sort reorders active rows only.
 ---
 
 # Project List Skill
 
-You render the contents of `index.md` as a readable overview so the user can see the state of every tracked project at a glance — and, in **sort mode**, reorder its rows by task completion so the most-finished work sits on top.
+Render a compact project overview or reorder active projects by completion.
 
-Two modes, one skill:
+- **View** — read-only active overview from `index.md`.
+- **Archive view** — read-only completed overview from `archive.md`.
+- **All view** — read both registries only when explicitly requested.
+- **Sort** — reorder rows inside active `index.md`; never edit content or `archive.md`.
 
-- **View (default)** — **read-only**: never edit `index.md`, `tasks.md`, statuses, or any project file. To change state use `/todo-update-state`.
-- **Sort** — changes **row order only** inside each section table. It never edits content (paths, repos, statuses, infographic links), never touches headers, intro prose, or the `## Status Legend`.
-
-Both modes are light, mechanical work. Use the **fast** tier from
-[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md) if dispatching; otherwise run inline.
+Use the **fast** tier from
+[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md) when dispatching.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Read and write `$TODO_HUB/index.md` by absolute path regardless of the current working directory — this skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
+Resolve the hub from `$TODO_HUB` (default `~/todo`) regardless of the current working
+directory. `index.md` is the active hot path; `archive.md` is cold completed history.
 
-## How the user invokes this
+## Invocation
 
-```
-/todo-list                ← view: the grouped overview
-/todo-list in-progress    ← view: only projects with that status
-/todo-list sort           ← sort mode: reorder index.md by completion
-```
-
-Plain language counts too: "what am I working on" → view; "rank my projects by progress" → sort.
-
-## View mode
-
-1. **Read `$TODO_HUB/index.md`**. Parse every project row from each section table (`## Work`, `## Self-initiative`, and any other section tables present). Capture `short-name`, `path`, `repo`, `status`, whether an `infographic` link exists, and the `started` / `completed` / `elapsed (days)` cells (present but not shown in the default compact table — see the note below).
-2. **Render the overview** (see format below). Don't dump the raw markdown table — reformat for skim-first reading.
-3. **End with a one-line summary** counting projects by status.
-
-### Output format
-
-Group by **section** (Work, Self-initiative, etc.), preserving the row order already in `index.md` (it's kept progress-sorted by sort mode — don't re-sort in the view). Within each section, list projects with a status icon, name, repo, and an infographic marker.
-
-Map status → icon:
-
-| status | icon |
-|---|---|
-| `done` | ☑️ |
-| `in-progress` | 🔄 |
-| `ready` | ✅ |
-| `planning` | ➖ |
-
-Use a compact table per section, e.g.:
-
-```
-## Work
-
-| | project | repo | status | info |
-|---|---|---|---|---|
-| 🔄 | api-token-rotation | api-service | in-progress | 📊 |
-| ➖ | service-auth | — | planning | — |
+```text
+/todo-list                 active overview
+/todo-list in-progress     active status filter
+/todo-list archive         completed projects only
+/todo-list all             active plus archived
+/todo-list sort            reorder active index.md by completion
 ```
 
-- `repo`: show the trailing folder name only (e.g. `~/code/api-service` → `api-service`); show `—` when repo is `-`.
-- `info`: `📊` if an infographic link exists, `—` otherwise.
-- Keep the project's full `short-name` — it's what the other `/todo-*` skills resolve against.
+Plain language counts: "what am I working on" means active view; "show completed
+projects" means archive view; "rank active projects" means sort.
 
-`started` / `completed` / `elapsed (days)` are `index.md` columns (populated by `todo-add`/`todo-plan`/`todo-update-state`/`todo-verify`/`todo-sync` per `todo-update-state` Step 3.5) but are **not** part of the default compact table — the view stays skim-first. If the user asks for dates or duration ("when did X start", "how long did X take", "show elapsed days"), add `started` / `completed` / `elapsed (days)` columns to that request's table instead of the default `info` column, or just answer the specific project inline — don't permanently widen the default table for one ask.
+## View modes
 
-### Summary line
+Choose exactly one source:
 
-After the tables, one terse line, e.g.:
+| Mode | Files read | Rows shown |
+|---|---|---|
+| default / status filter | `index.md` | active sections only |
+| `archive` | `archive.md` | completed sections only |
+| `all` | `index.md`, then `archive.md` | both, clearly separated |
 
+Ignore a legacy `## Archive` section still inside `index.md`, note that it needs
+`/todo-archive registry`, and never mix it into the active overview.
+
+Parse section tables and capture `short-name`, `path`, `repo`, `status`, infographic
+presence, and date fields. Preserve section and row order. Render compact tables rather
+than raw Markdown.
+
+```text
+Work
+project             repo          status        info
+api-token-rotation  api-service   in-progress   infographic
+service-auth        -             planning      -
 ```
-17 projects — 6 done · 4 in-progress · 0 ready · 7 planning
-```
 
-### Optional filter
+Keep full short-names because other skills resolve them. Show only the target registry's
+count. In `all` mode, report active and archived totals separately.
 
-If the user names a status ("show in-progress", "what's planning"), list only matching projects across all sections instead of the full grouped view. Still end with the count.
+`started`, `completed`, and `elapsed (days)` remain hidden unless the user asks for dates
+or duration. Do not open `plan.md` or `tasks.md` in view mode.
 
-### View notes
-- Pure display. If `index.md` is missing or empty, say so and stop — don't scaffold it (that's `/todo-add`).
-- Don't open `plan.md`/`tasks.md` or compute completion ratios in the view — it reflects only what `index.md` records. For completion-ranked order run sort mode.
+If `archive.md` is absent or contains no rows, archive view says there are no archived
+projects. Do not scaffold it here; bootstrap or `todo-archive` owns that file.
 
 ## Sort mode
 
-Reorders the project tables in `index.md` so rows in each table are sorted by **how complete the project is**, most-done first. The completion number is computed, not stored — it decides order only and is never written into the table.
+Sort only section tables in active `index.md`, most complete first. Never read or write
+`archive.md`; never reorder a legacy `## Archive` section.
 
-Delegate the work to a **fast**-tier subagent when available — it is mechanical counting
-and reordering, but the write-back must reproduce every non-reordered line byte-for-byte,
-so state that explicitly. Hand it the absolute hub root (`$TODO_HUB`) so it reads and
-writes there, not into the cwd.
+### Completion
 
-### What "completion" means
+For each active row, completion is real checked tasks divided by real task checkboxes:
 
-For each project row, completion = `done / total` task checkboxes in that project's `tasks.md`:
+```bash
+awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^## /{p=($0!~/^## Status/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
+```
 
-- Count `- [x]` (done) and `- [ ]` (open) checkboxes.
-- **Skip the `## Status` legend block** in `tasks.md` — its `- [ ] Not started` / `- [x] Done` lines are documentation, not tasks. Also **skip anything inside HTML comments** — the template's `## Revisions` section ships a commented-out example entry containing a `- [ ]` line that must not count. Per-project count:
-  ```bash
-  awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^## /{p=($0!~/^## Status/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
-  ```
-- A project with `total == 0` (no real tasks yet — typically `planning` status or a stub `tasks.md`) is **0% complete**.
-- If a project's folder or `tasks.md` is missing/unreadable, treat it as 0% and note it in the summary.
+- Skip the `## Status` legend and HTML-commented examples.
+- Missing or empty `tasks.md` is 0%; report it.
+- Sort descending by ratio; ties preserve existing relative order.
+- Keep sections independent and reproduce every non-row line byte-for-byte.
 
-The `path` column gives each project's folder; `tasks.md` lives directly inside it.
+Delegate the mechanical count and reorder to a fast-tier subagent when available, passing
+the absolute hub root and the byte-preservation rule. Report the new order and `done/total`
+for each section without pasting the whole file.
 
-### Sort rules
+## Notes
 
-Within each section table independently (`## Work`, `## Self-initiative`, …):
-
-1. **Primary:** completion ratio, descending — most-complete (1.0) at the top, 0% at the bottom. A `done` project is 100%, so done work rises to the top.
-2. **Tie-break:** stable — projects with equal completion keep their existing relative order. Don't reshuffle ties.
-
-Do not merge tables, re-rank across them, or change which table a project is in.
-
-### Sort steps
-
-1. **Read `$TODO_HUB/index.md`**. Capture every row of every section table verbatim (all columns), and note the row order.
-2. **Dispatch the fast-tier subagent** when available. Hand it the hub root (`$TODO_HUB`)
-   and the task: for each project row, resolve its `tasks.md` from the `path` column,
-   compute completion via the awk above, then rewrite each section table in `index.md`
-   sorted by the rules above — preserving headers, column content, and every other line
-   byte-for-byte. Tell it to return the new order per table with each project's
-   `done/total` so you can report it. If dispatching is unavailable, perform this step
-   inline with the same preservation rule.
-3. **Relay the result.** Report, per table, the new top-to-bottom order with each project's `done/total` (and any projects counted as 0% because tasks.md was missing/empty). Keep it terse. Don't paste the whole file.
-
-### Sort notes
-- Idempotent: sorting an already-sorted index is a no-op (stable sort, same data).
-- Order-only. If the user also wants statuses corrected or tasks ticked, that's `/todo-update-state`, not this skill.
+- View modes are idempotent and read-only.
+- Sort changes row order only.
+- Status or checkbox changes belong to `todo-update-state`.
+- Registry status is not dependency readiness. “What can I start now?” belongs to
+  `todo-graph`, which evaluates canonical `depends-on` edges and completion evidence.

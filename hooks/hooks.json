@@ -13,7 +13,13 @@
             "type": "command",
             "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/migrate-index-dates.sh\"",
             "timeout": 15,
-            "statusMessage": "Migrating index.md to the dated table format"
+            "statusMessage": "Migrating registry tables to the dated format"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/archive-candidates.sh\"",
+            "timeout": 15,
+            "statusMessage": "Checking archive candidates"
           }
         ]
       }

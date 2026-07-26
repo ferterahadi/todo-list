@@ -1,0 +1,4 @@
+interface:
+  display_name: "Todo Graph"
+  short_description: "Query and edit the typed project dependency graph"
+  default_prompt: "Show the ready frontier and dependency blockers in my todo hub."

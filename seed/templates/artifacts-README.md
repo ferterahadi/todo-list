@@ -9,7 +9,7 @@
 
 | file | purpose |
 |-|-|
-| [journal.md](journal.md) | archived detail of completed revisions + phase notes moved out of tasks.md |
+| [journal.md](journal.md) | archived revision detail; each `R<n>` starts with a stable `<a id="revision-r<n>"></a>` target |
 | [blockers.md](blockers.md) | canonical open-blockers list |
 | [infographic.html](infographic.html) | plan visual (linked from index.md) |
 
@@ -17,6 +17,6 @@
 
 | date | file | kind | source | one-line |
 |-|-|-|-|-|
-| YYYY-MM-DD | [YYYY-MM-DD-kind-slug.md](YYYY-MM-DD-kind-slug.md) | finding | tasks.md#R1 | one-line summary |
+| YYYY-MM-DD | [YYYY-MM-DD-kind-slug.md](YYYY-MM-DD-kind-slug.md) | finding | tasks.md revision R1 | one-line summary |
 
 <!-- When you add an artifact: name it YYYY-MM-DD-<kind>-<slug>.md, prepend the header blockquote, and add a row here. -->

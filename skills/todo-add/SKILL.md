@@ -13,7 +13,7 @@ run it inline.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — `index.md`, the new project folder under `projects/work/` or `projects/self-initiative/`, its `plan.md`/`tasks.md`/`research/`/`artifacts/` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to the scaffolding subagent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, the new project folder under `projects/work/` or `projects/self-initiative/`, and its files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to the scaffolding subagent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 
@@ -49,10 +49,13 @@ This decides whether the folder goes under `projects/work/` or `projects/self-in
 
 ## Step 3 — Check for collisions
 
-Read `$TODO_HUB/index.md`. If the chosen short-name already exists in either section:
+Read `$TODO_HUB/index.md`, then `$TODO_HUB/archive.md`. If the chosen short-name already
+exists in either registry or any section:
 
 - Stop. Do not overwrite or scaffold over it.
-- Point the user at the existing project and its current status, and suggest either picking a different short-name or running `/todo-plan <existing-name>` / `/todo-update-state <existing-name>` if they meant the existing one.
+- Point the user at the existing project, its active/archived location, and status. Suggest
+  either a different short-name or `/todo-update-state <existing-name> in-progress` to
+  reopen an archived project; never reuse an archived identity.
 
 Also check that the target folder `projects/<work|self-initiative>/<short-name>/` doesn't already exist on disk — if it does, treat it as a collision the same way.
 
@@ -60,12 +63,27 @@ Also check that the target folder `projects/<work|self-initiative>/<short-name>/
 
 Create `projects/<work|self-initiative>/<short-name>/` with:
 
-- `plan.md` — copied from `templates/plan.md`, with the `[Name]` placeholder replaced by a human-readable title derived from the description (e.g. "RabbitMQ Dead-Letter Queue Support"). Leave the rest of the template structure intact for `todo-plan` to fill.
+- `plan.md` — copied from `templates/plan.md`, with the `[Name]` placeholder replaced by a human-readable title derived from the description (e.g. "RabbitMQ Dead-Letter Queue Support"). Leave the rest of the template structure intact for `todo-plan` to fill, except for the explicit relationship rule below.
 - `tasks.md` — copied from `templates/tasks.md`, with the `[Project Name]` placeholder replaced by the same title. Leave the placeholder tasks for `todo-plan` to replace.
 - `research/` directory with a `.gitkeep` so the empty directory is tracked by git.
 - `artifacts/` directory containing `README.md` — copied from `templates/artifacts-README.md`, with the title placeholder replaced by the same human-readable title. This is the artifact manifest (backtrack hub); it seeds the folder so no `.gitkeep` is needed there.
 
-Read the templates fresh from `templates/` rather than hardcoding their contents — they may have changed.
+Read the templates fresh from `templates/` rather than hardcoding their contents — they
+may have changed. Existing hubs may carry a pre-graph `templates/plan.md`; after copying,
+insert the canonical empty `## Relationships` table before `## Verification` (or
+`## References` when Verification is absent) if the section is missing. Do not rewrite
+any other template content.
+
+If the user's description explicitly names an exact tracked project and relationship,
+seed one canonical row in `plan.md` `## Relationships`:
+
+- “depends on X” / “requires X” → `depends-on`
+- “replaces X” / “v2 of X” → `supersedes`
+- “related to X” / “follow-up to X” → `related-to`
+
+Resolve X active-first, then archive; use the request's own clause as the reason. Never
+infer an edge from naming similarity. If the wording is ambiguous, leave the table empty
+for `/todo-plan` discovery rather than guessing.
 
 ## Step 5 — Register in index.md
 
@@ -85,9 +103,21 @@ Add a row to the correct section table (`## Work` or `## Self-initiative`) in `i
 - `elapsed (days)` stays `-` — computed once the project reaches `done` (`completed −
   started` in whole days).
 - `infographic` stays `-` — `/todo-infographic` fills it after the plan exists.
-- `related` — if the user's description names or clearly implies another tracked project (e.g. "the v2 of X", "follow-up to Y", "depends on Z"), look it up in `index.md` and set this to its short-name(s), comma-separated. Otherwise leave `-`; the user or a later edit can fill it in once a link becomes obvious. Never guess a relation from naming similarity alone — only set it from an explicit statement.
+- `related` stays `-` for new projects. It is a legacy context-only field retained for
+  existing hubs; canonical typed relationships now live in `plan.md`.
 
 Append the row to the bottom of the appropriate table. Don't reorder or touch other rows.
+
+If Step 4 seeded a relationship, validate the now-registered source with:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py can-link \
+  "$TODO_HUB" "<source>" "<relation>" "<target>"
+```
+
+`EXISTS` confirms that the stored row is valid. On `ERROR`, remove only the seeded
+relationship row, keep the new project registered as `planning`, and report why the edge
+was not retained. Never leave a new cycle or ambiguous target in the hub.
 
 ## Step 6 — Confirm and hand off
 

@@ -30,16 +30,17 @@ The hub repo root is `$TODO_HUB` — an environment variable pointing at your cl
 
 ```
 /todo-review queue-migration        ← review current repo's diff against that plan
-/todo-review                        ← infer the project from the current repo (index.md repo column)
+/todo-review                        ← infer the active project from the current repo
 ```
 
 Plain language counts too: "review this against the plan", "did the parallel agents build what the plan said".
 
 ## Step 1 — Resolve project and load the plan
 
-Resolve the short-name via `$TODO_HUB/index.md` (the `todo-refer` rules). No name
-given → match the current repo's path against the index's `repo` column; one match →
-use it (say so); several or none → ask.
+Resolve an explicit short-name using `todo-refer`'s active-first, archive-on-exact-miss
+rules. With no name, match the current repo only against active `index.md` rows first;
+search `archive.md` only when no active row matches. One match → use it and say which
+registry supplied it; several or none → ask.
 
 Load the grounding the way `todo-refer` does: `plan.md` in full (Goal, Scope,
 Constraints, Key Decisions), `tasks.md` by extraction — open tasks, plus the `[x]` tasks

@@ -31,7 +31,7 @@ Hybrid, matching the hub's house pattern:
 ## Hub location
 
 The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this
-absolute root — `index.md`, each project's `path`, `plan.md`, `tasks.md` — regardless of
+absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of
 the current working directory. This skill may be invoked from another repo; never assume
 cwd is the hub. (Same convention as `todo-refer`.)
 
@@ -48,15 +48,38 @@ tasks", "triage the quorum queue work".
 
 ## Step 1 — Resolve scope
 
-Read `$TODO_HUB/index.md`.
+Read active `$TODO_HUB/index.md` for default and section scopes.
 
 - No argument → every project with status `ready` or `in-progress`. Mention `planning`
   projects only in a footer line ("N projects still in planning — no tasks to triage;
   run `/todo-plan`").
-- Short name → that project only; not found → tell the user and stop.
+- Short name → resolve active-first, then by exact match in `archive.md`; duplicates stop
+  the run. An archived project with no open work produces an empty result.
 - Section name (`work` / `self-initiative`) → all `ready`/`in-progress` rows in that table.
 - `done` projects are skipped unless they have **open Revisions** — those still count as
   remaining work and get triaged.
+
+## Step 1.5 — Filter through the ready frontier
+
+Run the deterministic graph helper before opening any project plans or task files:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py frontier "$TODO_HUB"
+```
+
+- Gather and model-route full task detail only for in-scope `IN_FLIGHT` and `READY`
+  projects.
+- Keep graph-blocked projects on the board as one project-level blocked row with the
+  exact unsatisfied prerequisites. Do not spend tokens reading or routing their tasks;
+  no model choice can satisfy another project's unfinished dependency.
+- Keep `PLANNING` projects in the existing footer.
+- Any graph identity/cycle error makes the affected component unactionable. Surface
+  `/todo-graph audit` instead of guessing an order.
+- Legacy registry `related` hints and canonical `related-to` / `supersedes` edges are
+  context only and never remove a project from the frontier.
+
+If the helper is unavailable, report that dependency-aware triage cannot run; do not
+fall back to treating untyped relationships as blockers.
 
 ## Step 2 — Gather remaining work
 
@@ -71,8 +94,9 @@ For each in-scope project (via the fast-tier gathering subagent when 3+, else in
   Use the shared counting rules: **skip the `## Status` legend block** and
   **skip anything inside HTML comments** (same awk snippet as `todo-list` sort mode /
   `todo-update-state`).
-- **Open Revisions**: every `### R<n> … [open]` heading with its `Gap:` line
-  (`grep -A1 -E '^### R[0-9]+.*\[open\]' tasks.md`).
+- **Open Revisions**: every case-insensitive `### R<n> … [open]` heading, including
+  suffixed IDs, with its `Gap:` line
+  (`grep -iA1 -E '^### R[0-9]+[A-Za-z]*.*\[open\]' tasks.md`).
 - **Completion**: `done/total` via the shared awk snippet.
 - **Blockers**: if `artifacts/blockers.md` exists, one line per blocker — a blocked task
   gets flagged, not model-routed (no model fixes a missing credential).

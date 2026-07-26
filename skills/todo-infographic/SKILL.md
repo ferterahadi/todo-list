@@ -1,6 +1,6 @@
 ---
 name: todo-infographic
-description: Use when the user invokes /todo-infographic, says "make an infographic", "visualize this plan", "I can't read walls of text", or after a plan is finished. Also auto-triggered by the Stop hook when a ready/in-progress project's infographic is missing or stale. Builds artifacts/infographic.html and links it in index.md.
+description: Use when the user invokes /todo-infographic, says "make an infographic", "visualize this plan", "I can't read walls of text", or after a plan is finished. Also auto-triggered by the Stop hook when a ready/in-progress project's infographic is missing or stale. Builds artifacts/infographic.html and links it in the project's active or archived registry row.
 ---
 
 # Project Infographic Skill
@@ -9,7 +9,7 @@ You turn a project's `plan.md` + `tasks.md` into a **one-page, self-contained HT
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — `index.md`, each project's `path`, `plan.md`, `tasks.md`, `artifacts/infographic.html` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to each build subagent so it reads and writes there, not into the cwd. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to each build subagent so it reads and writes there, not into the cwd. (Same convention as `todo-refer`.)
 
 ## Execution tier
 
@@ -45,11 +45,14 @@ It is also fired automatically by the plugin's **Stop hook** (`infographic-stale
 
 ## Step 1 — Resolve the project(s)
 
-Read `$TODO_HUB/index.md` to map short-name → `path` / `repo` / `status`.
+Resolve named projects active-first in `$TODO_HUB/index.md`, then by exact short-name in
+`$TODO_HUB/archive.md`. Record the owning registry.
 
-- Short name → look it up; not found → tell the user and stop.
+- Short name → look it up active-first; duplicates are corruption and stop the run.
+- Not found in either registry → tell the user and stop.
 - Full path → use as-is.
-- `all` → operate on every project with status `ready`, `in-progress`, or `done`. Only when the user explicitly passes `all`.
+- `all` → read both registries and operate on every `ready`, `in-progress`, or `done`
+  project. Only when the user explicitly passes `all`.
 - No argument → resolve to the single project in scope for this session. If that's ambiguous, ask — do **not** default to every project.
 
 ## Step 2 — Read the plan and guard against stubs
@@ -120,9 +123,10 @@ Count `- [ ]` (open) and `- [x]` (done) checkboxes per phase. **Skip the `## Sta
 awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^## /{p=($0!~/^## Status/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
 ```
 
-## Step 4 — Register it in index.md
+## Step 4 — Register it in the owning registry
 
-The section tables in `index.md` (`## Work`, `## Self-initiative`, …) have an `infographic` column. Set this project's cell to a link to the file you generated:
+The owning row in `index.md` or `archive.md` has an `infographic` column. Set that cell
+to a link to the file you generated:
 
 ```
 [open](projects/<cat>/<name>/artifacts/infographic.html)

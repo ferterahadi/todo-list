@@ -1,25 +1,26 @@
 {
   "name": "todo-list",
-  "version": "1.3.0",
-  "description": "A plan, execute, verify, and revise project-tracking hub built from Markdown skills.",
+  "version": "1.4.0",
+  "description": "An evidence-backed work-loop and typed project-graph hub built from Markdown skills.",
   "author": {
     "name": "The todo-list contributors",
     "url": "https://github.com/ferterahadi/todo-list"
   },
   "repository": "https://github.com/ferterahadi/todo-list",
   "license": "MIT",
-  "keywords": ["project-management", "workflow", "planning", "todo", "skills"],
+  "keywords": ["project-management", "workflow", "planning", "dependency-graph", "work-graph", "todo", "skills"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Todo List",
-    "shortDescription": "Plan, execute, verify, and revise tracked work",
-    "longDescription": "Track projects in a Markdown hub, execute their checklists, verify results, and revise gaps through reusable skills.",
+    "shortDescription": "Run project loops across a typed work graph",
+    "longDescription": "Track projects in a Markdown hub, execute evidence-backed plan-do-check-revise loops, and use explicit dependencies to find ready work, blockers, impact, and graph drift.",
     "developerName": "The todo-list contributors",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://github.com/ferterahadi/todo-list",
     "defaultPrompt": [
       "Show my tracked projects and their status.",
+      "Show the ready frontier and dependency blockers in my todo hub.",
       "Plan the next project in my todo hub.",
       "Resume the highest-priority unfinished project."
     ]

@@ -5,6 +5,37 @@ All notable changes to this plugin are documented here. The format follows
 [semver](https://semver.org). Installed users only receive an update when the
 `version` in `.claude-plugin/plugin.json` is bumped — see CONTRIBUTING.md § Releasing.
 
+## [Unreleased]
+
+## [1.4.0] — 2026-07-27
+
+### Added
+- `/todo-graph` compiles canonical `plan.md` relationships into a deterministic ready
+  frontier, blocker chains, impact, dependency paths, integrity audits, validated edge
+  edits, and stable Tab-Separated Values / JavaScript Object Notation exports.
+- Project plans now carry an optional typed `## Relationships` table. `depends-on` is a
+  hard scheduling edge; `related-to` and `supersedes` are context-only.
+- A read-only SessionStart archive-candidates report identifies detailed closed
+  revisions, legacy tombstone links, oversized task files, and completed active rows
+  without blocking or editing.
+- Targeted `/todo-refer <project> R<n>` history lookup follows a stable
+  `artifacts/journal.md#revision-r<n>` anchor instead of loading the full journal.
+
+### Changed
+- `/todo-execute`, `/todo-triage`, `/todo-refer`, `/todo-resume`,
+  `/todo-update-state`, and `/todo-sync` now consume bounded graph queries instead of
+  guessing cross-project order from prose. Legacy registry `related` values remain
+  non-blocking compatibility hints.
+- Graph queries fail closed on global corruption and invalid hard prerequisites while
+  keeping incoming context hints diagnostic-only. Iterative cycle detection, bounded
+  blocker search, fenced-comment handling, and symlink containment cover deep or
+  adversarial hubs without expanding model context.
+- `index.md` is now the active registry; completed rows move losslessly to cold
+  `archive.md` under their original section. Exact name lookup checks the index first
+  and the archive only on a miss.
+- Revision-state matching is case-insensitive, suffixed IDs are supported, and closed
+  entries collapse to direct journal links.
+
 ## [1.3.0] — 2026-07-25
 
 ### Changed

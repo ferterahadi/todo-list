@@ -12,8 +12,8 @@ you never edit code, never run repair. Failures and coverage gaps become structu
 `## Revisions` entries that `todo-revise` then consumes and fixes.
 
 Division of labor: **the verification MCP attests; you transcribe its verdict into
-`tasks.md` + `index.md`.** The run is the hard gate that flips status; coverage only emits
-Revisions.
+`tasks.md` plus the owning registry row.** The run is the hard gate that flips status;
+coverage only emits Revisions.
 
 This involves real judgment — driving the run, handling collisions, and interpreting the
 result. Use the **balanced** tier at **high** effort from
@@ -42,8 +42,8 @@ See the README for how to point this at a concrete server.
 ## Hub location
 
 The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this
-repo (default `~/todo`). Resolve **every** hub path against this root — `index.md`, each
-project's `path`, `plan.md`, `tasks.md` — regardless of the current working directory.
+repo (default `~/todo`). Resolve **every** hub path against this root — active `index.md`,
+cold `archive.md`, and each project's files — regardless of the current working directory.
 This skill may be invoked from another repo; never assume cwd is the hub. Pass this root
 to the edit sub-agent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
 
@@ -60,9 +60,11 @@ Plain language counts too: "verify the token feature", "did the lifecycle spec p
 
 ## Step 1 — Resolve the project
 
-Read `$TODO_HUB/index.md` to map short name → full `path` + `status`.
+Resolve the short-name in `$TODO_HUB/index.md` first, then `$TODO_HUB/archive.md` only
+on an exact active miss. Record the owning registry, section, full path, and status.
 
-- Short name → look it up; not found → tell the user and stop.
+- Short name → look it up active-first; a duplicate across registries stops the run.
+- Not found in either registry → tell the user and stop.
 - Full path → use as-is.
 - No project named and not obvious from context → ask which project before doing anything.
 
@@ -128,10 +130,22 @@ If `Coverage source` is not set, skip this step.
 
 ## Step 5 — Reconcile and write back
 
-Apply these rules. Mechanical `tasks.md` / `index.md` edits may be delegated to a
+Apply these rules. Mechanical `tasks.md` / registry edits may be delegated to a
 fast-tier subagent (as `todo-update-state` does); the interpretation is yours.
 
-| Verification result | tasks.md | index.md status | Revisions |
+Before any green result can flip the project to `done`, run:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
+  "$TODO_HUB" "<short-name>"
+```
+
+Passed tests may still tick their covered tasks, but an unsatisfied hard dependency or
+incident graph identity/cycle issue keeps status `in-progress`. Report the exact graph
+blocker and point at `/todo-graph why <short-name>` or `/todo-graph audit`. If the helper
+is unavailable, do not cross the `done` gate. Context and lineage edges never gate.
+
+| Verification result | tasks.md | owning registry status | Revisions |
 |---|---|---|---|
 | Run green, all gate-covered tasks pass | tick covered `[ ]`→`[x]` | → `done` **iff** every task in the project is `[x]`, else stays `in-progress` (a flip to `done` also stamps `completed` = today and `elapsed (days)` = `completed − started`, per `todo-update-state` Step 3.5 — never overwrite an existing real `started`) | — |
 | Run fails | no tick | stays `in-progress` | one entry per failing area, backlinked `⟵ Task N` |
@@ -166,21 +180,24 @@ two skills interlock. Append to (or create) the `## Revisions` block at the bott
   status, only emits Revisions.
 - **Idempotent:** before appending a Revision, scan existing entries — if one already
   covers the same failing area/test, update it rather than adding a duplicate. Scan by
-  extraction, not a full read: `grep -nA1 '^### R[0-9]\+' tasks.md` gives every entry's
+  extraction, not a full read: `grep -niA1 '^### R[0-9]\+[A-Za-z]*' tasks.md` gives every entry's
   heading + Gap line; read a specific entry's body by line range only if you need it.
   Likewise, find the `Gate covers` task lines to tick via `grep -n '\- \[ \]' tasks.md`
   filtered to the covered phase — hand the edit subagent the exact line text as
   its anchor, never the whole file.
 - Leave `plan.md`, `research/`, `artifacts/` untouched — this skill edits `tasks.md`
-  (checkboxes + `## Revisions`) and `index.md` (status) only.
+  plus the owning registry row.
+- If a failure or coverage gap opens a Revision for an archived project, atomically move
+  its row back to the same section in `index.md`, set `in-progress`, and clear
+  `completed` / `elapsed (days)` per `todo-update-state`. A passing re-verification that
+  leaves an archived project `done` updates its `archive.md` row in place.
 
 ## Step 6 — Reconcile status honesty, then report
 
-**Status honesty** (mirror `todo-update-state` / `todo-revise`): open Revisions on a project marked
-`done` mean it isn't done — flag it, move `index.md` back to `in-progress`, and clear its
-`completed` and `elapsed (days)` cells back to `-` (todo-update-state Step 3.5 — it's no
-longer true that the project finished on that date, so neither the date nor the duration
-is honest). All tasks `[x]` and no open Revisions → offer `done`,
+**Status honesty** (mirror `todo-update-state` / `todo-revise`): open Revisions on a
+project marked `done` mean it isn't done. If archived, move the row back to `index.md`;
+set `in-progress` and clear `completed` / `elapsed (days)` (Step 3.5). All tasks `[x]`
+and no case-insensitive open Revisions, with a clean project-graph gate → offer `done`,
 stamping `completed` = today and `elapsed (days)` when accepted.
 
 **Report** status-first, terse:
