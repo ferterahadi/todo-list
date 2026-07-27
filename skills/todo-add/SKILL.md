@@ -87,7 +87,9 @@ for `/todo-plan` discovery rather than guessing.
 
 ## Step 5 — Register in index.md
 
-Add a row to the correct section table (`## Work` or `## Self-initiative`) in `index.md`. The tables have **nine** columns — include them all:
+Add a row to the correct section table (`## Work` or `## Self-initiative`) in `index.md`. A
+row is the *only* thing this skill writes there — never a heading, banner, or paragraph
+(`REGISTRY.md` § *Registries are data, not reports*). The tables have **nine** columns — include them all:
 
 | short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |
 |---|---|---|---|---|---|---|---|---|

@@ -231,6 +231,11 @@ evidence, with at most one alternative:
 Grounding and revision modes end with one next-command nudge instead; do not run that
 command or edit hub files.
 
+Resume mode also reports the registry's `Start here` pointer when it disagrees with what
+resume just resolved — dead link, or aimed at a different project. Say so in one line and
+name `/todo-state <short-name> in-progress` as the repoint. This skill is read-only; it
+never edits the pointer itself.
+
 ## Notes
 
 - Read-only and idempotent in every mode — safe to run at the start of any session.

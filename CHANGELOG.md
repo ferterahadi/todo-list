@@ -7,6 +7,35 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-07-27
+
+### Added
+- **A `Start here` line, and a rule that the registries are data rather than reports.**
+  `index.md` and `archive.md` now have an explicit contract: title, preamble, the optional
+  one-line `Start here` pointer, and the section tables — no status banners, release
+  notes, or narrative, and no `##` heading that is not a section. The rule and its routing
+  table (handoff artifact / `journal.md` / `blockers.md` / `## Revisions`) live in
+  `seed/REGISTRY.md` § *Registries are data, not reports*, and `seed/AGENTS.md` states it
+  for any agent working a hub directly.
+  - The pointer is one line under the title:
+    `> **Start here:** [<short-name>](<link>) — <one sentence>`. `-` or no line means
+    nothing is pinned. It is a pointer, never a summary — the link target holds the state.
+  - **`/todo-state` owns it and no other skill writes it.** A flip into `in-progress`
+    repoints it; the flip that leaves no `in-progress` project resets it to `-`.
+  - `/todo-state audit` gained a hub-level registry-hygiene check: dead or misaimed
+    pointers, an `in-progress` project with the pointer left at `-`, and any prose or
+    non-section `##` heading in `index.md`. Fixes still need a yes, and prose is relocated
+    into the owning project's `artifacts/` rather than deleted.
+  - `/todo-list` surfaces a set pointer above the rendered tables and preserves everything
+    outside the section tables byte-for-byte when sorting. `/todo-refer … resume` reports a
+    pointer that disagrees with what it just resolved, and stays read-only.
+  - `/todo-add`, `/todo-execute`, `/todo-verify`, `/todo-revise`, and `/todo-archive` each
+    restate the invariant at the point they write the registry: a row, and nothing else.
+
+### Fixed
+- `.codex-plugin/plugin.json` was still on `1.7.0` while `.claude-plugin/plugin.json` had
+  moved to `1.7.1`. Both now read `1.8.0`.
+
 ## [1.7.0] — 2026-07-27
 
 ### Added

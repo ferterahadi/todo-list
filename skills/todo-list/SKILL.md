@@ -46,6 +46,12 @@ Choose exactly one source:
 Ignore a legacy `## Archive` section still inside `index.md`, note that it needs
 `/todo-archive registry`, and never mix it into the active overview.
 
+Surface `index.md`'s one-line `Start here` pointer above the rendered tables when it is
+set to something other than `-`, verbatim and unexpanded. Any *other* prose or non-section
+`##` heading in the registry is a hygiene violation, not content: report it in one line
+and point at `/todo-state audit` — this skill never renders it and never edits it
+(`REGISTRY.md` § *Registries are data, not reports*).
+
 Parse section tables and capture `short-name`, `path`, `repo`, `status`, infographic
 presence, and date fields. Preserve section and row order. Render compact tables rather
 than raw Markdown.
@@ -69,7 +75,8 @@ projects. Do not scaffold it here; bootstrap or `todo-archive` owns that file.
 ## Sort mode
 
 Sort only section tables in active `index.md`, most complete first. Never read or write
-`archive.md`; never reorder a legacy `## Archive` section.
+`archive.md`; never reorder a legacy `## Archive` section. Everything outside the section
+tables — the title, the preamble, the `Start here` line — is preserved byte-for-byte.
 
 ### Completion
 

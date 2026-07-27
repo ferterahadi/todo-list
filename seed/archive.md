@@ -5,6 +5,9 @@ work; project folders do not move. Each row keeps its original section so reopen
 move it back accurately. Only `done` projects with no open Revisions belong here, and
 hub-wide active scans do not load this file.
 
+Like `index.md`, this file is data, not a report: the title, this preamble, and the
+section tables. A finished project's story stays in its own `artifacts/`.
+
 Column meanings and the status lifecycle: [`REGISTRY.md`](REGISTRY.md). Typed dependency
 and lineage edges remain in each archived project's `plan.md` `## Relationships` table, so
 `/todo-graph` resolves historical targets without moving project folders.

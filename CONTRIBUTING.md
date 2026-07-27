@@ -36,6 +36,12 @@ explicit invariants, terse examples.
   short-name in the index first and search the archive only on a miss. A reopened row
   moves back atomically; it never exists in both files. Registry column semantics live in
   `seed/REGISTRY.md` — the registries themselves stay data, not manuals.
+- **Registries are data, not reports.** `index.md` and `archive.md` hold the title, the
+  preamble, the optional one-line `Start here` pointer, and the section tables — never a
+  status banner, release note, or narrative paragraph. A skill that writes a registry
+  writes a *row*; the one exception is `/todo-state`, which owns the `Start here` line.
+  Status output belongs in the owning project's `artifacts/`. Full rule:
+  `seed/REGISTRY.md` § *Registries are data, not reports*.
 - **`tasks.md` is a checklist, not a journal** — one line per task (~150 chars). Detail goes
   to `research/` or `artifacts/` with a pointer.
 - **Use stable revision anchors.** Journal entry `R4` gets

@@ -136,7 +136,9 @@ Rules:
 - If the project row came from `archive.md`, opening the first revision also reopens the
   project: move the row verbatim back to the same section in `index.md`, set status to
   `in-progress`, and clear `completed` / `elapsed (days)` per `todo-state` Step
-  3.5. Treat the row move and status edit as one atomic change.
+  3.5. Treat the row move and status edit as one atomic change. The row is all that
+  moves — revision narrative stays in `tasks.md` and `artifacts/`, never in the registry
+  (`REGISTRY.md` § *Registries are data, not reports*).
 
 ## Step 5 — Execute the fix
 

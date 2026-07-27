@@ -193,7 +193,10 @@ Re-run the Step 1.5 graph context immediately before any status flip to `done`.
 Dependencies can regress during a long execution session; a newly unsatisfied hard edge
 keeps the project `in-progress` and is reported as at risk.
 
-Update the active `index.md` row:
+Update the active `index.md` row — the row and nothing else. Session narrative goes to the
+project's `artifacts/`, never into the registry; if a later session needs a pointer to it,
+`/todo-state` owns the one-line `Start here` link (`REGISTRY.md` § *Registries are data,
+not reports*).
 
 - Blockers remain or tasks are open → stay `in-progress`.
 - All tasks complete and `plan.md` has a `## Verification` block → stay `in-progress` and point the user at `/todo-verify <short-name>` — the verification run is the gate that flips `done`, not your own assessment. Code-complete + unit tests ≠ done.

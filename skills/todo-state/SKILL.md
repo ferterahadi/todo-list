@@ -133,8 +133,27 @@ section in `index.md`, then update status and dates there. Preserve custom secti
 if a legacy row's source section is unknown, ask before moving it. The row move, status
 change, and date clearing are one atomic edit.
 
-Do not touch anything the user didn't ask about. Leave `plan.md`, `research/`, and
-`artifacts/` alone — this skill edits state, not content.
+**Repoint the `Start here` line** — this skill owns the one-line pointer under the
+`index.md` title (`REGISTRY.md` § *The `Start here` line*). It is the only registry write
+that is not a row edit, and no other skill performs it:
+
+- A flip **into** `in-progress` repoints the line at that project, in the documented
+  one-line form: `> **Start here:** [<short-name>](<link>) — <one sentence>`. Link the
+  project's newest `artifacts/YYYY-MM-DD-handoff-*.md` if one exists, else its
+  `artifacts/journal.md`, else the project folder.
+- A flip that leaves **no** `in-progress` project anywhere in `index.md` resets the line
+  to `> **Start here:** -`.
+- A flip out of `in-progress` while other `in-progress` projects remain repoints at the
+  most recently touched of those (`ls -t` their `tasks.md`), or leaves the line alone if
+  it already points at one of them.
+
+One line, one project, one link. The sentence after the dash says why you would open the
+link — never what the state is. Copying status into it recreates exactly the drift the
+rule exists to prevent.
+
+Do not touch anything else the user didn't ask about. Leave `plan.md`, `research/`, and
+`artifacts/` alone — this skill edits state, not content. Never add a heading, banner, or
+paragraph to `index.md`; the registries are data, not reports.
 
 ## Step S4 — Keep status and tasks in sync
 
@@ -160,8 +179,9 @@ archive ordinary task checkboxes.
 
 Report the edits plainly: which tasks flipped, the new completion count, and the status
 before → after. If a status flip stamped or cleared a `started`/`completed` date, say so
-in the same line. Keep it short. If you reconciled a mismatch in Step S4, say so
-explicitly so the user knows state was kept consistent.
+in the same line. Say it in one clause if the `Start here` line moved, cleared, or stayed
+put. Keep it short. If you reconciled a mismatch in Step S4, say so explicitly so the user
+knows state was kept consistent.
 
 ---
 
@@ -206,6 +226,19 @@ Four sources, cross-checked:
    An in-progress project with an unsettled prerequisite is **at risk**; a done project
    with one is graph drift. Context and lineage edges never count.
 
+**Registry hygiene** is checked once for the hub, not per project:
+
+```bash
+grep -n '^> \*\*Start here:\*\*' "$TODO_HUB/index.md"
+grep -nE '^#{2,} ' "$TODO_HUB/index.md"
+```
+
+Flag three things: a `Start here` pointer whose link target does not exist or whose
+project is no longer `in-progress`; an `in-progress` project with the pointer left at `-`;
+and any `##` heading in `index.md` that is not a section table's heading — a banner,
+release note, or narrative paragraph that belongs in the owning project's `artifacts/`
+(`REGISTRY.md` § *Registries are data, not reports*).
+
 ## Step A3 — Judge drift
 
 Compare the sources. The canonical mismatches and their fixes:
@@ -220,6 +253,8 @@ Compare the sources. The canonical mismatches and their fixes:
 | any | lingering worktree with uncommitted changes | work at risk | surface it — `/todo-refer <name> resume` before anything else |
 | `in-progress` | hard prerequisite is no longer settled | execution order at risk | stop execution; `/todo-graph why <name>` |
 | `done` | hard prerequisite is unresolved or dishonest | completion graph is inconsistent | audit evidence; do not auto-reopen |
+| — | `Start here` points at a dead link or a non-`in-progress` project | stale pointer | repoint or reset to `-` |
+| — | prose or a non-section `##` heading in `index.md` | registry used as a report | move the text to the project's `artifacts/`, leave a `Start here` link |
 
 Evidence gaps (couldn't check gh, repo missing locally) make a project **unverifiable**,
 not drifted — report it in its own bucket, never guess a verdict from partial evidence.
@@ -237,10 +272,13 @@ not drifted — report it in its own bucket, never guess a verdict from partial 
 | 11 others | — | — | ✅ consistent | — |
 
 2 drifted · 1 unverifiable · 11 consistent
+Registry hygiene: ❌ 9 lines of prose above `## Work` · Start here → dead link
 ```
 
 Every drifted row cites its evidence (PR URL, branch, task numbers) — a verdict without
-the evidence line is not reportable.
+the evidence line is not reportable. The hygiene line is one line: `✅ clean`, or the
+specific violations. Moving prose out of `index.md` needs a yes like any other fix, and
+the text is relocated to the owning project's `artifacts/` — never deleted outright.
 
 ## Step A5 — Apply fixes (only on a yes)
 

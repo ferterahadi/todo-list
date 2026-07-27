@@ -130,6 +130,11 @@ Preserve custom section names. Before moving, search both registries for the sho
 duplicates are corruption, so stop instead of choosing one. Do not move or rename the
 project folder.
 
+Rows are the only thing that moves between the two registries. Neither file carries
+headings beyond its section tables, banners, or narrative — that text belongs in the
+owning project's `artifacts/` (`REGISTRY.md` § *Registries are data, not reports*). Leave
+`index.md`'s one-line `Start here` pointer alone; `/todo-state` owns it.
+
 Repair registry conflicts before retirement:
 
 - Archived status other than `done`, or a case-insensitive terminal `[open…]`

@@ -22,6 +22,12 @@ its row back to the matching section in `index.md`; never leave the same row in 
 Keep `tasks.md` checkboxes and the owning registry row's status in sync. `REGISTRY.md`
 is the reference for what each registry column means and how the date columns are stamped.
 
+**Both registries are data, not reports.** `index.md` holds its title, preamble, the
+optional one-line `Start here` pointer, and the section tables — never a status banner,
+release note, or narrative paragraph. Status belongs in the owning project's `artifacts/`:
+a dated `handoff` for what is next, `journal.md` for what happened. `REGISTRY.md`
+§ *Registries are data, not reports* has the full rule and the routing table.
+
 The hub root is the `TODO_HUB` environment variable (default `~/todo`). Resolve every hub
 path against it — skills may be invoked from inside another repo, so never assume the
 current working directory is the hub.

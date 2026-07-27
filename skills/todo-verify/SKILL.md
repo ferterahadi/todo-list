@@ -186,7 +186,8 @@ two skills interlock. Append to (or create) the `## Revisions` block at the bott
   filtered to the covered phase — hand the edit subagent the exact line text as
   its anchor, never the whole file.
 - Leave `plan.md`, `research/`, `artifacts/` untouched — this skill edits `tasks.md`
-  plus the owning registry row.
+  plus the owning registry **row**. Verification narrative never enters `index.md`
+  (`REGISTRY.md` § *Registries are data, not reports*).
 - If a failure or coverage gap opens a Revision for an archived project, atomically move
   its row back to the same section in `index.md`, set `in-progress`, and clear
   `completed` / `elapsed (days)` per `todo-state`. A passing re-verification that
