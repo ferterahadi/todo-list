@@ -17,6 +17,12 @@
           },
           {
             "type": "command",
+            "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/migrate-registry-preamble.sh\"",
+            "timeout": 15,
+            "statusMessage": "Removing prose preambles from the active registry"
+          },
+          {
+            "type": "command",
             "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/archive-candidates.sh\"",
             "timeout": 15,
             "statusMessage": "Checking archive candidates"

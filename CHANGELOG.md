@@ -7,6 +7,38 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.8.2] — 2026-07-28
+
+### Added
+- **Existing hubs now converge on the shipped seed, without ever losing content.**
+  `bootstrap-hub.sh` used to add a missing `archive.md` or `REGISTRY.md` and then stop, so a
+  hub created before a given release stayed behind it forever. It now backfills every
+  missing doc and template — `AGENTS.md`, `CLAUDE.md`, `REGISTRY.md`, `templates/*` — and
+  reports docs that differ from the shipped versions instead of replacing them. The seed's
+  example project is still never recopied into an established hub.
+  - The split that makes this safe: registries (`index.md`, `archive.md`) hold the user's
+    project rows and are **never** overwritten; docs are added when missing and only
+    *reported* when they differ, because the seed cannot tell a hub's own extension from a
+    stale copy; `projects/` is never touched.
+- **`hooks/migrate-registry-preamble.sh`** — a SessionStart migration that removes prose
+  preambles from `index.md`, so an existing hub picks up the data-only format from 1.8.1
+  rather than keeping the old eight-line header. Modelled on `migrate-index-dates.sh`:
+  writes a `.pre-preamble.bak` first, is a no-op on an already-clean registry, and preserves
+  the file mode.
+  - It refuses to run if the rewrite would change the project-row count, and reports the
+    number of rows kept. A blockquote directly under the title is preserved, so a hub that
+    pins a pointer line there keeps it.
+  - `archive.md` keeps its preamble by design — the rule for what may live there (only
+    `done` projects with no open Revisions) is stated nowhere else.
+
+### Changed
+- **`seed/AGENTS.md`, `seed/REGISTRY.md` and `seed/archive.md` now carry the
+  registries-are-data rule.** A registry is read on every hub-wide scan and edited narrowly,
+  so prose there is paid for on every read and goes stale silently while still looking
+  current. `REGISTRY.md` gains a *Registries are data, not reports* section with the routing
+  table for what to record where — handoff, `journal.md`, `blockers.md`, `## Revisions` —
+  and `AGENTS.md` states the rule at the entry point.
+
 ## [1.8.1] — 2026-07-28
 
 ### Changed

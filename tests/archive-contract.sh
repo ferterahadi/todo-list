@@ -470,7 +470,74 @@ expect_contains \
 expect_contains \
   "$repo_root/hooks/superpowers-doc-sync.sh" \
   'for registry in "$INDEX" "$ARCHIVE"'
+expect_contains \
+  "$repo_root/hooks/hooks.json" \
+  'migrate-registry-preamble.sh'
 printf 'ok - hook registration and prompt contracts\n'
+
+# The preamble migration turns index.md into data: title, an optional pinned pointer, and
+# the section tables. Every project row survives, and a clean registry is left alone.
+preamble_hub="$fixture_root/preamble"
+write_lines "$preamble_hub/index.md" \
+  '# Project Index' \
+  '' \
+  '> **Start here:** [alpha](projects/work/alpha/artifacts/handoff.md) — mid cutover.' \
+  '' \
+  'Active-project registry. Skills resolve an exact short-name here first, then search' \
+  'the cold archive.md only on a miss.' \
+  '' \
+  'Column meanings: REGISTRY.md.' \
+  '' \
+  '## Work' \
+  '' \
+  '| short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |' \
+  '|---|---|---|---|---|---|---|---|---|' \
+  '| alpha | projects/work/alpha | - | in-progress | - | - | - | - | - |' \
+  '| beta | projects/work/beta | - | done | - | - | - | - | - |' \
+  '' \
+  '## Self-initiative' \
+  '' \
+  '| short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |' \
+  '|---|---|---|---|---|---|---|---|---|'
+chmod 644 "$preamble_hub/index.md"
+preamble_output="$(
+  TODO_HUB="$preamble_hub" bash "$repo_root/hooks/migrate-registry-preamble.sh"
+)"
+expect_contains "$preamble_hub/index.md" '**Start here:**'
+expect_contains "$preamble_hub/index.md" '| alpha | projects/work/alpha |'
+expect_contains "$preamble_hub/index.md" '| beta | projects/work/beta |'
+expect_contains "$preamble_hub/index.md" '## Self-initiative'
+if grep -q 'Active-project registry' "$preamble_hub/index.md"; then
+  fail "preamble migration must remove the prose preamble"
+fi
+if grep -q 'Column meanings' "$preamble_hub/index.md"; then
+  fail "preamble migration must remove the REGISTRY.md pointer paragraph"
+fi
+case "$preamble_output" in
+  *'2 rows kept'*) ;;
+  *) fail "preamble migration must report the preserved row count" ;;
+esac
+[ -f "$preamble_hub/index.md.pre-preamble.bak" ] ||
+  fail "preamble migration must create a backup"
+expect_equal "preamble migration preserves the file mode" \
+  "644" "$(file_mode "$preamble_hub/index.md")"
+preamble_second_output="$(
+  TODO_HUB="$preamble_hub" bash "$repo_root/hooks/migrate-registry-preamble.sh"
+)"
+expect_equal "preamble migration is idempotent" "" "$preamble_second_output"
+
+# The shipped seed is already clean, so the migration must never touch it.
+clean_hub="$fixture_root/clean-preamble"
+mkdir -p "$clean_hub"
+cp "$repo_root/seed/index.md" "$clean_hub/index.md"
+clean_output="$(
+  TODO_HUB="$clean_hub" bash "$repo_root/hooks/migrate-registry-preamble.sh"
+)"
+expect_equal "a clean registry is left alone" "" "$clean_output"
+if [ -f "$clean_hub/index.md.pre-preamble.bak" ]; then
+  fail "a clean registry must not get a backup"
+fi
+printf 'ok - registry preamble migration\n'
 
 fresh_hub="$fixture_root/fresh"
 bootstrap_output="$(
@@ -490,8 +557,9 @@ bootstrap_second_output="$(
 )"
 expect_equal "bootstrap is silent after both registries exist" "" "$bootstrap_second_output"
 
-# A hub created before REGISTRY.md existed gets the reference backfilled, once, without
-# recopying anything else.
+# An existing hub converges on the shipped doc set: every missing doc and template is
+# backfilled once. Registry content is never replaced, and the seed's example project is
+# never recopied into an established hub.
 predoc_hub="$fixture_root/predoc"
 write_lines "$predoc_hub/index.md" '# Project Index'
 write_lines "$predoc_hub/archive.md" '# Project Archive'
@@ -499,20 +567,51 @@ predoc_output="$(
   PLUGIN_ROOT="$repo_root" TODO_HUB="$predoc_hub" \
     bash "$repo_root/hooks/bootstrap-hub.sh"
 )"
-[ -f "$predoc_hub/REGISTRY.md" ] || fail "existing hub must receive REGISTRY.md"
-case "$predoc_output" in
-  *"$predoc_hub/REGISTRY.md"*) ;;
-  *) fail "REGISTRY.md backfill must announce itself" ;;
-esac
+for doc in REGISTRY.md AGENTS.md CLAUDE.md; do
+  [ -f "$predoc_hub/$doc" ] || fail "existing hub must receive $doc"
+  case "$predoc_output" in
+    *"$predoc_hub/$doc"*) ;;
+    *) fail "$doc backfill must announce itself" ;;
+  esac
+done
+for template in plan.md tasks.md artifacts-README.md; do
+  [ -f "$predoc_hub/templates/$template" ] ||
+    fail "existing hub must receive templates/$template"
+done
 expect_contains "$predoc_hub/index.md" '# Project Index'
-if [ -d "$predoc_hub/templates" ]; then
-  fail "backfill must not recopy the rest of the seed"
+expect_equal "backfill must not replace registry content" \
+  "$(printf '# Project Index\n')" "$(cat "$predoc_hub/index.md")"
+if [ -d "$predoc_hub/projects" ]; then
+  fail "backfill must not recopy the seed's example project"
 fi
 predoc_second_output="$(
   PLUGIN_ROOT="$repo_root" TODO_HUB="$predoc_hub" \
     bash "$repo_root/hooks/bootstrap-hub.sh"
 )"
-expect_equal "REGISTRY.md backfill is idempotent" "" "$predoc_second_output"
+expect_equal "doc backfill is idempotent" "" "$predoc_second_output"
+
+# A hub that has extended its own docs keeps them. Drift is reported, never resolved by
+# overwriting, because the seed cannot tell a user's extension from a stale copy.
+drift_hub="$fixture_root/drift"
+mkdir -p "$drift_hub"
+for doc in index.md archive.md REGISTRY.md AGENTS.md CLAUDE.md; do
+  cp "$repo_root/seed/$doc" "$drift_hub/$doc"
+done
+mkdir -p "$drift_hub/templates"
+cp "$repo_root"/seed/templates/* "$drift_hub/templates/"
+printf '\nMY OWN HUB RULE\n' >> "$drift_hub/AGENTS.md"
+cp "$repo_root/seed/templates/plan.md" "$drift_hub/templates/my-own-template.md"
+drift_output="$(
+  PLUGIN_ROOT="$repo_root" TODO_HUB="$drift_hub" \
+    bash "$repo_root/hooks/bootstrap-hub.sh"
+)"
+expect_contains "$drift_hub/AGENTS.md" 'MY OWN HUB RULE'
+[ -f "$drift_hub/templates/my-own-template.md" ] ||
+  fail "convergence must not delete a hub's own template"
+case "$drift_output" in
+  *'differ from the shipped versions'*'AGENTS.md'*) ;;
+  *) fail "doc drift must be reported" ;;
+esac
 printf 'ok - registry reference backfill\n'
 
 legacy_hub="$fixture_root/legacy"

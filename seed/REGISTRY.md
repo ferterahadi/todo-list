@@ -18,6 +18,33 @@ matching section. A row never exists in both files. Project folders never move.
 The SessionStart archive-candidates check reports pending moves and compaction without
 editing anything.
 
+## Registries are data, not reports
+
+`index.md` holds two things: the title and the section tables. `archive.md` holds those
+plus a short preamble, because the lifecycle rules for what may live there are stated
+nowhere else. Nothing else in either — no status banners, no release notes, no revision
+narrative, no `##` heading that is not a section.
+
+The rule exists because a registry is read constantly and edited narrowly. Every hub-wide
+scan opens `index.md` first, so prose here is paid for on every read; and a paragraph
+nobody re-opens before editing a row goes stale silently, while still looking current to
+the next session. Status that matters belongs where the next reader is already going to
+look for it:
+
+| what you want to record | where it goes |
+|---|---|
+| what is next for a project | `<project>/artifacts/YYYY-MM-DD-handoff-<slug>.md` |
+| what happened, with evidence | `<project>/artifacts/journal.md` |
+| what is blocked and why | `<project>/artifacts/blockers.md` |
+| a gap between result and expectation | `tasks.md` `## Revisions` |
+
+Answering "where was I" is `/todo-refer <short-name> resume`, which derives the answer
+from live files and git rather than from a line someone remembered to update.
+
+A hub may add its own conventions on top — a pinned pointer line under the title, for
+instance. The SessionStart preamble migration preserves a blockquote directly under the
+title for exactly that reason, and strips prose paragraphs only.
+
 ## Columns
 
 Both registries carry the same columns.

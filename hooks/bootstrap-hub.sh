@@ -15,15 +15,44 @@ PLUGIN="${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}"
 SEED="$PLUGIN/seed"
 [ -d "$SEED" ] || exit 0   # nothing to seed from — bail quietly
 
-# Existing hub: add only new stand-alone files, never recopy or overwrite the seed.
+# Existing hub: converge it on the shipped seed without ever destroying content.
+#
+# Three classes of hub file, and the difference matters:
+#   registries  — index.md, archive.md hold the user's project rows. NEVER overwritten.
+#                 index.md's format is migrated in place by migrate-registry-preamble.sh.
+#   docs        — AGENTS.md, CLAUDE.md, REGISTRY.md, templates/. Added when missing.
+#                 Users extend these, so a file that differs is reported, not replaced.
+#   projects/   — never touched.
 if [ -f "$HUB/index.md" ]; then
-  if [ ! -f "$HUB/archive.md" ] && [ -f "$SEED/archive.md" ]; then
-    cp "$SEED/archive.md" "$HUB/archive.md"
-    printf 'todo-list: added the completed-project registry at %s/archive.md.\n' "$HUB"
+  add_if_missing() {
+    local rel="$1" note="$2"
+    [ -f "$SEED/$rel" ] || return 0
+    [ -f "$HUB/$rel" ] && return 0
+    mkdir -p "$(dirname "$HUB/$rel")"
+    cp "$SEED/$rel" "$HUB/$rel"
+    printf 'todo-list: added %s/%s%s\n' "$HUB" "$rel" "$note"
+  }
+
+  add_if_missing archive.md ' — the completed-project registry.'
+  add_if_missing REGISTRY.md ' (registry columns, status lifecycle, date semantics).'
+  add_if_missing AGENTS.md ' — the shared agent instructions.'
+  add_if_missing CLAUDE.md ' — Claude Code entry point, defers to AGENTS.md.'
+  if [ -d "$SEED/templates" ]; then
+    for template in "$SEED/templates"/*; do
+      [ -f "$template" ] && add_if_missing "templates/$(basename "$template")" ' — a project template.'
+    done
   fi
-  if [ ! -f "$HUB/REGISTRY.md" ] && [ -f "$SEED/REGISTRY.md" ]; then
-    cp "$SEED/REGISTRY.md" "$HUB/REGISTRY.md"
-    printf 'todo-list: added the registry reference at %s/REGISTRY.md (registry columns, status lifecycle, date semantics).\n' "$HUB"
+
+  # Report doc drift; never resolve it by overwriting. A hub's own additions to AGENTS.md
+  # or REGISTRY.md are the user's, and the seed has no way to tell an extension from a
+  # stale copy.
+  drifted=""
+  for doc in AGENTS.md CLAUDE.md REGISTRY.md; do
+    [ -f "$SEED/$doc" ] && [ -f "$HUB/$doc" ] || continue
+    cmp -s "$SEED/$doc" "$HUB/$doc" || drifted="$drifted $doc"
+  done
+  if [ -n "$drifted" ]; then
+    printf 'todo-list: hub docs differ from the shipped versions:%s. Yours are kept as-is — diff them against the plugin seed if you want the newer wording.\n' "$drifted"
   fi
   exit 0
 fi
