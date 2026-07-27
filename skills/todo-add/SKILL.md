@@ -54,7 +54,7 @@ exists in either registry or any section:
 
 - Stop. Do not overwrite or scaffold over it.
 - Point the user at the existing project, its active/archived location, and status. Suggest
-  either a different short-name or `/todo-update-state <existing-name> in-progress` to
+  either a different short-name or `/todo-state <existing-name> in-progress` to
   reopen an archived project; never reuse an archived identity.
 
 Also check that the target folder `projects/<work|self-initiative>/<short-name>/` doesn't already exist on disk — if it does, treat it as a collision the same way.
@@ -97,7 +97,7 @@ Add a row to the correct section table (`## Work` or `## Self-initiative`) in `i
 - `repo` stays `-` — the local codebase path is confirmed later during `/todo-plan`.
 - `status` is `planning` — the plan isn't filled in yet.
 - `started` is today's date (`YYYY-MM-DD`) — the lowest-tier provisional stamp in the
-  `in-progress` > `ready` > `planning` > `completed` fallback chain (`todo-update-state`
+  `in-progress` > `ready` > `planning` > `completed` fallback chain (`todo-state`
   Step 3.5). It gets overwritten by a `ready` or `in-progress` flip later; this is just the
   earliest signal available. `completed` stays `-`.
 - `elapsed (days)` stays `-` — computed once the project reaches `done` (`completed −

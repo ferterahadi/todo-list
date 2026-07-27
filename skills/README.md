@@ -16,17 +16,15 @@ fallback when nothing relevant is installed.
 |-------|---------|
 | `todo-list` | Show active projects at a glance; `archive` reads the cold completed registry and `sort` reorders active rows by task completion (fast tier) |
 | `todo-triage` | Tabulate what's left across projects and recommend frontier/deep/balanced/fast tier · effort · skill pairing per item (read-only; fast-tier gathering, routing judgment inline) |
-| `todo-refer` | Load a project's `plan.md`+`tasks.md` as grounding context; an optional `R<n>` follows its direct journal anchor and reads only that historical revision — cross-repo, read-only |
-| `todo-resume` | Reconstruct where a project's work stopped — open tasks, last journal entry, blockers, worktree/branch/PR state — and recommend the next command (read-only, cross-repo) |
+| `todo-refer` | Load project context — cross-repo, read-only, three modes. Default: `plan.md`+`tasks.md` as grounding. `resume`: where the work stopped (open tasks, last journal entry, blockers, worktree/branch/PR state) plus the next command. `R<n>`: follows the direct journal anchor and reads only that historical revision |
 | `todo-add` | Scaffold a new project folder + register it in `index.md` (fast tier) |
 | `todo-plan` | Write `plan.md` and `tasks.md` for a project |
 | `todo-execute` | Work through `tasks.md`, write outputs to `artifacts/`; `parallel` mode fans file-disjoint tasks out to agents in git worktrees of the target repo (no model pin — both implement and review waves inherit the session model), then lands PRs via a serial merge queue |
 | `todo-graph` | Compile typed `plan.md` relationships into the ready frontier, blocker chains, impact, paths, integrity audits, validated edits, and stable exports |
 | `todo-review` | Review a repo's diff against the project's plan — scope drift, violated constraints, ticked tasks with no evidence — then a correctness pass via the installed `code-review` skill (report-only) |
-| `todo-update-state` | Mark tasks/projects done, move status (fast tier) |
+| `todo-state` | Own the recorded state, both directions. Default: mark tasks/projects done, move status. `audit`: cross-check the owning registry against `tasks.md` and target-repo git/PR evidence, report drift, fix only on confirmation. Also the hub's authority on `started`/`completed`/`elapsed` stamping (fast-tier edits and gathering; drift verdicts inline) |
 | `todo-verify` | The "check" gate: drive a record-only verification run, tick tasks / flip status on green, open Revisions entries on failures or coverage gaps (balanced tier, high effort) |
 | `todo-revise` | Gap-driven rework: review done items, capture feedback per item, plan + run fixes, verify |
-| `todo-sync` | Audit recorded state vs reality: cross-check `index.md` status against `tasks.md` and target-repo git/PR evidence, report drift, fix only on confirmation (fast-tier gathering; verdicts inline) |
 | `todo-archive` | Lossless housekeeping: move closed revision detail behind direct journal links and move completed rows from active `index.md` to cold `archive.md` (fast tier) |
 | `todo-learn` | Capture a correction as one shared repo skill under `.agents/skills/` and `.claude/skills/` (balanced tier, high effort) |
 | `todo-infographic` | Turn a plan into a one-page HTML infographic, fresh theme each time (+ staleness hook). Generation uses balanced tier, high effort |
@@ -36,20 +34,22 @@ fallback when nothing relevant is installed.
 Status lifecycle: `planning → ready → in-progress → done`. The `plan → do → check → revise`
 loop is `todo-plan` → `todo-execute` → `todo-verify` → `todo-revise`, with `todo-review`
 as an optional intent check between do and check. `todo-graph` coordinates those loops
-through explicit `depends-on` edges; `todo-resume` / `todo-sync` / `todo-archive` keep
-multi-session work continuable, honest, and compact. Exact short-name lookups check
-active `index.md` first, then cold `archive.md` only on a miss.
+through explicit `depends-on` edges; `todo-refer resume` / `todo-state audit` /
+`todo-archive` keep multi-session work continuable, honest, and compact. Exact short-name
+lookups check active `index.md` first, then cold `archive.md` only on a miss.
 
 ## Install
 
 Install all skills in both agents from the repo root:
 
 ```bash
-npx skills add . --skill todo-llm-routing todo-add todo-archive todo-execute \
-  todo-graph todo-infographic todo-learn todo-list todo-plan todo-push todo-refer \
-  todo-resume todo-review todo-revise todo-sync todo-triage todo-update-state \
-  todo-verify --agent claude-code --agent codex --global --yes
+npx skills add . --agent claude-code --agent codex --global --yes
 ```
+
+No `--skill` filter: every installable skill in this repo lives in this directory and is
+named `todo-*`. The repo's own learned-convention skills under `../.agents/skills/` carry
+`metadata.internal: true`, so `npx skills` never offers them. Preview the set with
+`npx skills add . --list`.
 
 See the [root README](../README.md) for native plugin installation when lifecycle hooks
 and hub bootstrapping are also required.

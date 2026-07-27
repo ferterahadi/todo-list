@@ -135,7 +135,7 @@ Rules:
 - If a completed source task no longer holds, leave its original `[x]` as-is but note in the revision that the source is being corrected; the project status reconcile (Step 7) handles the rest.
 - If the project row came from `archive.md`, opening the first revision also reopens the
   project: move the row verbatim back to the same section in `index.md`, set status to
-  `in-progress`, and clear `completed` / `elapsed (days)` per `todo-update-state` Step
+  `in-progress`, and clear `completed` / `elapsed (days)` per `todo-state` Step
   3.5. Treat the row move and status edit as one atomic change.
 
 ## Step 5 — Execute the fix
@@ -153,14 +153,14 @@ the host's structured choice prompt when available: "Does R<n> now match what yo
 expected?" with options
 "Accepted" / "Still off — here's the gap" / "Park it for now".
 
-- **Accepted** → flip the revision heading to `[done]`, and re-confirm the source task's state via the same checkbox logic `todo-update-state` uses (re-check it if it had been reopened). Then **archive the entry's detail** (see "Archival rule" below). Report it. If the project's `plan.md` has a `## Verification` block, suggest `/todo-verify <short-name>` to re-run the verification gate against the reworked code.
+- **Accepted** → flip the revision heading to `[done]`, and re-confirm the source task's state via the same checkbox logic `todo-state` uses (re-check it if it had been reopened). Then **archive the entry's detail** (see "Archival rule" below). Report it. If the project's `plan.md` has a `## Verification` block, suggest `/todo-verify <short-name>` to re-run the verification gate against the reworked code.
 - **Rejected / still off** → the user gives a new gap. Return to Step 3 with it (a fresh revision entry, or refine the existing one). This is the loop — repeat until accepted or the user stops.
 
 Never claim a revision is fixed without the user accepting it or you having run real verification. Evidence before assertions.
 
 ## Step 7 — Reconcile status, then offer to persist the lesson
 
-**Status honesty** (mirror `todo-update-state` Step 4): case-insensitive open revisions
+**Status honesty** (mirror `todo-state` Step S4): case-insensitive open revisions
 on a project marked `done` mean it is not truly done. Flag it and offer to move an
 archived row back to `index.md` when needed, then set `in-progress`. All revisions whose
 tags start with `[done` and all tasks `[x]` → run `todo-graph`'s bounded
@@ -223,6 +223,6 @@ The canonical repair and conflict rules live in `todo-archive`. If 3+ completed 
 still carry detail, offer `/todo-archive <short-name>`.
 
 ## Notes
-- **Session handoff:** when open revisions or tasks remain after this session's rework wraps, recommend `/todo-resume <short-name>` as the next-session entry point — it re-orients on current state and routes back here itself. Name `/todo-revise <short-name> R<n>` directly only as an immediate next step within the same session.
+- **Session handoff:** when open revisions or tasks remain after this session's rework wraps, recommend `/todo-refer <short-name> resume` as the next-session entry point — it re-orients on current state and routes back here itself. Name `/todo-revise <short-name> R<n>` directly only as an immediate next step within the same session.
 - This skill edits `tasks.md` (the `## Revisions` block) and project code/artifacts — it does not rewrite `plan.md`. If a gap reveals the *plan itself* was wrong, say so and point to `/todo-plan` rather than silently editing the plan.
 - Revisions feed the infographic: the Stop hook (`infographic-staleness.sh`) will regenerate `artifacts/infographic.html` after rework lands.

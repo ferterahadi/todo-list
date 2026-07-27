@@ -30,10 +30,38 @@ frontmatter_name() {
   ' "$1"
 }
 
-extract_install_skills() {
-  local document="$1"
-  local destination="$2"
+frontmatter_internal() {
+  awk '
+    NR == 1 && $0 == "---" {
+      frontmatter = 1
+      next
+    }
+    frontmatter && $0 == "---" {
+      exit
+    }
+    frontmatter && /^metadata:[[:space:]]*$/ {
+      in_metadata = 1
+      next
+    }
+    frontmatter && in_metadata && /^[^[:space:]]/ {
+      in_metadata = 0
+    }
+    frontmatter && in_metadata && /^[[:space:]]+internal:[[:space:]]*true[[:space:]]*$/ {
+      print "true"
+      exit
+    }
+  ' "$1"
+}
 
+# The published install command carries no --skill filter, so `npx skills add` installs
+# everything it discovers. Two invariants keep that safe, and both are asserted below:
+# the documented command stays unfiltered, and every repo-local skill is marked internal
+# so the installer never offers it.
+assert_unfiltered_install() {
+  local document="$1"
+  local label="$2"
+
+  local status=0
   awk '
     !in_command && /npx[[:space:]]+skills[[:space:]]+add/ {
       in_command = 1
@@ -41,73 +69,35 @@ extract_install_skills() {
     }
     in_command {
       line = $0
-      gsub(/\\/, " ", line)
-      count = split(line, fields, /[[:space:]]+/)
-
-      for (field_index = 1; field_index <= count; field_index++) {
-        token = fields[field_index]
-        if (token == "") {
-          continue
-        }
-        if (token == "--skill") {
-          capture = 1
-          found_skill_flag = 1
-          continue
-        }
-        if (capture && token == "--agent") {
-          found_end = 1
-          exit
-        }
-        if (capture) {
-          print token
-        }
+      if (line ~ /--skill/) {
+        found_filter = 1
+      }
+      if (line !~ /\\[[:space:]]*$/) {
+        in_command = 0
       }
     }
     END {
-      if (!found_command || !found_skill_flag || !found_end) {
+      if (!found_command) {
         exit 3
       }
+      if (found_filter) {
+        exit 4
+      }
     }
-  ' "$document" > "$destination" ||
-    fail "could not parse the explicit install command in ${document#"$repo_root"/}"
-}
+  ' "$document" || status=$?
 
-assert_same_skill_set() {
-  local label="$1"
-  local expected="$2"
-  local actual_raw="$3"
-  local actual_sorted="$4"
-  local duplicate_count
-  local missing
-  local unexpected
-
-  LC_ALL=C sort "$actual_raw" > "$actual_sorted"
-  duplicate_count="$(LC_ALL=C uniq -d "$actual_sorted" | wc -l | tr -d '[:space:]')"
-  if [ "$duplicate_count" != "0" ]; then
-    printf 'not ok - %s install command contains duplicate skills:\n' "$label" >&2
-    LC_ALL=C uniq -d "$actual_sorted" >&2
-    exit 1
-  fi
-
-  missing="$(LC_ALL=C comm -23 "$expected" "$actual_sorted")"
-  unexpected="$(LC_ALL=C comm -13 "$expected" "$actual_sorted")"
-  if [ -n "$missing" ] || [ -n "$unexpected" ]; then
-    printf 'not ok - %s install command does not match public skills\n' "$label" >&2
-    if [ -n "$missing" ]; then
-      printf 'missing:\n%s\n' "$missing" >&2
-    fi
-    if [ -n "$unexpected" ]; then
-      printf 'unexpected:\n%s\n' "$unexpected" >&2
-    fi
-    exit 1
-  fi
+  case "$status" in
+    0) ;;
+    3) fail "$label has no 'npx skills add' install command" ;;
+    4) fail "$label install command still filters with --skill; it must install every discovered skill" ;;
+    *) fail "could not parse the install command in $label" ;;
+  esac
 }
 
 require_command awk
-require_command comm
+require_command cmp
 require_command python3
 require_command sort
-require_command uniq
 
 json_files=(
   "$repo_root/.codex-plugin/plugin.json"
@@ -146,7 +136,7 @@ public_skills="$temp_root/public-skills"
 
 shopt -s nullglob
 skill_files=("$repo_root"/skills/*/SKILL.md)
-repo_skill_files=("$repo_root"/.agents/skills/*/SKILL.md)
+repo_skill_files=("$repo_root"/.agents/skills/*/SKILL.md "$repo_root"/.claude/skills/*/SKILL.md)
 shopt -u nullglob
 
 [ "${#skill_files[@]}" -gt 0 ] || fail "no public skills found"
@@ -158,6 +148,12 @@ for skill_file in "${skill_files[@]}"; do
     fail "missing frontmatter name: ${skill_file#"$repo_root"/}"
   [ "$declared_name" = "$skill_directory" ] ||
     fail "frontmatter name mismatch in ${skill_file#"$repo_root"/}: $declared_name != $skill_directory"
+  case "$skill_directory" in
+    todo-*) ;;
+    *) fail "public skill is not todo-prefixed: ${skill_file#"$repo_root"/}" ;;
+  esac
+  [ "$(frontmatter_internal "$skill_file")" = "true" ] &&
+    fail "public skill is marked metadata.internal: ${skill_file#"$repo_root"/}"
   printf '%s\n' "$skill_directory" >> "$public_skills"
 done
 LC_ALL=C sort -u -o "$public_skills" "$public_skills"
@@ -167,26 +163,30 @@ grep -Fxq 'todo-llm-routing' "$public_skills" ||
 grep -Fxq 'todo-graph' "$public_skills" ||
   fail "public skills are missing todo-graph"
 
+# Repo-local learned-convention skills sit in directories `npx skills` scans. Without
+# metadata.internal they would install alongside the public set once the documented
+# command dropped its --skill filter.
+for repo_skill_file in "${repo_skill_files[@]}"; do
+  [ "$(frontmatter_internal "$repo_skill_file")" = "true" ] ||
+    fail "repo-only skill is missing 'metadata:\\n  internal: true': ${repo_skill_file#"$repo_root"/}"
+done
+
+for agents_skill_file in "$repo_root"/.agents/skills/*/SKILL.md; do
+  [ -e "$agents_skill_file" ] || continue
+  mirror="$repo_root/.claude/skills/$(basename "$(dirname "$agents_skill_file")")/SKILL.md"
+  [ -e "$mirror" ] ||
+    fail "repo-only skill has no .claude mirror: ${agents_skill_file#"$repo_root"/}"
+  cmp -s "$agents_skill_file" "$mirror" ||
+    fail "repo-only skill and its .claude mirror differ: ${mirror#"$repo_root"/}"
+done
+
 documents=(
   "$repo_root/README.md"
   "$repo_root/skills/README.md"
   "$repo_root/CONTRIBUTING.md"
 )
 for document in "${documents[@]}"; do
-  label="${document#"$repo_root"/}"
-  safe_label="$(printf '%s' "$label" | tr '/.' '__')"
-  install_raw="$temp_root/${safe_label}.raw"
-  install_sorted="$temp_root/${safe_label}.sorted"
-
-  extract_install_skills "$document" "$install_raw"
-  assert_same_skill_set "$label" "$public_skills" "$install_raw" "$install_sorted"
-
-  for repo_skill_file in "${repo_skill_files[@]}"; do
-    repo_skill="$(basename "$(dirname "$repo_skill_file")")"
-    if grep -Fxq "$repo_skill" "$install_sorted"; then
-      fail "$label install command exposes repo-only skill: $repo_skill"
-    fi
-  done
+  assert_unfiltered_install "$document" "${document#"$repo_root"/}"
 done
 
 catalogs=(

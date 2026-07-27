@@ -13,7 +13,7 @@ picks the session model or dispatch target per task instead of running everythin
 the most expensive model by default.
 
 This is **read-only**. Never edit `index.md`, `tasks.md`, `plan.md`, or any project
-file. To change state use `/todo-update-state`; to do the work use `/todo-execute`.
+file. To change state use `/todo-state`; to do the work use `/todo-execute`.
 
 ## The model this runs on
 
@@ -93,7 +93,7 @@ For each in-scope project (via the fast-tier gathering subagent when 3+, else in
   ```
   Use the shared counting rules: **skip the `## Status` legend block** and
   **skip anything inside HTML comments** (same awk snippet as `todo-list` sort mode /
-  `todo-update-state`).
+  `todo-state`).
 - **Open Revisions**: every case-insensitive `### R<n> … [open]` heading, including
   suffixed IDs, with its `Gap:` line
   (`grep -iA1 -E '^### R[0-9]+[A-Za-z]*.*\[open\]' tasks.md`).

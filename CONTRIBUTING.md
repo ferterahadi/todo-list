@@ -81,11 +81,14 @@ and packaging. To exercise a change:
 1. Install the skills from your local checkout for both agents:
 
    ```bash
-   npx skills add . --skill todo-llm-routing todo-add todo-archive todo-execute \
-     todo-graph todo-infographic todo-learn todo-list todo-plan todo-push todo-refer \
-     todo-resume todo-review todo-revise todo-sync todo-triage todo-update-state \
-     todo-verify --agent claude-code --agent codex --global --yes
+   npx skills add . --agent claude-code --agent codex --global --yes
    ```
+
+   The command carries no `--skill` filter, so anything the installer discovers ships.
+   Keep that safe: public skills live in `skills/todo-*/`, and any repo-local skill under
+   `.agents/skills/` (or its `.claude/skills/` mirror) must set `metadata.internal: true`
+   in its frontmatter so the installer skips it. `tests/package-contract.sh` enforces
+   both rules.
 
 2. To test the Claude Code hooks and bootstrap path, install the full plugin:
 

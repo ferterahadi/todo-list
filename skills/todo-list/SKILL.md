@@ -92,6 +92,6 @@ for each section without pasting the whole file.
 
 - View modes are idempotent and read-only.
 - Sort changes row order only.
-- Status or checkbox changes belong to `todo-update-state`.
+- Status or checkbox changes belong to `todo-state`.
 - Registry status is not dependency readiness. “What can I start now?” belongs to
   `todo-graph`, which evaluates canonical `depends-on` edges and completion evidence.

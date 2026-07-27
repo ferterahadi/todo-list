@@ -78,7 +78,7 @@ A typical project, end to end:
 /todo-revise api-rate-limiting             # fix whatever the gate caught
 ```
 
-Stopped halfway? `/todo-resume api-rate-limiting` rebuilds the open tasks, Revisions,
+Stopped halfway? `/todo-refer api-rate-limiting resume` rebuilds the open tasks, Revisions,
 blockers, and git/worktree state, then names the next command.
 
 ## The graph
@@ -149,16 +149,13 @@ What keeps it honest:
 One command installs all skills for both agents from the same source:
 
 ```bash
-npx skills add ferterahadi/todo-list \
-  --skill todo-llm-routing todo-add todo-archive todo-execute todo-graph \
-    todo-infographic todo-learn todo-list todo-plan todo-push todo-refer \
-    todo-resume todo-review todo-revise todo-sync todo-triage todo-update-state \
-    todo-verify \
-  --agent claude-code \
-  --agent codex \
-  --global \
-  --yes
+npx skills add ferterahadi/todo-list --agent claude-code --agent codex --global --yes
 ```
+
+No `--skill` filter is needed. Every publicly installable skill in this repo lives under
+`skills/` and is named `todo-*`; the repo's own learned-convention skills under
+`.agents/skills/` are marked `metadata.internal: true`, so the installer skips them. Run
+`npx skills add ferterahadi/todo-list --list` to see the exact set before installing.
 
 For a local checkout, replace `ferterahadi/todo-list` with `.`. The installer uses
 symlinks by default so both agents share one copy. This path installs skills only; use a
@@ -243,7 +240,7 @@ rm -rf ~/todo    # or wherever TODO_HUB points
   inside another repo. See [`.env.example`](.env.example).
 - **Version the hub.** The hub is a plain directory. `git init` it if you want history.
 
-## All 18 skills
+## All 16 skills
 
 The loop and graph skills above, plus support skills grouped by role:
 
@@ -254,7 +251,7 @@ The loop and graph skills above, plus support skills grouped by role:
 |`todo-add`|Scaffold a new project folder + register it in `index.md`|
 |`todo-list`|Overview of the index grouped by status; `archive` reads the cold registry, `sort` reorders rows by task completion|
 |`todo-triage`|Tabulate open work across projects + recommend a model per task|
-|`todo-update-state`|Tick tasks / flip status by hand, without an execution pass|
+|`todo-state`|Record and reconcile state. Default: tick tasks / flip status by hand. `audit`: cross-check the registry against tasks + git/PR reality and fix drift on confirmation|
 
 **Work** — the loop, and the graph over the loops
 
@@ -271,8 +268,7 @@ The loop and graph skills above, plus support skills grouped by role:
 
 |Skill|Purpose|
 |-|-|
-|`todo-refer`|Load a project's plan+tasks as grounding context from any repo; `R<n>` loads one past Revision instead|
-|`todo-resume`|Reconstruct where work stopped (tasks, blockers, worktree/PR state) + name the next command|
+|`todo-refer`|Load project context from any repo. Default: plan+tasks as grounding. `resume`: reconstruct where work stopped (tasks, blockers, worktree/PR state) + name the next command. `R<n>`: one past Revision|
 |`todo-push`|Full git shipping workflow: branch → commit → push → PR → merge|
 |`todo-infographic`|Turn a plan into a one-page HTML infographic|
 |`todo-learn`|Capture a correction as a durable rule in a repo's own skill files|
@@ -281,7 +277,6 @@ The loop and graph skills above, plus support skills grouped by role:
 
 |Skill|Purpose|
 |-|-|
-|`todo-sync`|Audit recorded status vs tasks + git/PR reality; fix drift on confirmation|
 |`todo-archive`|Move closed revision detail to the journal, retire done rows to `archive.md` — lossless|
 
 **Support** — shared configuration the others read
@@ -332,7 +327,7 @@ effort, and than Fable below max. The mapping is advisory and centralized in
   marketplace.json   makes this repo installable as a marketplace
 .codex-plugin/
   plugin.json        Codex plugin manifest
-skills/todo-*/       the 18 shared skills (each a SKILL.md)
+skills/todo-*/       the 16 shared skills (each a SKILL.md)
   todo-graph/scripts/graph-report.py   the deterministic graph compiler (stdlib only)
 hooks/
   hooks.json                 registers the five hooks below (auto)

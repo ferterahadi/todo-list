@@ -150,7 +150,7 @@ Move unknown paths under `## Other` and flag them for confirmation before any la
 reopen.
 
 This skill may repair a stale archived row reported by the audit. For a user-requested
-status change away from `done`, `todo-update-state` owns the same atomic reverse move.
+status change away from `done`, `todo-state` owns the same atomic reverse move.
 
 ## Step 4 — Verify and report
 

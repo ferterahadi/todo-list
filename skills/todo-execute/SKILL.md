@@ -89,7 +89,7 @@ Do not start executing until you've read all of them. If `plan.md` is missing cr
 ## Step 3 — Activate the project and update status
 
 If the row came from `archive.md`, move it verbatim back to the same section in
-`index.md`. Set status to `in-progress` there and apply `todo-update-state` Step 3.5 in
+`index.md`. Set status to `in-progress` there and apply `todo-state` § Date stamping in
 the same atomic edit: clear `completed` / `elapsed (days)`, preserve the original
 `started`, and never leave a non-done row in `archive.md`.
 
@@ -198,7 +198,7 @@ Update the active `index.md` row:
 - Blockers remain or tasks are open → stay `in-progress`.
 - All tasks complete and `plan.md` has a `## Verification` block → stay `in-progress` and point the user at `/todo-verify <short-name>` — the verification run is the gate that flips `done`, not your own assessment. Code-complete + unit tests ≠ done.
 - All tasks complete, no `## Verification` block, **but the Step 4 worktree has unmerged changes** → stay `in-progress`; the work isn't landed until it's shipped. Point the user at `/todo-push` (run from `<repo>-wt/<short-name>`).
-- All tasks complete, no `## Verification` block, and nothing to ship (hub-only project) → set `done`, and stamp `completed` = today plus `elapsed (days)` = `completed − started` (`todo-update-state` Step 3.5).
+- All tasks complete, no `## Verification` block, and nothing to ship (hub-only project) → set `done`, and stamp `completed` = today plus `elapsed (days)` = `completed − started` (`todo-state` § Date stamping).
 
 Summarize:
 - What was completed
@@ -210,7 +210,7 @@ Keep it short. The artifacts speak for themselves.
 
 **Session handoff:** a command named in this report is an *act-now* pointer for the
 current session. When the remaining work is for a later session, recommend
-`/todo-resume <short-name>` instead — it re-orients on current tasks/revisions/git
+`/todo-refer <short-name> resume` instead — it re-orients on current tasks/revisions/git
 state and routes to the right work command itself.
 
 ---
@@ -349,7 +349,7 @@ Only now, and only you: tick the completed task lines in `tasks.md`, write block
 
 Report per feature: PR link, merge result, coverage numbers, blockers. Keep it short.
 The sequential Step 7 session-handoff rule applies here too: work left for a later
-session gets `/todo-resume <short-name>`, not a direct work command.
+session gets `/todo-refer <short-name> resume`, not a direct work command.
 
 ## Parallel-mode rules
 

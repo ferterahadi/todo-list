@@ -7,6 +7,47 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-07-27
+
+### Removed
+- `/todo-resume` and `/todo-sync` as standalone skills, and `/todo-update-state` under
+  that name. 18 skills → 16. See the two merges below for where each one went; both old
+  names are called out in the surviving skills' descriptions so a stale invocation still
+  routes correctly.
+
+### Changed
+- **`/todo-resume` merged into `/todo-refer` as `resume` mode.** Both skills resolved a
+  project the same way and extracted `tasks.md` the same way — resume's own instructions
+  said "use `todo-refer`'s resolution" and "the `todo-refer` extraction snippets", so the
+  duplication was already load-bearing. `/todo-refer <name>` still gives the grounding
+  digest, `/todo-refer <name> R<n>` still gives one revision, and
+  `/todo-refer <name> resume` gives the where-you-stopped digest plus the evidence →
+  next-command routing table.
+- **`/todo-update-state` + `/todo-sync` merged into `/todo-state`.** Sync could not write
+  a correct status flip without following update-state's Step 3.5 date-stamping rules
+  from another file. Neither old name described the merged skill honestly, so both were
+  retired: `/todo-state` records what the user says, `/todo-state audit` checks the record
+  against tasks and git evidence, and `/todo-state audit fix` applies confirmed
+  corrections through the same edit path.
+- Date-stamping rules moved from `todo-update-state` "Step 3.5" to a named
+  `todo-state` § Date stamping section, and are now explicitly the hub-wide authority.
+  `todo-execute`, `todo-verify`, `todo-revise`, and `seed/index.md` point at the section
+  instead of a step number.
+- The documented `npx skills add` command no longer passes `--skill`. Every publicly
+  installable skill lives in `skills/` and is named `todo-*`, so the installer's own
+  discovery is now the source of truth instead of an 18-name list kept in sync by hand
+  across `README.md`, `skills/README.md`, and `CONTRIBUTING.md`.
+- The repo's own learned-convention skills (`.agents/skills/infographic-scope`,
+  `.agents/skills/session-handoff`, and their `.claude/skills/` mirrors) are marked
+  `metadata: internal: true`, which is what makes the unfiltered command safe —
+  `npx skills` skips them during discovery.
+- `/todo-learn` now writes `metadata: internal: true` into every topic skill it creates,
+  so a repo's private corrections never ship to people installing that repo's skills.
+- `tests/package-contract.sh` swapped its name-list assertion for the two invariants that
+  now matter: the documented install command carries no `--skill` filter, and every
+  repo-local skill is marked internal and mirrored byte-identically into
+  `.claude/skills/`. It also asserts the `todo-` prefix on every public skill.
+
 ## [1.4.0] — 2026-07-27
 
 ### Added

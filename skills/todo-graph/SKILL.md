@@ -184,4 +184,4 @@ otherwise return the requested slice in chat.
   fails its source project without contaminating the target.
 - Read-only modes never edit. Link validation happens before the single plan-row edit.
 - Do not auto-change status when a dependency regresses. Report an in-progress dependent
-  as at risk and let `todo-sync` reconcile state deliberately.
+  as at risk and let `todo-state audit` reconcile state deliberately.

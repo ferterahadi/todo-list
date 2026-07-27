@@ -58,8 +58,8 @@ git diff origin/<base>...HEAD --stat                    # committed-but-unlanded
 
 - In a `todo/<short-name>` or `feat/*` worktree → the whole branch diff vs `origin/<base>`.
 - On the base branch with local changes → the working-tree diff.
-- Nothing in either → say there's nothing to review and stop; suggest `/todo-resume
-  <name>` if the user expected work to be here.
+- Nothing in either → say there's nothing to review and stop; suggest `/todo-refer
+  <name> resume` if the user expected work to be here.
 
 State what you're reviewing (branch, commit range, file count) before judging it.
 
@@ -112,7 +112,7 @@ The verdict line answers one question: **is this ready for `/todo-verify` / `/to
 or does something go back?** Findings that survive user triage become `/todo-revise`
 gaps — offer to carry them over, don't write Revisions entries yourself. The `▶ Next`
 command is an act-now pointer; if the user will act in a later session instead,
-recommend `/todo-resume <short-name>` as the entry point.
+recommend `/todo-refer <short-name> resume` as the entry point.
 
 ## Notes
 - Hub-read-only; repo-read-only. This skill changes nothing — it produces findings.
