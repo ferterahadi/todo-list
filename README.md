@@ -337,7 +337,7 @@ hooks/
   infographic-staleness.sh   Stop: nudge stale infographics
   superpowers-doc-sync.sh    Stop: ensure superpowers plans/specs are tracked in the hub
 seed/                copied to $TODO_HUB on first run
-tests/               contract checks for the package, archive rules, and graph compiler
+tests/               contract checks for the package, archive rules, graph compiler, and hooks
 ```
 
 The seeded hub adds `AGENTS.md` as the shared instructions and a small `CLAUDE.md`

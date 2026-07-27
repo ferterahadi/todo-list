@@ -22,7 +22,7 @@ use at least the **balanced** tier from [`../todo-llm-routing/SKILL.md`](../todo
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 
@@ -173,7 +173,7 @@ After completing each task, check it off in `tasks.md`:
 
 When checking off, **don't append findings or prose to the task line** — a task stays
 one line. Discoveries go to `research/`, outcomes to `artifacts/`, with at most a short
-pointer suffix (`— see research/findings.md § X`). `tasks.md` is read whole by six
+pointer suffix (`— see research/findings.md § X`). `tasks.md` is read whole by several
 skills; keeping it a bare checklist is what keeps every other skill cheap.
 
 ## Step 6 — Handle blockers

@@ -11,7 +11,6 @@ projects/
 templates/     — plan.md and tasks.md templates for new projects
 index.md       — hot registry: active projects only
 archive.md     — cold registry: completed rows, preserving their original sections
-skills/        — the /todo-* skills that drive the workflow
 ```
 
 ## Entry Point

@@ -7,6 +7,46 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-07-27
+
+### Fixed
+- `hooks/infographic-staleness.sh` resolves the hub from `$TODO_HUB` (default `~/todo`)
+  like every other hook, instead of only ever firing when the session's working
+  directory happened to be the hub. The staleness nudge now reaches cross-repo sessions:
+  a stale `ready`/`in-progress` project is reported from the hub itself or from a
+  session inside that project's target repo (including its `<repo>-wt/*` worktrees),
+  and unrelated repos stay quiet. Covered by the new `tests/infographic-hook-contract.sh`
+  — the hook previously had no tests.
+- The shared task-counting awk snippet embedded in `todo-state`, `todo-list`, and
+  `todo-infographic` now skips `## Notes` / `## Context` sections and fenced code
+  blocks, matching the deterministic helpers (`graph-report.py`, `archive-report.sh`),
+  so completion ratios agree across every reader.
+
+### Changed
+- Hub self-description corrected in ten skills: `$TODO_HUB` points at "your hub
+  folder", not "your clone of this repo" — the hub is seeded by the plugin, not a
+  clone of it. The seeded `AGENTS.md` no longer lists a `skills/` directory the hub
+  doesn't contain.
+- Provider model names retreat behind the tier layer (per CONTRIBUTING, names live
+  only in `todo-llm-routing`): `todo-push` now says "the fast tier's resolved host
+  model" instead of naming Opus / GPT-5.6 Luna, and `todo-triage`'s example render
+  uses `<resolved host model>`.
+- `templates/plan.md` gains the `## Repo` section every skill already expected;
+  `todo-infographic`'s Note section names its fallback when a plan has no `## Notes`.
+
+### Removed
+- `seed/templates/planning-prompt.md` — an orphaned pre-`/todo-plan` copy-paste prompt
+  nothing referenced; it duplicated (and disagreed with) `/todo-plan`'s discovery
+  questions.
+
+### Upgrade note
+- Global skill installs made before 1.5.0 (`npx skills add … --global`) still carry
+  the removed `todo-resume` / `todo-sync` / `todo-update-state` skills, and possibly
+  stale pre-`internal` copies of the repo's own `session-handoff` /
+  `infographic-scope` conventions. Delete those folders from your global skills
+  directory (e.g. `~/.claude/skills/`) so stale descriptions stop competing with the
+  merged skills. Native plugin installs are unaffected.
+
 ## [1.5.0] — 2026-07-27
 
 ### Removed

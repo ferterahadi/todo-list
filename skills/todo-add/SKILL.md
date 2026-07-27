@@ -13,7 +13,7 @@ run it inline.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, the new project folder under `projects/work/` or `projects/self-initiative/`, and its files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to the scaffolding subagent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, the new project folder under `projects/work/` or `projects/self-initiative/`, and its files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to the scaffolding subagent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 

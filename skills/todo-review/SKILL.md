@@ -24,7 +24,7 @@ This is judgment work. Run it inline on the current session model; use at least 
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve every hub path against this absolute root regardless of the current working directory — this skill is usually invoked FROM the target repo, so never assume cwd is the hub. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve every hub path against this absolute root regardless of the current working directory — this skill is usually invoked FROM the target repo, so never assume cwd is the hub. (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 

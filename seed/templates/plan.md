@@ -49,5 +49,8 @@ One row per Key Decision — what it gains, what it costs:
 - **Task↔test map:**                                     <!-- optional; sharpens which task ticks on which spec -->
   - "<task text>" ⟶ spec: <spec file or test name>
 
+## Repo
+Absolute local path to the target codebase — confirmed on disk during /todo-plan.
+
 ## References
 - Links to relevant docs, APIs, prior art

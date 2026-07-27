@@ -41,8 +41,8 @@ See the README for how to point this at a concrete server.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this
-repo (default `~/todo`). Resolve **every** hub path against this root — active `index.md`,
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder
+(default `~/todo`). Resolve **every** hub path against this root — active `index.md`,
 cold `archive.md`, and each project's files — regardless of the current working directory.
 This skill may be invoked from another repo; never assume cwd is the hub. Pass this root
 to the edit sub-agent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
