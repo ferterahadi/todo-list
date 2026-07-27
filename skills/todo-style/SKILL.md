@@ -15,9 +15,19 @@ Two files, one per agent:
 | Claude Code | `$CLAUDE_CONFIG_DIR/CLAUDE.md` (default `~/.claude/CLAUDE.md`) | `assets/CLAUDE.md` |
 | Codex | `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`) | `assets/AGENTS.md` |
 
-The two packs carry the same rules; only harness-specific lines differ (Claude's version
-uses `<details>` accordions and artifact widgets, Codex's uses a `### Technical detail`
-heading and written-to-disk HTML, since a terminal renders neither accordions nor mermaid).
+The two packs carry the same rules; only harness-specific lines differ, because the two
+surfaces render and accept different things:
+
+| | Claude Code | Codex |
+|-|-|-|
+| Below-the-fold evidence | `<details>` accordion | `### Technical detail` heading |
+| Diagrams | artifact widget | written-to-disk HTML (never mermaid) |
+| Decision picker | interactive picker tool, fired last | tag table at the top of the block |
+
+The picker split is the one to remember: Claude Code has a click-to-choose control, so its
+pack drops the closing `### ➡️ Choose` table and lets the tool be the click surface. A
+terminal has no such control, so Codex's pack keeps a tag table — moved to the top of the
+CHOICES block, where it is read before the option detail rather than after it.
 
 This is deterministic file work — the script does it all. Use the **fast** tier from
 [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). Your judgment is spent on

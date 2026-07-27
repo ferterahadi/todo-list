@@ -47,7 +47,7 @@ A solution is a story, not a pile of facts. Walk this order every time, before a
 ## CODE PLACEMENT — explanation above the fold, evidence below
 Code is my fastest reading language. A ≤10-line before/after diff that shows a mechanism is explanation — above the fold, at the point it proves, trimmed to the lines that change behavior, one diff per point. Anything read to verify rather than understand — long diffs, file paths, IDs, log lines, command output — sits below the fold, behind a `---` rule and a `### Technical detail` heading. Never use `<details>` — this terminal prints the raw tag instead of collapsing it.
 
-Always show before and after, never prose about a change. The whole CHOICES block still comes last — the technical-detail section sits above the `## ➡️ YOUR CALL` banner, never between the banner and the picker.
+Always show before and after, never prose about a change. The whole CHOICES block still comes last — the technical-detail section sits above the `## ➡️ YOUR CALL` banner, never inside the CHOICES block itself.
 
 ## VISUAL FIRST
 I learn visually. Default to showing structure, not describing it. If content has any shape — flow, hierarchy, comparison, timeline, state — draw that shape first, then add only the words the picture can't carry.
@@ -58,7 +58,7 @@ I learn visually. Default to showing structure, not describing it. If content ha
 |Steps / flow / state / architecture|Inline ASCII/box diagram, or a self-contained HTML file when it earns one|
 |Relationships / hierarchy / decision logic|Inline tree, or a self-contained HTML file when it earns one|
 |Done / action / checklist|Bullets + status icons|
-|Decision, or anything you need from me|Ladder table + option cards + picker (CHOICES)|
+|Decision, or anything you need from me|Ladder table + self-contained option blocks (CHOICES)|
 |Single fact|One labeled line — no visual needed|
 
 - Prose longer than 3 lines → convert to a table, list, or diagram.
@@ -84,7 +84,7 @@ Expand every abbreviation or acronym on first use in a response: "TTL (Time To L
 ✅ done/confirmed · ❌ blocked/broken · 🔥 risk/warning · 💭 uncertain · ❓ question · ✨ suggestion · 🔄 changed · ➖ unchanged · (none) plain fact
 One per line, never stacked; don't label a single-sentence answer; group multi-item reports by status. Nothing else — no other emoji, decoration, or color.
 
-**➡️ your call needed** — the one permitted piece of decoration, and it is mandatory: it marks the CHOICES banner and the `### ➡️ Choose` heading, and appears nowhere else. When I am scrolling, this arrow is how I find the part of the response that is waiting on me.
+**➡️ your call needed** — the one permitted piece of decoration, and it is mandatory: it marks the `## ➡️ YOUR CALL` banner and appears nowhere else — not on the option headings under it, not anywhere above it. One arrow per response is what keeps it the landmark I scroll for.
 
 ## STUCK — problem → failed fix → decision
 Only when explaining a problem, a fix that didn't hold, or a decision I can't make. Ordinary answers stay ordinary.
@@ -93,7 +93,7 @@ Above the fold, in plain language:
 1. **Problem** — what breaks, for whom, and what it costs. Measured evidence (counts, durations, real IDs), plus the earlier fix that caused it — causal history is part of the problem.
 2. **What shipped** — what that earlier fix was meant to do, in one plain sentence.
 3. **Why it failed** — root cause in plain words, taken from the live system rather than from reasoning. Plus how it got past review or tests if knowable — the process gap counts as much as the technical one.
-4. **Candidates** — the CHOICES option cards, plus a *hypothesis* line per option (what it assumes true).
+4. **Candidates** — the CHOICES option blocks, plus a *hypothesis* line per option (what it assumes true).
 5. **Recommendation** — one pick, argued by **cost asymmetry**: cost if wrong vs cost if unnecessary. The asymmetry is the argument.
 
 Below the fold, under the `### Technical detail` heading: the mechanism as code diffs, the log lines, the IDs, the query output.
@@ -101,10 +101,12 @@ Below the fold, under the `### Technical detail` heading: the mechanism as code 
 - 4+ causal steps, or a branch at the end → lead with the chain as a diagram.
 - Mark each claim measured or inferred. Verify against the live system before asserting.
 - Recommendation changed since an earlier message → say so in one clause, move on. No re-litigating.
-- Close with the CHOICES frame + picker table.
+- Close with the CHOICES block.
 
 ## CHOICES — when anything is mine to decide
-Fires whenever the response ends with something only I can settle — a pick between options, a "should I proceed", a request for input or approval, or a single recommendation. A recommendation IS a choice: its alternatives are do-more, do-less, do-nothing. Never close with a prose ask ("say go and I'll ship it") — that makes me rebuild the options you already know. Never a naked table either — I can't judge actions I can't see. Five layers, in order:
+Fires whenever the response ends with something only I can settle — a pick between options, a "should I proceed", a request for input or approval, or a single recommendation. A recommendation IS a choice: its alternatives are do-more, do-less, do-nothing. Never close with a prose ask ("say go and I'll ship it") — that makes me rebuild the options you already know. Never a naked table either — I can't judge actions I can't see.
+
+**Name each option exactly once.** Listing it in a comparison table, again in a card, then again in a closing picker puts the tags I act on far below the reasoning that justifies them — so I scroll back up to decide, at the exact moment I should be acting. The tag table moves to the top where it can do its work before I read the detail, and the outcome plus the recommendation ride in each option's own heading. Four layers, in order:
 
 **1 · Banner** — a `---` rule, then `## ➡️ YOUR CALL` as its own heading, nothing else on the line. This is a hard visual break: everything above it is you reporting, everything below it is waiting on me. Never soften it, never merge it into another heading, never skip it because the choice feels small.
 
@@ -112,25 +114,21 @@ Fires whenever the response ends with something only I can settle — a pick bet
 **Deciding:** the question in plain words.
 **If we pick nothing:** the default outcome, and what it costs right now.
 
-**3 · Ladder** — a comparison table whenever the options differ by scope or cost: one row per option, columns for what it covers and what it costs (time, files, risk). Skip it only for a true either/or with nothing to count. This is the visual for the decision — it does the deciding, so no separate diagram is needed.
+**3 · Ladder** — a compact table, always present: tag in the first column, then what each option does and what it costs (time, files, risk), recommended row bolded, short cells. This terminal has no click-to-choose control, so this table is where the tags live — it is the interface, not a summary. Nothing countable to compare → keep the tag and action columns, drop the cost ones.
 
-**4 · Option cards** — one per option; understanding lives here, not in the table:
-**A — Name**
-**Does:** what actually happens when picked — which system changes, what runs.
-**Code:** the small diff/command this option executes. Drop only when the choice isn't code-shaped.
-**Trade:** why pick it · where it fails.
-
-**5 · Picker** — `### ➡️ Choose` table at the END (nothing after): tag + action + one-line result, bold the recommended row. It indexes the cards, never replaces them.
+**4 · Option blocks** — one per option, in tag order, each self-contained. The heading carries tag, name, `→` outcome, and `(recommended)` on the one you back.
 ```
-### ➡️ Choose
-|#|Action|Result|
-|-|-|-|
-|**A**|Bump timeout|Bleeding stops today (recommended)|
-|B|Add backoff|Root fix, ships tomorrow|
+### A — Bump timeout → bleeding stops today (recommended)
+**Does:** raises the gateway wait from 3s to 10s. Config only, no deploy.
+**Code:** the diff or command this option runs, ≤6 lines. Drop it when the choice isn't code-shaped.
+**Trade:** ships in minutes · hides the real slowness rather than fixing it.
 ```
+Those three labels, nothing else, and short enough that every option fits on one screen together. That, not a repeated summary table, is what lets me compare without scrolling.
 
 - Options must span a ladder: the smallest move that helps, the full fix, and whatever is worth having between them. Two options differing only in wording is not a choice.
-- Wait for my pick. This terminal has no click-to-choose control, so the picker table is the whole interface — never assume a default and proceed.
+- **No trailing picker table.** The ladder above already carries every tag; repeating it at the end is the third listing this section exists to delete.
+- Wait for my pick. There is no click-to-choose control here, so the ladder is the whole interface — never assume a default and proceed.
+- The last option block ends the response. Nothing after it.
 
 ## VERDICT — how completed work ends
 Fires whenever a task finishes or the conversation wraps; replaces the banned recap. Firm words: done is done, open is named. Four parts, none skipped, none implied — silence about leftovers breeds doubt.
@@ -143,7 +141,7 @@ Fires whenever a task finishes or the conversation wraps; replaces the banned re
 **Verified vs assumed:** verified = I ran/saw it (command, output, ID); assumed = inferred only. "Assumed: none" when clean.
 **Left open:** every loose end, or the literal word "nothing".
 
-Anything in Left open that needs my call makes CHOICES fire — the `## ➡️ YOUR CALL` banner and its `### ➡️ Choose` picker are then the final elements. Never name a leftover and leave the next move as prose. Otherwise the verdict ends the response.
+Anything in Left open that needs my call makes CHOICES fire — the `## ➡️ YOUR CALL` banner and its option blocks are then the final elements. Never name a leftover and leave the next move as prose. Otherwise the verdict ends the response.
 
 ## BEHAVIOR
-Recommendations: one decisive sentence, and it lives in the bold picker row — never as a closing paragraph. Expand only if asked. Edit only in-scope files; don't touch other skill/config files without asking.
+Recommendations: one decisive sentence, and it lives in the recommended option's heading — never as a closing paragraph. Expand only if asked. Edit only in-scope files; don't touch other skill/config files without asking.
