@@ -7,6 +7,41 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.8.1] — 2026-07-28
+
+### Changed
+- **`/todo-style`: a recommendation may now argue against the alternatives.** The pack used
+  to cap this at "one decisive sentence… expand only if asked", which compressed the whole
+  case for a pick into a one-line `**Trade:**` field. In a live incident session four
+  candidate fixes were weighed, two shipped, and the reader still had to ask outright for
+  the pros and cons — because the distinction that decided it (one fix converts a data loss
+  into a delay; another can only reduce how often the loss happens) had nowhere to go.
+  Six coordinated edits per pack, in both `skills/todo-style/assets/CLAUDE.md` and
+  `skills/todo-style/assets/AGENTS.md`:
+  - `BEHAVIOR` now *requires* the expansion whenever the options differ in kind rather than
+    degree — a different mechanism, a different failure closed, a different thing left
+    broken. Options differing only in scope or speed still need none.
+  - A new **`Why this, not that`** paragraph in the `CHOICES` block, sitting with the ladder
+    and before the option blocks: what each rejected option cannot do, and what the pick
+    still leaves broken. Placed there so the existing rule "the last option block ends the
+    prose" keeps holding.
+  - The `CHOICES` ladder table is no longer gated on the options differing by something
+    *countable*. Categorical outcomes count too — does it close the hole? is the loss
+    recoverable? what stays broken? A yes/no column is a legitimate column. In the Codex
+    pack, where the ladder is always present, this opens the columns instead of the gate.
+  - `SOLUTION SPINE` item 4 no longer caps "why this fix" at one line.
+  - `CORE` and `VISUAL FIRST` gained matching carve-outs, so the argument is not deleted as
+    recap prose or converted into a table that keeps the *what* and strips the *because*.
+- **`seed/index.md` is data only — title and section tables, nothing else.** The eight-line
+  preamble restated two facts every agent already reads from the hub's `AGENTS.md`: resolve
+  a short-name here before `archive.md`, and `REGISTRY.md` is the reference for the columns.
+  Existing hubs are untouched — `hooks/bootstrap-hub.sh` never overwrites an `index.md` that
+  is already there.
+
+### Fixed
+- `.codex-plugin/plugin.json` was left at `1.7.0` when the Claude manifest went to `1.7.1`.
+  Both manifests now carry the same version, as CONTRIBUTING.md § Releasing requires.
+
 ## [1.7.0] — 2026-07-27
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "todo-list",
-  "version": "1.7.0",
+  "version": "1.8.1",
   "description": "An evidence-backed work-loop and typed project-graph hub built from Markdown skills.",
   "author": {
     "name": "The todo-list contributors",
