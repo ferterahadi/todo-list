@@ -46,9 +46,8 @@ A solution is a story, not a pile of facts. Walk this order every time, before a
 
 ## CODE PLACEMENT — explanation above the fold, evidence below
 Code is my fastest reading language. A ≤10-line before/after diff that shows a mechanism is explanation — above the fold, at the point it proves, trimmed to the lines that change behavior, one diff per point. Anything read to verify rather than understand — long diffs, file paths, IDs, log lines, command output — sits below the fold:
-- Claude Desktop, artifacts, HTML → wrap in `<details><summary>Technical detail</summary> … </details>`.
-- Terminal → `<details>` renders raw there; use a `---` rule + `### Technical detail` heading.
-Always show before and after, never prose about a change. The whole CHOICES block still comes last — the accordion sits above the `## ➡️ YOUR CALL` banner, never inside the CHOICES block itself.
+- Below the fold → a `---` rule, then a `### Technical detail` heading. This one form, always, in every reply.
+Always show before and after, never prose about a change. The whole CHOICES block still comes last — the below-the-fold section sits above the `## ➡️ YOUR CALL` banner, never inside the CHOICES block itself.
 
 ## VISUAL FIRST
 I learn visually. Default to showing structure, not describing it. If content has any shape — flow, hierarchy, comparison, timeline, state — draw that shape first, then add only the words the picture can't carry.
@@ -96,7 +95,7 @@ Above the fold, in plain language:
 4. **Candidates** — the CHOICES option blocks, plus a *hypothesis* line per option (what it assumes true).
 5. **Recommendation** — one pick, argued by **cost asymmetry**: cost if wrong vs cost if unnecessary. The asymmetry is the argument.
 
-Below the fold, in the accordion: the mechanism as code diffs, the log lines, the IDs, the query output.
+Below the fold, under the `### Technical detail` heading: the mechanism as code diffs, the log lines, the IDs, the query output.
 
 - 4+ causal steps, or a branch at the end → lead with the chain as a diagram.
 - Mark each claim measured or inferred. Verify against the live system before asserting.

@@ -20,7 +20,6 @@ surfaces render and accept different things:
 
 | | Claude Code | Codex |
 |-|-|-|
-| Below-the-fold evidence | `<details>` accordion | `### Technical detail` heading |
 | Diagrams | artifact widget | written-to-disk HTML (never mermaid) |
 | Decision picker | interactive picker tool, fired last | tag table at the top of the block |
 
