@@ -437,7 +437,7 @@ fi
 for skill in \
   "$repo_root/skills/todo-archive/SKILL.md" \
   "$repo_root/skills/todo-revise/SKILL.md" \
-  "$repo_root/skills/todo-update-state/SKILL.md"; do
+  "$repo_root/skills/todo-state/SKILL.md"; do
   expect_matches \
     "$skill" \
     'artifacts/journal\.md#revision-r(<n>|[0-9]+[A-Za-z]*)'

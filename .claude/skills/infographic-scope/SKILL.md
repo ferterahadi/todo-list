@@ -1,6 +1,8 @@
 ---
 name: infographic-scope
 description: Project-specific corrections about infographic generation scope. Learned conventions for how to work on this in the todo-list hub. Consult before doing infographic-related work here.
+metadata:
+  internal: true
 ---
 
 # Infographic Scope — learned conventions

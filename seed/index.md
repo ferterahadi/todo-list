@@ -37,7 +37,7 @@ provisional and gets overwritten by the next higher-tier signal; a row that land
 as `done` (retroactive bookkeeping) falls back to `started` = `completed`. `completed` is
 stamped when status flips to `done` and cleared if the project is reopened.
 `elapsed (days)` = `completed − started` in whole days, computed at the flip to `done` and
-cleared alongside `completed`. The stamping rules live in `todo-update-state` Step 3.5 —
+cleared alongside `completed`. The stamping rules live in `todo-state` § Date stamping —
 every skill that flips a status follows them.
 
 ## Work

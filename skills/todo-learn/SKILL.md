@@ -58,12 +58,25 @@ up as a real skill:
 ---
 name: <topic>
 description: Project-specific corrections about <topic>. Learned conventions for how to work on this in <repo>. Consult before doing <topic>-related work here.
+metadata:
+  internal: true
 ---
 
 # <Topic> — learned conventions
 
 Corrections captured via /todo-learn. Each is a standing rule for this repo.
 ```
+
+`metadata.internal: true` is not decoration. `.agents/skills/` and `.claude/skills/` are
+directories `npx skills add <repo>` scans, so without the flag a repo's private
+corrections get offered to anyone installing that repo's skills. The flag only affects
+that installer — Claude Code and Codex read these directories directly, so both agents
+still pick the skill up normally.
+
+Default to the flag. Add it to an older topic file that predates this rule the next time
+you touch that file. Drop it only when the user explicitly wants the convention
+distributed with the repo's public skills — say so when you do, since it stops being a
+private note at that point.
 
 Then **append** one entry per correction (newest at the bottom). Keep entries atomic — one rule each:
 

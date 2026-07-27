@@ -19,7 +19,7 @@ This involves real judgment — driving the run, handling collisions, and interp
 result. Use the **balanced** tier at **high** effort from
 [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). The final mechanical `tasks.md`/`index.md`
 checkbox and status edits may be delegated to the **fast** tier exactly as
-`todo-update-state` does. If the host cannot select a dispatch model, keep the work in
+`todo-state` does. If the host cannot select a dispatch model, keep the work in
 the current session.
 
 ## The verification MCP (pluggable)
@@ -131,7 +131,7 @@ If `Coverage source` is not set, skip this step.
 ## Step 5 — Reconcile and write back
 
 Apply these rules. Mechanical `tasks.md` / registry edits may be delegated to a
-fast-tier subagent (as `todo-update-state` does); the interpretation is yours.
+fast-tier subagent (as `todo-state` does); the interpretation is yours.
 
 Before any green result can flip the project to `done`, run:
 
@@ -147,7 +147,7 @@ is unavailable, do not cross the `done` gate. Context and lineage edges never ga
 
 | Verification result | tasks.md | owning registry status | Revisions |
 |---|---|---|---|
-| Run green, all gate-covered tasks pass | tick covered `[ ]`→`[x]` | → `done` **iff** every task in the project is `[x]`, else stays `in-progress` (a flip to `done` also stamps `completed` = today and `elapsed (days)` = `completed − started`, per `todo-update-state` Step 3.5 — never overwrite an existing real `started`) | — |
+| Run green, all gate-covered tasks pass | tick covered `[ ]`→`[x]` | → `done` **iff** every task in the project is `[x]`, else stays `in-progress` (a flip to `done` also stamps `completed` = today and `elapsed (days)` = `completed − started`, per `todo-state` § Date stamping — never overwrite an existing real `started`) | — |
 | Run fails | no tick | stays `in-progress` | one entry per failing area, backlinked `⟵ Task N` |
 | Coverage gap (even if run green) | no change | unchanged | one informational entry per gap (gap type named) |
 | Run blocked (boot/creds) | no tick | unchanged | report blocker; coverage path still runs |
@@ -189,12 +189,12 @@ two skills interlock. Append to (or create) the `## Revisions` block at the bott
   plus the owning registry row.
 - If a failure or coverage gap opens a Revision for an archived project, atomically move
   its row back to the same section in `index.md`, set `in-progress`, and clear
-  `completed` / `elapsed (days)` per `todo-update-state`. A passing re-verification that
+  `completed` / `elapsed (days)` per `todo-state`. A passing re-verification that
   leaves an archived project `done` updates its `archive.md` row in place.
 
 ## Step 6 — Reconcile status honesty, then report
 
-**Status honesty** (mirror `todo-update-state` / `todo-revise`): open Revisions on a
+**Status honesty** (mirror `todo-state` / `todo-revise`): open Revisions on a
 project marked `done` mean it isn't done. If archived, move the row back to `index.md`;
 set `in-progress` and clear `completed` / `elapsed (days)` (Step 3.5). All tasks `[x]`
 and no case-insensitive open Revisions, with a clean project-graph gate → offer `done`,
@@ -206,8 +206,8 @@ stamping `completed` = today and `elapsed (days)` when accepted.
 - Exactly what was written: which tasks ticked, status before → after (plus any
   `started`/`completed`/`elapsed (days)` stamped or cleared), which `R<n>` Revisions opened.
 - If Revisions were opened: "Run `/todo-revise <short-name>` to fix now — or
-  `/todo-resume <short-name>` when picking this up in a later session." Direct work
-  commands are act-now pointers; `/todo-resume` is the entry point for deferred pickup.
+  `/todo-refer <short-name> resume` when picking this up in a later session." Direct work
+  commands are act-now pointers; `/todo-refer … resume` is the entry point for deferred pickup.
 
 ## Notes
 - This is the producer half of the Revisions loop; `todo-revise` is the consumer. Keep the

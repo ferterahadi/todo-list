@@ -99,7 +99,7 @@ Fill these sections from the plan. **Summarise — never transcribe.** No walls 
 - **Constraints** — chips; mark hard non-negotiables with `.warn`.
 - **Execution Plan** — one `.phase` block per phase header in `tasks.md`. Each shows a `done/total` badge, a progress bar whose width = `round(done/total*100)%`, and a short summarised bullet list of that phase's tasks. Flag the riskiest/biggest phase with a distinct badge.
 - **Note** — the single biggest risk or gotcha from the plan's Notes.
-- **Footer** — "Generated from plan.md + tasks.md · <today's date>" + "plan.md remains the source of truth". Use today's date from context — do not invent a timestamp. Below that, one feedback line: *"Feedback: quote an ID in chat ('D2 is wrong because…'). This session: `/todo-revise <short-name>`. Later session: start with `/todo-resume <short-name>`."*
+- **Footer** — "Generated from plan.md + tasks.md · <today's date>" + "plan.md remains the source of truth". Use today's date from context — do not invent a timestamp. Below that, one feedback line: *"Feedback: quote an ID in chat ('D2 is wrong because…'). This session: `/todo-revise <short-name>`. Later session: start with `/todo-refer <short-name> resume`."*
 
 ### Section IDs — the feedback handle
 
