@@ -479,6 +479,7 @@ bootstrap_output="$(
 )"
 [ -f "$fresh_hub/index.md" ] || fail "fresh bootstrap must seed index.md"
 [ -f "$fresh_hub/archive.md" ] || fail "fresh bootstrap must seed archive.md"
+[ -f "$fresh_hub/REGISTRY.md" ] || fail "fresh bootstrap must seed REGISTRY.md"
 expect_equal \
   "fresh bootstrap names both registries" \
   "todo-list: created your project hub at $fresh_hub (index.md, archive.md, templates, and an example project). It is the default location — set the TODO_HUB env var to move it." \
@@ -488,6 +489,31 @@ bootstrap_second_output="$(
     bash "$repo_root/hooks/bootstrap-hub.sh"
 )"
 expect_equal "bootstrap is silent after both registries exist" "" "$bootstrap_second_output"
+
+# A hub created before REGISTRY.md existed gets the reference backfilled, once, without
+# recopying anything else.
+predoc_hub="$fixture_root/predoc"
+write_lines "$predoc_hub/index.md" '# Project Index'
+write_lines "$predoc_hub/archive.md" '# Project Archive'
+predoc_output="$(
+  PLUGIN_ROOT="$repo_root" TODO_HUB="$predoc_hub" \
+    bash "$repo_root/hooks/bootstrap-hub.sh"
+)"
+[ -f "$predoc_hub/REGISTRY.md" ] || fail "existing hub must receive REGISTRY.md"
+case "$predoc_output" in
+  *"$predoc_hub/REGISTRY.md"*) ;;
+  *) fail "REGISTRY.md backfill must announce itself" ;;
+esac
+expect_contains "$predoc_hub/index.md" '# Project Index'
+if [ -d "$predoc_hub/templates" ]; then
+  fail "backfill must not recopy the rest of the seed"
+fi
+predoc_second_output="$(
+  PLUGIN_ROOT="$repo_root" TODO_HUB="$predoc_hub" \
+    bash "$repo_root/hooks/bootstrap-hub.sh"
+)"
+expect_equal "REGISTRY.md backfill is idempotent" "" "$predoc_second_output"
+printf 'ok - registry reference backfill\n'
 
 legacy_hub="$fixture_root/legacy"
 write_lines "$legacy_hub/index.md" \

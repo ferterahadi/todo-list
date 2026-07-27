@@ -14,6 +14,7 @@ from the repos where the real code lives:
 ~/todo/
   index.md                     ← active projects, one row each
   archive.md                   ← completed rows, kept not deleted
+  REGISTRY.md                  ← what each registry column means
   projects/
     work/api-rate-limiting/
       plan.md                       goal, scope, decisions

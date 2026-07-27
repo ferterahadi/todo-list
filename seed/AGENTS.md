@@ -11,6 +11,7 @@ projects/
 templates/     — plan.md and tasks.md templates for new projects
 index.md       — hot registry: active projects only
 archive.md     — cold registry: completed rows, preserving their original sections
+REGISTRY.md    — how both registries work: columns, lifecycle, date semantics
 ```
 
 ## Entry Point
@@ -18,7 +19,8 @@ archive.md     — cold registry: completed rows, preserving their original sect
 Resolve an exact project name in `index.md` first, then `archive.md` only on a miss.
 Default hub-wide scans read the active index only. Reopening an archived project moves
 its row back to the matching section in `index.md`; never leave the same row in both.
-Keep `tasks.md` checkboxes and the owning registry row's status in sync.
+Keep `tasks.md` checkboxes and the owning registry row's status in sync. `REGISTRY.md`
+is the reference for what each registry column means and how the date columns are stamped.
 
 The hub root is the `TODO_HUB` environment variable (default `~/todo`). Resolve every hub
 path against it — skills may be invoked from inside another repo, so never assume the

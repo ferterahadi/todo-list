@@ -262,9 +262,11 @@ whole hub.** Other skills that flip a status — `todo-execute`, `todo-verify`,
 `todo-revise`, `todo-archive` — apply these same rules.
 
 `started` picks the earliest reliable signal, in priority order — **`in-progress` >
-`ready` > `planning` > `completed`** (see `index.md`'s header prose for the full
-rationale). Whenever an edit changes a row's `status` cell, also update that row's
-`started` / `completed` cells, using today's date (`YYYY-MM-DD`):
+`ready` > `planning` > `completed`**. The tiers exist because the early signals only say
+work is *intended* (project created, plan confirmed) while a real `ready`→`in-progress`
+flip says work *began*: lower tiers stamp provisionally, higher tiers overwrite them, and
+the real start is never overwritten. Whenever an edit changes a row's `status` cell, also
+update that row's `started` / `completed` cells, using today's date (`YYYY-MM-DD`):
 
 - **Flips to `planning`** (new project via `/todo-add`) — stamp `started` to today if it's
   currently `-`. This is the lowest-tier provisional stamp — see the overwrite rules below.

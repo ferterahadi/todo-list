@@ -1,16 +1,13 @@
 # Project Archive
 
-Completed project rows move here so `index.md` stays limited to active work. Project
-folders do not move. Preserve each row under its original section so reopening can move
-it back accurately.
+Cold registry. Completed rows move here so [`index.md`](index.md) stays limited to active
+work; project folders do not move. Each row keeps its original section so reopening can
+move it back accurately. Only `done` projects with no open Revisions belong here, and
+hub-wide active scans do not load this file.
 
-Skills resolve an exact short-name in `index.md` first, then search this cold file only
-on a miss. Hub-wide active scans do not load it. Only `done` projects with no open
-Revisions belong here.
-
-The `related` column preserves legacy context hints. Typed dependency and lineage edges
-remain in each archived project's `plan.md` `## Relationships` table so `/todo-graph`
-can resolve historical targets without moving project folders.
+Column meanings and the status lifecycle: [`REGISTRY.md`](REGISTRY.md). Typed dependency
+and lineage edges remain in each archived project's `plan.md` `## Relationships` table, so
+`/todo-graph` resolves historical targets without moving project folders.
 
 ## Work
 

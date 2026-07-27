@@ -15,11 +15,15 @@ PLUGIN="${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}"
 SEED="$PLUGIN/seed"
 [ -d "$SEED" ] || exit 0   # nothing to seed from — bail quietly
 
-# Existing hub: add only the new cold archive registry, never recopy the seed.
+# Existing hub: add only new stand-alone files, never recopy or overwrite the seed.
 if [ -f "$HUB/index.md" ]; then
   if [ ! -f "$HUB/archive.md" ] && [ -f "$SEED/archive.md" ]; then
     cp "$SEED/archive.md" "$HUB/archive.md"
     printf 'todo-list: added the completed-project registry at %s/archive.md.\n' "$HUB"
+  fi
+  if [ ! -f "$HUB/REGISTRY.md" ] && [ -f "$SEED/REGISTRY.md" ]; then
+    cp "$SEED/REGISTRY.md" "$HUB/REGISTRY.md"
+    printf 'todo-list: added the registry reference at %s/REGISTRY.md (registry columns, status lifecycle, date semantics).\n' "$HUB"
   fi
   exit 0
 fi

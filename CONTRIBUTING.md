@@ -34,7 +34,8 @@ explicit invariants, terse examples.
 - **Keep the hot/cold registries separate.** `index.md` contains active rows;
   `archive.md` contains completed rows under their original section. Resolve an exact
   short-name in the index first and search the archive only on a miss. A reopened row
-  moves back atomically; it never exists in both files.
+  moves back atomically; it never exists in both files. Registry column semantics live in
+  `seed/REGISTRY.md` — the registries themselves stay data, not manuals.
 - **`tasks.md` is a checklist, not a journal** — one line per task (~150 chars). Detail goes
   to `research/` or `artifacts/` with a pointer.
 - **Use stable revision anchors.** Journal entry `R4` gets
@@ -62,9 +63,9 @@ This repo packages the same skills for both agents:
 - `skills/todo-*/SKILL.md` — the skills (auto-discovered).
 - `hooks/` — `hooks.json` plus SessionStart bootstrap, date migration, and
   archive-candidate reporting; Stop hooks handle infographic and external-doc drift.
-- `seed/` — copied to `$TODO_HUB` on first run: `index.md`, `archive.md`, `AGENTS.md`,
-  `CLAUDE.md`, templates, and the example project. Anything a fresh hub should contain
-  goes here.
+- `seed/` — copied to `$TODO_HUB` on first run: `index.md`, `archive.md`, `REGISTRY.md`,
+  `AGENTS.md`, `CLAUDE.md`, templates, and the example project. Anything a fresh hub should
+  contain goes here.
 
 ## Adding a skill
 
