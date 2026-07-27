@@ -121,6 +121,17 @@ To test the bootstrap hook in isolation, run it against a throwaway hub:
 CLAUDE_PLUGIN_ROOT="$(pwd)" TODO_HUB=/tmp/hub-test bash hooks/bootstrap-hub.sh
 ```
 
+Editing anything under `seed/` also changes what existing hubs receive, because
+`hooks/sync-hub-seed.sh` refreshes plugin-owned hub files on upgrade. Run
+`tests/seed-sync-contract.sh` for any change to that hook or to a seed file's shape — it
+builds its own throwaway plugin with two published seed generations, so it never reads this
+repo's history. It must prove that a stale hub keeps its rows, file modes, and `Start here`
+pointer; that a hand-edited file is reported rather than overwritten; that prose above a
+section table leaves the registry byte-for-byte unchanged and routes to `/todo-state
+audit`; and that an up-to-date hub is silent and idempotent. Changing a registry preamble's
+shape matters most: the hook anchors the preamble on the first `## ` heading followed by a
+`short-name` table row, so a seed registry must keep that shape.
+
 Run `hooks/archive-candidates.sh` against throwaway fixtures as well. A clean or missing
 hub must print nothing and exit zero. A candidate hub emits one deterministic line and
 still exits zero. Cover `[done]` and `[DONE …]`, suffixed IDs such as `R72b`, unique

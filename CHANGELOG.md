@@ -7,6 +7,38 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.8.1] — 2026-07-27
+
+### Fixed
+- **Seed changes now reach hubs that already exist.** `hooks/bootstrap-hub.sh` copies a
+  seed file into an existing hub only when it is *absent*, so every hub-side instruction
+  file was frozen at the version current when the hub was created. Skills upgraded with
+  the plugin; `AGENTS.md`, `REGISTRY.md`, `templates/`, and the registry preambles did
+  not — a rule added to `seed/` reached new hubs only. That is why 1.8.0's
+  registries-are-data rule had no effect on an existing hub: the agent reads the hub's own
+  `AGENTS.md`, which still permitted status banners.
+
+  The new `hooks/sync-hub-seed.sh` SessionStart hook closes the gap, with a policy per
+  file chosen by how likely a local edit is:
+
+  | file | policy |
+  |---|---|
+  | `REGISTRY.md`, `CLAUDE.md` | refreshed whenever they differ — plugin prose, no user content |
+  | `index.md`, `archive.md` | the preamble above the first section table only; rows and the `Start here` pointer are preserved |
+  | `AGENTS.md`, `templates/*` | refreshed when the hub copy still matches the hash recorded at install, or matches any version the plugin once published; a hand-edited file is reported, never overwritten |
+
+  - Hashes are recorded in `$TODO_HUB/.todo-list-seed`. A hub predating that file is still
+    upgradable: a copy matching an earlier *published* seed version is provably untouched,
+    just stale, so it refreshes without asking.
+  - Every write leaves a `<file>.pre-seed-sync.bak`. `TODO_SEED_ADOPT=<paths>` (or `all`)
+    forces an edited file to take the seed version, backup first.
+  - A registry carrying prose above its section tables is left **byte-for-byte unchanged**
+    and routed to `/todo-state audit`, which relocates the text into the owning project's
+    `artifacts/` and asks before editing. A hook never deletes what someone wrote.
+  - Silent when there is nothing to do, and a no-op when there is no hub or no seed.
+- `tests/seed-sync-contract.sh` covers all of the above, including that a stale hub keeps
+  its rows, file modes, and pointer, and that hook ordering puts bootstrap before the sync.
+
 ## [1.8.0] — 2026-07-27
 
 ### Added

@@ -11,6 +11,12 @@
           },
           {
             "type": "command",
+            "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/sync-hub-seed.sh\"",
+            "timeout": 15,
+            "statusMessage": "Syncing hub instruction files with the plugin seed"
+          },
+          {
+            "type": "command",
             "command": "bash \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/migrate-index-dates.sh\"",
             "timeout": 15,
             "statusMessage": "Migrating registry tables to the dated format"

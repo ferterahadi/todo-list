@@ -32,6 +32,12 @@ The hub root is the `TODO_HUB` environment variable (default `~/todo`). Resolve 
 path against it — skills may be invoked from inside another repo, so never assume the
 current working directory is the hub.
 
+This file, `CLAUDE.md`, `REGISTRY.md`, `templates/`, and the two registry preambles come
+from the plugin and are refreshed from it on upgrade — `.todo-list-seed` records the
+version each one was installed at, so keep it. A hand edit to any of them is detected and
+left in place rather than overwritten. Every refresh leaves a `.pre-seed-sync.bak`; those
+are recovery copies, safe to delete once you have read them.
+
 Each project folder contains:
 - `plan.md` — goal, context, constraints, key decisions
 - `tasks.md` — checklist you execute against
