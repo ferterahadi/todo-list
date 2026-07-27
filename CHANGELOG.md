@@ -7,6 +7,39 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-07-27
+
+### Added
+- **`/todo-style` — an opt-in response-style pack for both agents.** 16 skills → 17. Every
+  other skill organizes work; this one changes how the agent *talks*. The pack is a
+  formatting and briefing contract for a reader who is technical but short on time:
+  meaning before evidence, visuals instead of prose, an explicit `➡️ YOUR CALL` block
+  whenever something is the reader's to decide, and a closing verdict that names what is
+  still open.
+  - Two files ship, one per harness, and they carry the same rules —
+    `skills/todo-style/assets/CLAUDE.md` installs to `~/.claude/CLAUDE.md`,
+    `skills/todo-style/assets/AGENTS.md` to `~/.codex/AGENTS.md`. Only harness-specific
+    lines differ: the Claude pack uses `<details>` accordions and artifact widgets, the
+    Codex pack uses a `### Technical detail` heading and written-to-disk HTML, because a
+    terminal renders neither accordions nor mermaid.
+  - **The current file is backed up into the hub and byte-verified before anything is
+    overwritten**, at `$TODO_HUB/backups/agent-instructions/<agent>-<file>-<UTC>-<run>.md`.
+    A failed backup aborts without writing. Nothing in that folder is ever deleted, and it
+    contains only the user's own content — the shipped pack is skipped, since the plugin
+    can hand that back at any time.
+  - `status`, `diff`, `install`, `restore`, and `list-backups` run through
+    `skills/todo-style/scripts/agent-style.sh`; the skill never hand-copies a file. An
+    already-current install and a redundant restore are both no-ops.
+  - Entirely opt-in: no hook fires it, no other `/todo-*` skill calls it, and it requires
+    an explicit yes in conversation. The rest of the plugin behaves identically without it.
+  - Covered by the new `tests/style-contract.sh`, which sandboxes `CLAUDE_CONFIG_DIR` and
+    `CODEX_HOME` so it never touches the machine's real instruction files.
+
+### Note
+- `skills/todo-style/assets/CLAUDE.md` is **not** `seed/CLAUDE.md`. The seed pair is
+  hub-scoped and describes how `$TODO_HUB` works; the asset pair is user-scoped and
+  describes how the agent should answer. Same filenames, different destinations.
+
 ## [1.6.0] — 2026-07-27
 
 ### Fixed
