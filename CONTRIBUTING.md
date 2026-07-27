@@ -66,6 +66,11 @@ This repo packages the same skills for both agents:
 - `seed/` — copied to `$TODO_HUB` on first run: `index.md`, `archive.md`, `REGISTRY.md`,
   `AGENTS.md`, `CLAUDE.md`, templates, and the example project. Anything a fresh hub should
   contain goes here.
+- `skills/todo-style/assets/` — the response-style pack: `CLAUDE.md` and `AGENTS.md`, one
+  per harness. These are *not* seed files. `seed/CLAUDE.md` and `seed/AGENTS.md` are
+  hub-scoped and land in `$TODO_HUB`; these are user-scoped and land in
+  `~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md`, and only when the user asks. Same
+  filenames, different scope — keep the two straight when editing.
 
 ## Adding a skill
 
@@ -120,6 +125,14 @@ Run `tests/graph-contract.sh` for graph changes. It must prove that legacy `rela
 hints never block, archived completion is checked against live task/revision evidence,
 cycles and missing targets fail closed, exact names do not collapse (`api` ≠ `api-v2`),
 and rejected link validation leaves the hub byte-for-byte unchanged.
+
+Run `tests/style-contract.sh` for any change to `/todo-style` or its packs. It must prove
+the two packs keep identical `## ` sections (the Codex file is a harness port, not a fork),
+that an existing instruction file is byte-verified into `$TODO_HUB/backups/agent-instructions/`
+before it is overwritten, that an already-current install and a redundant restore both
+no-op without churning backups, that a user-edited file *is* backed up on restore, that
+backups are only ever added, and that a bad agent or mode fails closed. It sandboxes
+`CLAUDE_CONFIG_DIR` and `CODEX_HOME`, so it never touches the machine's real files.
 
 Run `tests/infographic-hook-contract.sh` for staleness-hook changes. It must prove the
 hub resolves from `TODO_HUB`, hub sessions report every stale `ready`/`in-progress`

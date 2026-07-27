@@ -29,6 +29,7 @@ fallback when nothing relevant is installed.
 | `todo-learn` | Capture a correction as one shared repo skill under `.agents/skills/` and `.claude/skills/` (balanced tier, high effort) |
 | `todo-infographic` | Turn a plan into a one-page HTML infographic, fresh theme each time (+ staleness hook). Generation uses balanced tier, high effort |
 | `todo-push` | General-purpose git shipping workflow (any repo): branch off main, commit, push, PR, merge, land back on main (fast tier) |
+| `todo-style` | Install the bundled response-style pack into the *global* agent instruction file — `~/.claude/CLAUDE.md` for Claude Code, `~/.codex/AGENTS.md` for Codex — after backing the current file up into `$TODO_HUB/backups/agent-instructions/`. Opt-in, confirmation-gated, reversible via `restore` (fast tier) |
 | `todo-llm-routing` | Map frontier/deep/balanced/fast capability tiers to the available Claude Code or Codex model |
 
 Status lifecycle: `planning → ready → in-progress → done`. The `plan → do → check → revise`

@@ -90,7 +90,7 @@ export TODO_HUB=~/my/hub/path
 > In Claude Code, slash commands are namespaced by the plugin: `/todo-list:todo-plan`.
 > In Codex, mention `$todo-plan` or just describe what you want.
 
-## The 16 skills
+## The 17 skills
 
 **Track** — get projects in, see where they stand
 
@@ -126,6 +126,7 @@ export TODO_HUB=~/my/hub/path
 |Skill|Purpose|
 |-|-|
 |`todo-archive`|Retire done rows to `archive.md` — lossless, nothing is deleted|
+|`todo-style`|Swap in the bundled response-style pack for Claude Code and Codex, backing up your current file first|
 |`todo-llm-routing`|Shared config: which model each skill asks for|
 
 Status lifecycle: `planning → ready → in-progress → done`. Each skill's full contract
@@ -135,6 +136,32 @@ lives in [`skills/`](skills/).
 installed (superpowers brainstorming / test-driven-development, code-review, dataviz, …),
 the todo skills call *those* for the thinking. If none are installed, every todo skill
 carries its own fallback.
+
+## Optional: the response-style pack
+
+Every other skill organizes *work*. `/todo-style` is the one that changes how the agent
+*talks* — a formatting and briefing pack for readers who are technical but short on time:
+meaning before evidence, visuals over prose, an explicit decision block whenever something
+is yours to call, and a closing verdict that names what's still open.
+
+```
+/todo-style            # what's installed now vs what ships
+/todo-style diff       # exactly which lines would change
+/todo-style install    # back up, then swap in
+/todo-style restore    # put your old file back
+```
+
+It writes to your **global** agent instruction file — `~/.claude/CLAUDE.md` for Claude
+Code, `~/.codex/AGENTS.md` for Codex (same rules, ported per harness). Three guardrails,
+because that file is usually hand-tuned:
+
+- It replaces the file wholesale; it never merges. `/todo-style diff` shows you that first.
+- Your current file is copied to `$TODO_HUB/backups/agent-instructions/` and byte-verified
+  **before** anything is overwritten. A failed backup aborts the install.
+- Nothing in that folder is ever deleted, and `restore` puts the newest one back.
+
+Entirely opt-in — no hook runs it, no other skill calls it, and the rest of the plugin
+behaves identically whether or not you install it.
 
 ## Remove it
 
