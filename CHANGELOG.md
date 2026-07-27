@@ -38,6 +38,13 @@ All notable changes to this plugin are documented here. The format follows
   - Silent when there is nothing to do, and a no-op when there is no hub or no seed.
 - `tests/seed-sync-contract.sh` covers all of the above, including that a stale hub keeps
   its rows, file modes, and pointer, and that hook ordering puts bootstrap before the sync.
+- `/todo-refer … resume` no longer guesses at repo state. It reads the newest dated
+  `artifacts/YYYY-MM-DD-handoff-*.md` by listing the directory rather than constructing a
+  filename, discovers real worktree paths and branch names from `git worktree list` and
+  `git branch --list` instead of assuming `todo/<short-name>` or `<repo>-wt/<short-name>`,
+  and runs each probe as its own call — bundling them made one non-zero exit read as a
+  failure of the whole block. Nothing matched now reports "no repo trail" instead of
+  improvising a comparison.
 
 ## [1.8.0] — 2026-07-27
 

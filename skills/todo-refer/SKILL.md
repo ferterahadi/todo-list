@@ -111,6 +111,12 @@ explicitly needs completed-task detail.
    the most recent closed work. If the user also named a revision, use Step 3's exact
    anchored lookup instead of the tail.
 3. `artifacts/README.md` — the newest 2–3 rows (most recent outputs).
+4. The newest dated handoff — `YYYY-MM-DD-handoff-<slug>.md`, the hub's own record of
+   what is next. Resolve it by listing `artifacts/` and taking the lexically highest
+   matching filename (the date prefix sorts correctly); read only its next-steps
+   section, not the whole file. Never construct a handoff filename from the date or
+   the short name — a guessed path is the failure this step exists to prevent. No
+   handoff present is normal for a young project: report the absence and move on.
 
 ## Step 3 — Resolve requested revision history
 
@@ -165,17 +171,28 @@ names as non-blocking context only. Never infer a dependency from the fallback.
 
 If the owning registry row names a target repo that exists locally:
 
+Discover the repo's actual names first, then probe them. Do not assume a project uses
+`todo/<short-name>` or `<repo>-wt/<short-name>` — many repos keep worktrees under
+`<repo>/.claude/worktrees/<name>` on `feat/` `fix/` `chore/` branches.
+
 ```bash
-git -C <repo> worktree list                          # is <repo>-wt/<short-name> still there?
-git -C <repo> branch --list 'todo/<short-name>' 'feat/*'
-git -C <repo> log origin/<base>..todo/<short-name> --oneline | head -5   # unshipped commits
-git -C <repo>-wt/<short-name> status --short 2>/dev/null | head -10      # uncommitted work
-gh pr list --repo <owner>/<repo> --head todo/<short-name> --state all --limit 3   # PR state (if gh works here)
+git -C <repo> worktree list                     # take worktree paths FROM HERE, never assume
+git -C <repo> branch --list 'todo/*' 'feat/*' 'fix/*' 'chore/*'
+git -C <repo> log --oneline origin/<base>..<branch-found-above> | head -5  # unshipped commits
+git -C <repo> rev-parse --short <ONE-rev>       # --short implies --verify: one revision per call
+git -C <worktree-path-found-above> status --short | head -10              # uncommitted work
+gh pr list --repo <owner>/<repo> --head <branch-found-above> --state all --limit 3
 ```
 
-Take what succeeds and skip what doesn't (no repo, no gh auth) — note gaps rather than
-erroring. The point is to know whether work is **uncommitted, committed-but-unshipped,
-in an open PR, or merged**.
+Run each probe as its own call. Bundling them into one shell invocation makes a single
+non-zero exit the whole block's status, so successful probes read as failures.
+
+Nothing matched by the discovery probes means there is no repo trail to report — say so.
+Do not substitute an improvised comparison; that is where invalid commands come from.
+
+Take what succeeds and skip what doesn't (no repo, no `gh` — the GitHub command-line
+tool — no auth) — note gaps rather than erroring. The point is to know whether work is
+**uncommitted, committed-but-unshipped, in an open pull request, or merged**.
 
 ## Step 6 — Emit the digest
 
