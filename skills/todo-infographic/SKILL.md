@@ -9,7 +9,7 @@ You turn a project's `plan.md` + `tasks.md` into a **one-page, self-contained HT
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to each build subagent so it reads and writes there, not into the cwd. (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to each build subagent so it reads and writes there, not into the cwd. (Same convention as `todo-refer`.)
 
 ## Execution tier
 
@@ -98,7 +98,7 @@ Fill these sections from the plan. **Summarise — never transcribe.** No walls 
 - **Limitations** (`L1`, `L2`, …) — amber chips: what this build deliberately does **not** handle. From Trade-offs **Known gaps**. These are accepted gaps, not risks — the risk stays in **Note**. Nothing recorded → drop the section.
 - **Constraints** — chips; mark hard non-negotiables with `.warn`.
 - **Execution Plan** — one `.phase` block per phase header in `tasks.md`. Each shows a `done/total` badge, a progress bar whose width = `round(done/total*100)%`, and a short summarised bullet list of that phase's tasks. Flag the riskiest/biggest phase with a distinct badge.
-- **Note** — the single biggest risk or gotcha from the plan's Notes.
+- **Note** — the single biggest risk or gotcha from the plan (its `## Notes` section when present, else the sharpest constraint or context caveat). Drop the section when nothing qualifies.
 - **Footer** — "Generated from plan.md + tasks.md · <today's date>" + "plan.md remains the source of truth". Use today's date from context — do not invent a timestamp. Below that, one feedback line: *"Feedback: quote an ID in chat ('D2 is wrong because…'). This session: `/todo-revise <short-name>`. Later session: start with `/todo-refer <short-name> resume`."*
 
 ### Section IDs — the feedback handle
@@ -117,10 +117,10 @@ Every reviewable element carries a short stable ID rendered as a small chip in i
 Rules: assign in document order on first generation. On regeneration, an element that still exists **keeps its ID**; new elements take the next unused number; never renumber or reuse a removed ID. Style the chip small and muted — it's a handle, not decoration.
 
 ### Counting tasks for the bars
-Count `- [ ]` (open) and `- [x]` (done) checkboxes per phase. **Skip the `## Status` legend block** that the tasks.md template ships (its `- [ ] Not started` / `- [x] Done` lines are documentation, not tasks), and **skip anything inside HTML comments** (the template's `## Revisions` section has a commented-out example with a `- [ ]` line). A shell count, if useful:
+Count `- [ ]` (open) and `- [x]` (done) checkboxes per phase. **Skip the `## Status` legend block** that the tasks.md template ships (its `- [ ] Not started` / `- [x] Done` lines are documentation, not tasks), **skip `## Notes` / `## Context` sections**, **skip anything inside HTML comments** (the template's `## Revisions` section has a commented-out example with a `- [ ]` line), and **skip fenced code blocks** — the same exclusions the deterministic helpers apply. A shell count, if useful:
 
 ```bash
-awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^## /{p=($0!~/^## Status/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
+awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^[[:space:]]*(```|~~~)/{f=!f; next} f{next} /^## /{p=($0!~/^## (Status|Notes|Context)([[:space:]]|$)/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
 ```
 
 ## Step 4 — Register it in the owning registry

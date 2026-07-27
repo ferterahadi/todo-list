@@ -120,6 +120,12 @@ hints never block, archived completion is checked against live task/revision evi
 cycles and missing targets fail closed, exact names do not collapse (`api` ≠ `api-v2`),
 and rejected link validation leaves the hub byte-for-byte unchanged.
 
+Run `tests/infographic-hook-contract.sh` for staleness-hook changes. It must prove the
+hub resolves from `TODO_HUB`, hub sessions report every stale `ready`/`in-progress`
+project, target-repo and `<repo>-wt/*` worktree sessions report only their own project,
+unrelated sessions stay silent, and stub plans, fresh infographics, and stop-hook
+continuations never fire.
+
 ## Releasing
 
 Pushing commits does **not** update installed users — Claude Code treats the `version`

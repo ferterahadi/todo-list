@@ -46,8 +46,8 @@ The drift *verdicts* are judgment — always yours, inline on the main model.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of the
-hub (default `~/todo`). Resolve **every** path against this absolute root — active
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder
+(default `~/todo`). Resolve **every** path against this absolute root — active
 `index.md`, cold `archive.md`, and each project's `path`/`tasks.md` — regardless of the
 current working directory. This skill may be invoked from another repo; never assume cwd
 is the hub. Pass this absolute root to any edit subagent so it writes there, not into the
@@ -304,17 +304,19 @@ next session. If you hit an unmigrated table mid-edit, widen it yourself first: 
 
 To report progress (e.g. "5/8 done"), count the checkboxes — but skip the `## Status`
 legend block that the `tasks.md` template includes (its `- [ ] Not started` / `- [x] Done`
-lines are documentation, not real tasks), and skip anything inside HTML comments (the
-template's `## Revisions` section ships a commented-out example with a `- [ ]` line). Count
-only checkboxes under the actual work sections (`## Tasks`, `## Phase …`, or real
-`## Revisions` entries).
+lines are documentation, not real tasks), skip `## Notes` / `## Context` sections, skip
+anything inside HTML comments (the template's `## Revisions` section ships a commented-out
+example with a `- [ ]` line), and skip fenced code blocks. These are the same exclusions
+the deterministic helpers apply (`graph-report.py`, `archive-report.sh`), so counts agree
+everywhere. Count only checkboxes under the actual work sections (`## Tasks`,
+`## Phase …`, or real `## Revisions` entries).
 
 A quick count from the shell (the shared snippet `todo-list` sort mode, `todo-triage`, and
 `todo-infographic` also use):
 
 ```bash
-# completed/total real tasks — skips the ## Status legend and HTML-commented examples
-awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^## /{p=($0!~/^## Status/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
+# completed/total real tasks — skips ## Status/Notes/Context, HTML comments, and fences
+awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^[[:space:]]*(```|~~~)/{f=!f; next} f{next} /^## /{p=($0!~/^## (Status|Notes|Context)([[:space:]]|$)/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
 ```
 
 ## Notes

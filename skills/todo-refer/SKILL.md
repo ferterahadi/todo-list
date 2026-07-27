@@ -33,7 +33,7 @@ model rather than delegating it.
 ## Hub location and registry contract
 
 The hub root is `$TODO_HUB` (default `~/todo`) — an environment variable pointing at your
-clone of the hub. Resolve **every** hub path against this absolute root regardless of the
+hub folder. Resolve **every** hub path against this absolute root regardless of the
 current working directory; this skill is often invoked from another repo, so never assume
 cwd is the hub.
 

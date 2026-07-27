@@ -19,7 +19,7 @@ execution arm for its "PR and merge" outcome.
 Use the **fast** tier from [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). Delegate to a
 general-purpose subagent with shell and GitHub CLI access when the host supports it;
 otherwise execute inline. The invoking session must wait for the shipping result before
-continuing. Select Opus at low effort on Claude Code, or GPT-5.6 Luna on Codex, only when
+continuing. Select the fast tier's resolved host model only when
 the host supports per-dispatch model selection. Never invent unsupported parameters.
 
 ## Warm-start the subagent — the speed lever

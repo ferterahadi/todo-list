@@ -76,10 +76,11 @@ Sort only section tables in active `index.md`, most complete first. Never read o
 For each active row, completion is real checked tasks divided by real task checkboxes:
 
 ```bash
-awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^## /{p=($0!~/^## Status/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
+awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^[[:space:]]*(```|~~~)/{f=!f; next} f{next} /^## /{p=($0!~/^## (Status|Notes|Context)([[:space:]]|$)/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
 ```
 
-- Skip the `## Status` legend and HTML-commented examples.
+- Skip the `## Status` legend, `## Notes` / `## Context` sections, HTML-commented
+  examples, and fenced code — the same exclusions `graph-report.py` applies.
 - Missing or empty `tasks.md` is 0%; report it.
 - Sort descending by ratio; ties preserve existing relative order.
 - Keep sections independent and reproduce every non-row line byte-for-byte.

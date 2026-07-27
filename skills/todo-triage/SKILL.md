@@ -30,7 +30,7 @@ Hybrid, matching the hub's house pattern:
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this
 absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of
 the current working directory. This skill may be invoked from another repo; never assume
 cwd is the hub. (Same convention as `todo-refer`.)
@@ -160,7 +160,7 @@ resolve the tier to the current host using `todo-llm-routing/SKILL.md`:
   run the balanced tier at **high** effort.
 
 Render the tier and resolved host model in the model cell, for example
-`balanced · Opus · medium` or `balanced · <resolved Codex model> · high`.
+`balanced · <resolved host model> · medium` or `balanced · <resolved host model> · high`.
 
 ### Skill pairing (procedure beats raw intelligence)
 

@@ -2,7 +2,7 @@
 
 > Point your coding agent here to execute. Each task = one clear action, **one line** (~150 chars max).
 > Detail, findings, and rationale go to `research/` or `artifacts/journal.md` with a pointer —
-> never inline here. This file is read whole by six skills; every long line taxes all of them.
+> never inline here. This file is read whole by several skills; every long line taxes all of them.
 
 ## Status
 - [ ] Not started

@@ -34,7 +34,7 @@ which skill produced the content.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your clone of this repo (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's separate from the hub.) (Same convention as `todo-refer`.)
+The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's separate from the hub.) (Same convention as `todo-refer`.)
 
 ## How the user invokes this
 
@@ -136,7 +136,7 @@ Break the work into a concrete checklist:
 - Group under headers if the project has distinct phases
 - **One line per task (~150 chars max).** Supporting detail, mechanics, and rationale go
   to `research/findings.md` with a pointer (`— see research/findings.md § Token exchange`),
-  never inline in the task line. `tasks.md` is read whole by six skills; it must stay a
+  never inline in the task line. `tasks.md` is read whole by several skills; it must stay a
   checklist, not a journal.
 
 ## Step 6.5 — Quality gate (mandatory, before anything is shown)

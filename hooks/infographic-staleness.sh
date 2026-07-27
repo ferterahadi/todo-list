@@ -4,12 +4,19 @@
 # tasks.md is newer than it. Only projects with status ready / in-progress and a
 # real (non-stub) plan.md are considered — done projects are left alone.
 #
+# Hub resolution matches every other hook: $TODO_HUB (default ~/todo), never the
+# current working directory. To stay quiet in unrelated repos, a stale project is
+# reported only when the session's working directory is the hub itself or sits
+# inside that project's target repo (the `repo` column), including the
+# <repo>-wt/* worktrees that /todo-execute creates.
+#
 # Output contract (Stop hook): emit {"decision":"block","reason":"..."} to keep the
 # turn going so the agent regenerates; emit nothing (exit 0) to allow the stop.
 set -euo pipefail
 
-ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
-INDEX="$ROOT/index.md"
+HUB="${TODO_HUB:-$HOME/todo}"
+case "$HUB" in "~"*) HUB="${HOME}${HUB#\~}" ;; esac
+INDEX="$HUB/index.md"
 
 # Read the hook payload; if we're already inside a stop-hook continuation, don't
 # re-trigger — avoids a loop if generation ever fails to refresh the file.
@@ -20,22 +27,45 @@ esac
 
 [ -f "$INDEX" ] || exit 0
 
+CWD="${CLAUDE_PROJECT_DIR:-$PWD}"
+in_hub=0
+case "$CWD" in
+  "$HUB"|"$HUB"/*) in_hub=1 ;;
+esac
+
 # Portable mtime (BSD/macOS then GNU/Linux).
 mtime() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || echo 0; }
 
 stale=""
-# Pull "path|status" for every project row in index.md (skips header/separator rows).
+# Pull "path|repo|status" for every project row in index.md (skips header/separator rows).
 while IFS='|' read -r _ shortname path repo status _rest; do
   shortname="$(echo "$shortname" | xargs)"
   path="$(echo "$path" | xargs)"
+  path="${path//\`/}"
+  repo="$(echo "$repo" | xargs)"
+  repo="${repo//\`/}"
   status="$(echo "$status" | xargs)"
   case "$status" in
     ready|in-progress) ;;
     *) continue ;;
   esac
-  plan="$ROOT/$path/plan.md"
-  tasks="$ROOT/$path/tasks.md"
-  info="$ROOT/$path/artifacts/infographic.html"
+
+  # Session scope: a hub session sees every project; any other session sees only
+  # the project whose target repo (or its -wt worktree) contains the cwd.
+  if [ "$in_hub" -eq 0 ]; then
+    case "$repo" in
+      "~/"*|"/"*) repo="${repo/#\~/$HOME}" ;;
+      *) continue ;;
+    esac
+    case "$CWD" in
+      "$repo"|"$repo"/*|"$repo"-wt/*) ;;
+      *) continue ;;
+    esac
+  fi
+
+  plan="$HUB/$path/plan.md"
+  tasks="$HUB/$path/tasks.md"
+  info="$HUB/$path/artifacts/infographic.html"
 
   [ -f "$plan" ] || continue
   # Skip unfilled template stubs.

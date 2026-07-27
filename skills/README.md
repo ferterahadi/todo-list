@@ -68,8 +68,10 @@ The plugin ships five hooks in [`../hooks/`](../hooks/), registered automaticall
   reviewed `/todo-archive` sweep; it never edits or blocks.
 - **`infographic-staleness.sh`** (Stop) — when a `ready`/`in-progress` project has a
   missing or stale `artifacts/infographic.html`, nudges the agent to regenerate it via
-  `todo-infographic` before the turn ends. It self-scopes: it only acts when the current
-  project has an `index.md` (i.e. you're working in the hub), so it's quiet everywhere else.
+  `todo-infographic` before the turn ends. It resolves the hub from `$TODO_HUB` and
+  self-scopes: a stale project is reported from a session in the hub itself or inside
+  that project's target repo (including its `<repo>-wt/*` worktrees), so it stays quiet
+  in unrelated repos.
 - **`superpowers-doc-sync.sh`** (Stop) — ensures superpowers plans/specs written into a
   target repo get a pointer row in the project's `research/superpowers-docs.md`.
 
