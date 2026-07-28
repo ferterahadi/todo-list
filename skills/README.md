@@ -22,6 +22,7 @@ fallback when nothing relevant is installed.
 | `todo-execute` | Work through `tasks.md`, write outputs to `artifacts/`; `parallel` mode fans file-disjoint tasks out to agents in git worktrees of the target repo (no model pin — both implement and review waves inherit the session model), then lands PRs via a serial merge queue |
 | `todo-graph` | Compile typed `plan.md` relationships into the ready frontier, blocker chains, impact, paths, integrity audits, validated edits, and stable exports |
 | `todo-review` | Review a repo's diff against the project's plan — scope drift, violated constraints, ticked tasks with no evidence — then a correctness pass via the installed `code-review` skill (report-only) |
+| `todo-review-handoff` | Package a review for someone else to adjudicate: findings become numbered falsifiable claims with confidence grades, a script spec that prints plain-English evidence per claim, and a ruling sheet whose columns include *reviewer is wrong*. Hub-optional — accepted rows feed `todo-revise`, or a standalone second-agent brief (deep tier) |
 | `todo-state` | Own the recorded state, both directions. Default: mark tasks/projects done, move status. `audit`: cross-check the owning registry against `tasks.md` and target-repo git/PR evidence, report drift, fix only on confirmation. Also the hub's authority on `started`/`completed`/`elapsed` stamping (fast-tier edits and gathering; drift verdicts inline) |
 | `todo-verify` | The "check" gate: drive a record-only verification run, tick tasks / flip status on green, open Revisions entries on failures or coverage gaps (balanced tier, high effort) |
 | `todo-revise` | Gap-driven rework: review done items, capture feedback per item, plan + run fixes, verify |
@@ -34,7 +35,9 @@ fallback when nothing relevant is installed.
 
 Status lifecycle: `planning → ready → in-progress → done`. The `plan → do → check → revise`
 loop is `todo-plan` → `todo-execute` → `todo-verify` → `todo-revise`, with `todo-review`
-as an optional intent check between do and check. `todo-graph` coordinates those loops
+as an optional intent check between do and check and `todo-review-handoff` as its
+optional escape hatch when the person who must rule on the findings isn't the person who
+ran the review. `todo-graph` coordinates those loops
 through explicit `depends-on` edges; `todo-refer resume` / `todo-state audit` /
 `todo-archive` keep multi-session work continuable, honest, and compact. Exact short-name
 lookups check active `index.md` first, then cold `archive.md` only on a miss.

@@ -109,6 +109,7 @@ export TODO_HUB=~/my/hub/path
 |`todo-execute`|Work the checklist; `parallel` fans tasks out to git-worktree agents|
 |`todo-graph`|Declare which projects block which; ask what's ready, what's blocked, why|
 |`todo-review`|Audit a diff against the plan — scope drift, missing evidence|
+|`todo-review-handoff`|Package a review so someone else can rule on it — claims, evidence spec, ruling sheet|
 |`todo-verify`|The check gate: run the tests, tick tasks, open Revisions on failures|
 |`todo-revise`|Rework what the gate caught, then re-verify|
 
