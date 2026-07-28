@@ -7,6 +7,43 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.8.3] — 2026-07-28
+
+### Added
+- **`/todo-review-handoff` — package a review so someone else can rule on it.** A review
+  handed over raw is a pile of opinions: the recipient can only trust it or ignore it, and
+  a non-engineer cannot judge it at all. The skill converts each finding into a numbered
+  **falsifiable claim** with a confidence grade and a verification method, specifies a
+  script that prints plain-English evidence per claim, and emits a ruling sheet whose
+  columns include *the reviewer is wrong*. Only accepted rows get fixed, by a second agent,
+  from the same document.
+  - It never reviews code itself and never applies a fix. Findings come from whatever is
+    already available, in order: findings from the current session → `todo-review` (which
+    adds plan compliance — scope drift, violated constraints, ticked tasks with no
+    evidence) → the installed `code-review` skill → a self-run pass as fallback.
+  - **Hub-optional.** A handoff is often about a pull request in a repo with no hub project
+    — another team's, another product's. With a hub project, accepted rows feed
+    `todo-revise`; without one, the output is a standalone brief for a second agent.
+  - Judgment work, so it runs inline on the session model at the **deep** tier
+    (`balanced` floor) rather than being farmed out.
+  - Slots into the loop as the escape hatch on `todo-review`: `plan → do → check → revise`
+    with `todo-review` as the optional intent check, and this skill for when the person who
+    must rule on the findings isn't the person who ran the review. Listed in `README.md` and
+    `skills/README.md`.
+
+### Changed
+- **`/todo-style`: below-the-fold evidence now has one form, not two.** The pack used to
+  branch on surface — `<details>` accordion for Claude Desktop / artifacts / HTML, a
+  `---` rule plus `### Technical detail` heading for the terminal — which meant the agent
+  had to guess where its output would be read — and a wrong guess renders raw `<details>`
+  markup at the reader. It is now the rule and heading, always, in every reply. Two
+  coordinated edits in `skills/todo-style/assets/CLAUDE.md`
+  (`CODE PLACEMENT`, and the `STUCK` block's below-the-fold line), plus the now-redundant
+  *Below-the-fold evidence* row dropped from the surface-differences table in
+  `skills/todo-style/SKILL.md`. This brings the Claude pack in line with
+  `assets/AGENTS.md`, which already stated the single form — below the fold is no longer a
+  surface difference between the two packs.
+
 ## [1.8.2] — 2026-07-28
 
 ### Added
