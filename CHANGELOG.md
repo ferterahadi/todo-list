@@ -7,6 +7,45 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.8.5] — 2026-07-30
+
+### Changed
+- **`/todo-style`: a `CHOOSE` block can no longer be written in words the reader was never
+  given.** Two real sessions ended with the reader unable to answer — one asking "you give
+  me options without giving me context, i am confused", the other "i don't understand, can
+  you simplify". Both blocks were well-formed: banner, question, table, three option cards,
+  a recommendation. Both were unanswerable, because the only vocabulary on offer was the
+  code's own — `DLQ`, `TRANSACTIONAL` lane, `batch-queue-identity.ts`, `externalizable()`,
+  `server.getClientVersion()` — and a reader who cannot picture an option cannot weigh it.
+  The pack now treats that as the failure it is, not a style lapse:
+  - **New gate, `Plain words, or it isn't a choice`.** Every name the code invented — file,
+    class, function, exception, flag, queue, constant, acronym — is barred from the span
+    between the banner and the last option. Barred, not glossed in parentheses: a
+    definition makes the block longer, and length was half the complaint. The `**Code:**`
+    line stays the one place identifiers belong, where they are evidence rather than
+    argument.
+  - **A density cap, because the fix for jargon must not be more words.** `Action:` two
+    sentences at most, `Trade-off:` one line, table cells four ordinary words at most, and
+    a cell that needs invented shorthand to fit ("Int fan + Ext fan") means the column is
+    wrong rather than the cell. Column headers are ordinary English too.
+  - **New required line, `What this is about:`.** Layer 2 goes from two lines to three; the
+    new first line says what the system does, what went wrong, and why a choice exists at
+    all, in kitchen-table words. It cannot be skipped for feeling obvious — it felt obvious
+    in both failed sessions.
+  - **An escape hatch that was missing.** If the choice cannot be stated without terms the
+    reader does not have yet, it is not ready to ask: explain first, and if that explanation
+    is what they actually needed, it is the answer rather than a preamble to a picker.
+  - **`TRANSLATE FIRST` now covers options,** not only findings, diffs, logs, and root
+    causes — the meaning-before-evidence rule had never been pointed at the one place the
+    reader has to act.
+- **`/todo-style`: the recommendation is a labelled pair, not a named argument.**
+  `Why this, not that` was private phrasing, and the model kept rebuilding it per response
+  into things like "Why B, not A or C". It is now two fixed labels — **`Suggestion:`** (the
+  tag and its outcome in plain words) and **`Reason:`** (why that one, what each rejected
+  option cannot do, what the pick still leaves broken) — matching the labelled-line shape
+  the rest of the pack already uses. Both packs, and the four cross-references in
+  `GROUND RULES`, `PROPOSING A FIX`, `VISUAL FIRST`, and `BEHAVIOR`, were updated with it.
+
 ## [1.8.4] — 2026-07-29
 
 ### Changed
