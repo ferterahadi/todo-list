@@ -35,6 +35,15 @@ All notable changes to this plugin are documented here. The format follows
   BEHAVIOR). Bullet lines go 23 → 71, paragraphs over 200 characters 19 → 9. The nine that
   remain are the passages where the argument is the point and a bullet would strip the
   *because* — the why-this-not-that rule already protects those.
+- **Bullets are now stated as the default, not just demonstrated.** The pack had three
+  weak mentions and no rule: bullets were named for checklists only, offered as one of
+  three equal options once prose passed three lines, and used as the *fallback* when a
+  table failed to earn its 3×3. VISUAL FIRST now opens with `Bullets are the default shape
+  for explanation` — two or more points in a row become bullets, one point each, and a
+  paragraph is what you reach for when the points stop making sense apart. Prose over
+  three lines routes to bullets first rather than to a coin-flip between three shapes, and
+  a new content row maps `Several points in a row` → bullets. A counter-rule keeps it from
+  becoming bullet soup: don't bullet a single point, because a one-item list is decoration.
 - **Two rules added to stop the drift returning.** Under NO UNEXPLAINED ABBREVIATIONS,
   never invent a metaphor where a plain word exists. Under BEHAVIOR, a wording question is
   not a decision block — pick the plainer word, change it, say what changed, don't build a

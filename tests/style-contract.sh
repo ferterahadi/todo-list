@@ -97,6 +97,8 @@ for asset in "$claude_asset" "$codex_asset"; do
     fail "style pack lost the 'Action:' option label: ${asset#"$repo_root"/}"
   grep -Fq '**Trade-off:**' "$asset" ||
     fail "style pack lost the 'Trade-off:' option label: ${asset#"$repo_root"/}"
+  grep -Fq 'Bullets are the default shape for explanation' "$asset" ||
+    fail "style pack lost the bullets-by-default rule: ${asset#"$repo_root"/}"
 done
 
 # --- sandbox ----------------------------------------------------------------

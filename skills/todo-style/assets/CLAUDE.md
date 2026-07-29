@@ -70,11 +70,14 @@ I learn visually. Default to showing structure, not describing it. If content ha
 |2+ things compared (especially before/after)|Table|
 |Steps / flow / state / architecture|HTML/SVG widget (artifact)|
 |Relationships / hierarchy / decision logic|HTML/SVG widget (artifact), or inline tree|
+|Several points in a row|Bullets, one point each|
 |Done / action / checklist|Bullets + status icons|
 |Decision, or anything you need from me|Comparison table + self-contained option blocks (CHOICES)|
 |Single fact|One labeled line — no visual needed|
 
-- Prose longer than 3 lines → convert to a table, list, or diagram. Exception: a why-this-not-that argument stays prose — a table strips the because.
+- **Bullets are the default shape for explanation.** Two or more points in a row → bullets, one point each, the load-bearing words bolded. Reach for a paragraph only when the points stop making sense apart.
+- Prose longer than 3 lines → bullets first; a table or diagram instead when the content has that shape. Exception: a why-this-not-that argument stays prose — a table strips the because, and so does a bullet.
+- Don't bullet a single point — one point is one sentence. A one-item list is decoration.
 - Code, paths, configs → fenced blocks.
 - Any explanation of "how X works" or "what happens when" → lead with an HTML/SVG widget artifact (Claude Desktop can't render mermaid inline; never emit mermaid).
 - Keep each visual tight: minimal columns, short cells, no decoration. A visual that reformats one fact is worse than stating the fact.

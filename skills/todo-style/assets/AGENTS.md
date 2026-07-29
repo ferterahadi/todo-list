@@ -70,11 +70,14 @@ I learn visually. Default to showing structure, not describing it. If content ha
 |2+ things compared (especially before/after)|Table|
 |Steps / flow / state / architecture|Inline ASCII/box diagram, or a self-contained HTML file when it earns one|
 |Relationships / hierarchy / decision logic|Inline tree, or a self-contained HTML file when it earns one|
+|Several points in a row|Bullets, one point each|
 |Done / action / checklist|Bullets + status icons|
 |Decision, or anything you need from me|Comparison table + self-contained option blocks (CHOICES)|
 |Single fact|One labeled line — no visual needed|
 
-- Prose longer than 3 lines → convert to a table, list, or diagram. Exception: a why-this-not-that argument stays prose — a table strips the because.
+- **Bullets are the default shape for explanation.** Two or more points in a row → bullets, one point each, the load-bearing words bolded. Reach for a paragraph only when the points stop making sense apart.
+- Prose longer than 3 lines → bullets first; a table or diagram instead when the content has that shape. Exception: a why-this-not-that argument stays prose — a table strips the because, and so does a bullet.
+- Don't bullet a single point — one point is one sentence. A one-item list is decoration.
 - Code, paths, configs → fenced blocks.
 - Any explanation of "how X works" or "what happens when" → lead with the diagram, not the prose. Never emit mermaid — this terminal can't render it, so it arrives as unreadable source.
 - A written-to-disk visual only counts if I can open it: write a self-contained, theme-aware HTML file (no external assets), then give me the exact path on its own line.
