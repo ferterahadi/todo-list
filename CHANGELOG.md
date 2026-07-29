@@ -7,6 +7,62 @@ All notable changes to this plugin are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.8.4] — 2026-07-29
+
+### Changed
+- **`/todo-style`: the call to action is now one common word, and the pack explains itself
+  in bullets.** Two problems, one cause — the pack had drifted into private vocabulary.
+  `YOUR CALL` named whose turn it was instead of telling the reader to act; `Does:` was a
+  verb with no subject; `Trade:` is a clipped form that means a swap or a profession in
+  ordinary English. Sixteen terms are replaced with the plainest word that fits:
+  - **Banner `## ➡️ YOUR CALL` → `## ➡️ CHOOSE`.** An imperative naming the physical act,
+    and every choice carries at least two options, so there is always something to choose
+    between. This also retires the banned `### ➡️ Choose` fallback table, now `### Options` —
+    one word cannot be mandatory as an `##` heading and forbidden as an `###` one, and that
+    heading was the second arrow in a pack that permits exactly one.
+  - **Option labels `Does:` / `Trade:` → `Action:` / `Trade-off:`.**
+  - **Sections `CORE` → `GROUND RULES`, `SOLUTION SPINE` → `PROPOSING A FIX`.** "Core" named
+    nothing; "spine" was a metaphor the reader decoded before reading.
+  - **The four TRANSLATE FIRST lenses become one parallel set** — `What it does`,
+    `What it touches`, `What it costs`, `How long it takes`, replacing `Plain mechanism`,
+    `Blast radius`, `Business impact`, `Time and effort`.
+  - **Also:** `On the ground` → `Now` (the word the Situation Board already used),
+    `Where this goes` → `If nobody acts`, `Candidates` → `Options`, layer 2 `Frame` →
+    `Question`, layer 3 `Ladder` → `Comparison`, `Deciding:` → `Question:`,
+    `If we pick nothing:` → `If nobody acts:`, `Done level:` → `Stage reached:`.
+- **Eight sections converted from paragraphs to bullets** (AUDIENCE, GROUND RULES, CODE
+  PLACEMENT, NO UNEXPLAINED ABBREVIATIONS, ICONS, BRIEFING, CHOICES intro and layers,
+  BEHAVIOR). Bullet lines go 23 → 71, paragraphs over 200 characters 19 → 9. The nine that
+  remain are the passages where the argument is the point and a bullet would strip the
+  *because* — the why-this-not-that rule already protects those.
+- **Bullets are now stated as the default, not just demonstrated.** The pack had three
+  weak mentions and no rule: bullets were named for checklists only, offered as one of
+  three equal options once prose passed three lines, and used as the *fallback* when a
+  table failed to earn its 3×3. VISUAL FIRST now opens with `Bullets are the default shape
+  for explanation` — two or more points in a row become bullets, one point each, and a
+  paragraph is what you reach for when the points stop making sense apart. Prose over
+  three lines routes to bullets first rather than to a coin-flip between three shapes, and
+  a new content row maps `Several points in a row` → bullets. A counter-rule keeps it from
+  becoming bullet soup: don't bullet a single point, because a one-item list is decoration.
+- **Two rules added to stop the drift returning.** Under NO UNEXPLAINED ABBREVIATIONS,
+  never invent a metaphor where a plain word exists. Under BEHAVIOR, a wording question is
+  not a decision block — pick the plainer word, change it, say what changed, don't build a
+  menu about vocabulary.
+- Both packs move together: `skills/todo-style/assets/CLAUDE.md` and
+  `skills/todo-style/assets/AGENTS.md`, with the Codex pack keeping its harness-specific
+  rules (no artifact widgets, no mermaid, no `<details>`, and the comparison table as the
+  whole interface since that terminal has no click-to-choose control).
+
+### Fixed
+- **`tests/style-contract.sh` asserted a rule that 1.8.3 had deleted.** The contract still
+  required the Claude pack to contain the `<details><summary>` accordion rule, which 1.8.3
+  removed when below-the-fold evidence collapsed to one form. The test had been failing on
+  `main` since that release. It now checks what the packs actually promise: both carry
+  `### Technical detail`, neither branches to an accordion, the Codex pack forbids
+  `<details>` outright, and the Claude/Codex split is enforced on artifact widgets and the
+  click-to-choose control instead. New assertions pin the banner spelling and both option
+  labels in both packs, so a future rename cannot land in one file and miss the other.
+
 ## [1.8.3] — 2026-07-28
 
 ### Added
