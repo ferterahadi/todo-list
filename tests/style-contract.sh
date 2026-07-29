@@ -64,19 +64,40 @@ for asset in "$claude_asset" "$codex_asset"; do
     fail "style pack has no AUDIENCE section: ${asset#"$repo_root"/}"
 done
 
-# Harness-specific rules must actually differ — a copy-paste of the Claude pack into the
-# Codex slot would tell Codex to emit accordions and artifact widgets a terminal cannot
-# render.
-grep -Fq 'wrap in `<details><summary>' "$claude_asset" ||
-  fail "the Claude pack lost its accordion rule"
-grep -Fq 'wrap in `<details><summary>' "$codex_asset" &&
-  fail "the Codex pack tells a terminal to emit a <details> accordion"
+# Both packs put below-the-fold evidence behind the same rule and heading — one form, not
+# a per-surface branch the agent has to guess at.
+for asset in "$claude_asset" "$codex_asset"; do
+  grep -Fq '### Technical detail' "$asset" ||
+    fail "style pack lost its below-the-fold heading: ${asset#"$repo_root"/}"
+  grep -Fq '<details><summary>' "$asset" &&
+    fail "style pack still branches to an accordion: ${asset#"$repo_root"/}"
+done
 grep -Fq 'Never use `<details>`' "$codex_asset" ||
   fail "the Codex pack must forbid <details> outright"
+
+# Harness-specific rules must actually differ — a copy-paste of the Claude pack into the
+# Codex slot would tell Codex to emit artifact widgets and click-to-choose pickers a
+# terminal cannot render.
+grep -Fq 'artifact' "$claude_asset" ||
+  fail "the Claude pack lost its artifact-widget rule"
 grep -Fq 'artifact' "$codex_asset" &&
   fail "the Codex pack points at artifact widgets Codex cannot render"
-grep -Fq '### Technical detail' "$codex_asset" ||
-  fail "the Codex pack lost its below-the-fold heading"
+grep -Fq 'no click-to-choose control' "$codex_asset" ||
+  fail "the Codex pack must say the comparison table is the whole interface"
+
+# --- the call-to-action stays one word, and one word only -------------------
+# The banner is the landmark the reader scrolls for. Two spellings across the two packs,
+# or a stray second arrow, and it stops being a landmark.
+for asset in "$claude_asset" "$codex_asset"; do
+  grep -Fq '## ➡️ CHOOSE' "$asset" ||
+    fail "style pack lost the '## ➡️ CHOOSE' banner: ${asset#"$repo_root"/}"
+  grep -Fq 'YOUR CALL' "$asset" &&
+    fail "style pack still uses the old 'YOUR CALL' banner: ${asset#"$repo_root"/}"
+  grep -Fq '**Action:**' "$asset" ||
+    fail "style pack lost the 'Action:' option label: ${asset#"$repo_root"/}"
+  grep -Fq '**Trade-off:**' "$asset" ||
+    fail "style pack lost the 'Trade-off:' option label: ${asset#"$repo_root"/}"
+done
 
 # --- sandbox ----------------------------------------------------------------
 fixture_root="$(mktemp -d)"
