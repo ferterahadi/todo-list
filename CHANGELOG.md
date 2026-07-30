@@ -18,6 +18,9 @@ request; how it works lives in the diff.
   conventions, so the pack's reasoning-forward prose stops at the reply boundary.
 - **Release notes are now one bullet per change, two lines at most.** The rule is stated in
   CONTRIBUTING.md § Releasing, and this file was condensed from 411 lines to 188 under it.
+- **`/todo-style`: both packs cut by about a sixth** — 8,460 → 7,010 tokens combined. Repeated
+  rule statements collapsed to one each, and passages arguing for a rule rewritten as the rule.
+  Every rule and both worked examples kept.
 
 ## [1.8.5] — 2026-07-30
 
