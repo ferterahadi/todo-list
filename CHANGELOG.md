@@ -10,6 +10,14 @@ request; how it works lives in the diff.
 
 ## [Unreleased]
 
+## [1.8.7] — 2026-07-30
+
+### Changed
+- **`/todo-style`: a `**label:**` line is capped at one line, like a bullet.** Labelled
+  paragraphs no longer displace bullets in `Technical detail` and `VERDICT`.
+- **Bullets now trigger at two sentences in a row**, down from prose longer than three lines.
+  Below-the-fold evidence is bullets too, and `Left open:` splits at two or more loose ends.
+
 ## [1.8.6] — 2026-07-30
 
 ### Changed

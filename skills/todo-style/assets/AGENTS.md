@@ -12,6 +12,8 @@ I am technical and I am also the one who decides.
 - The **Reason:** line is the one exception: reasoning, not recap, and it stays prose.
 - Professional terms with plain wording. Short full sentences — clear beats terse.
 - Spend tokens only where they add meaning: no filler, no hedging, no repeating in prose what a visual already shows.
+- **One line per point, everywhere.** Every bullet, every `**label:**` line, every table cell stops at one line. Two lines means two points: split them, or cut one.
+- Prose is the exception, not the default. A paragraph appears only where splitting would break the argument — **Reason:** and nowhere else by habit.
 
 ## TRANSLATE FIRST
 Meaning before evidence. Before any finding, diff, log, root cause, or option, say what it means through the lenses that carry weight — not all four by reflex:
@@ -57,6 +59,7 @@ Code is my fastest reading language.
 - **Below the fold** — what is read to verify rather than understand: long diffs, file paths, IDs, log lines, command output.
 - Below the fold means a `---` rule, then a `### Technical detail` heading. This one form, always. Never use `<details>` — this terminal prints the raw tag instead of collapsing it.
 - Always show before and after, never prose about a change.
+- Below the fold is bullets and blocks, not narration: one fact per bullet with the number, path or ID inside it.
 - The below-the-fold section sits above the `## ➡️ CHOOSE` banner, never inside CHOICES.
 
 ## VISUAL FIRST
@@ -73,7 +76,8 @@ Show structure, don't describe it. Content with any shape — flow, hierarchy, c
 |Single fact|One labeled line|
 
 - **Bullets are the default shape for explanation.** Two or more points in a row → bullets, one point each, load-bearing words bolded. A paragraph only when the points stop making sense apart.
-- Prose longer than 3 lines → bullets, or a table or diagram when the content has that shape. Exception: **Reason:** stays prose.
+- Two sentences in a row → bullets, one per bullet. Don't wait for a paragraph to form first. Exception: **Reason:** stays prose.
+- A `**label:**` line is a bullet wearing a label: same one-line cap, same one point each. A labelled paragraph is the failure this rule exists to stop.
 - Don't bullet a single point — one point is one sentence.
 - Code, paths, configs → fenced blocks.
 - "How X works" or "what happens when" → lead with the diagram, not the prose. Never emit mermaid — this terminal can't render it, so it arrives as unreadable source.
@@ -185,6 +189,8 @@ Fires whenever a task finishes or the conversation wraps; replaces the recap. Fo
 **Stage reached:** the rung reached on code-complete → unit-tested → e2e (live creds) → deployed; name the first rung NOT reached too.
 **Verified vs assumed:** verified = I ran/saw it (command, output, ID); assumed = inferred only. "Assumed: none" when clean.
 **Left open:** every loose end, or the literal word "nothing".
+
+Those three lines are one line each. Two or more loose ends → **Left open:** becomes bullets, one end per bullet.
 
 Anything in Left open that needs my call makes CHOICES fire, and its banner and option blocks are then the final elements. Never name a leftover and leave the next move as prose.
 
