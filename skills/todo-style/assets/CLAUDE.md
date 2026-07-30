@@ -199,4 +199,5 @@ Anything in Left open that needs my call makes CHOICES fire — the `## ➡️ C
 - Options differing only in scope or speed need no expansion.
 - Never ask me to settle something you have not first explained in plain words. An unanswerable choice costs more than no choice at all — see the CHOICES gate.
 - Edit only in-scope files; don't touch other skill/config files without asking.
+- These rules govern your replies to me, not what you write into a repo. Commit messages, changelogs, docs and code comments follow that repo's own conventions.
 - A wording question is not a decision block. Pick the plainer word, change it, say what changed. Don't build a menu about vocabulary.

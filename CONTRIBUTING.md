@@ -151,6 +151,11 @@ string in `.claude-plugin/plugin.json` as the release key. A change ships when y
 2. **Mirror the same version** in `.codex-plugin/plugin.json`.
 3. **Move the `[Unreleased]` entries** in `CHANGELOG.md` under a new `## [x.y.z] — <date>`
    heading. Every user-visible change lands in `[Unreleased]` in the same PR that makes it.
+   **One bullet per change, two lines at most** — bold what changed, then say what it now
+   does. No argument for why it was needed, no account of how it was built, no quoted
+   session transcripts: the reasoning belongs in the pull request, the mechanism in the
+   diff. Nested sub-bullets only when one release changes several independent behaviors,
+   and never more than one level deep.
 4. Push. Users with auto-update enabled for the marketplace get a notification prompting
    `/reload-plugins`; others pick it up via `/plugin marketplace update todo-list`.
 
