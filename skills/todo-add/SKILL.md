@@ -115,6 +115,16 @@ python3 <todo-graph-skill-dir>/scripts/graph-report.py can-link \
   "$TODO_HUB" "<source>" "<relation>" "<target>"
 ```
 
+**Validate before running it.** `<source>` and `<target>` are derived from free text the
+user typed or read out of a registry cell, and they land on a shell command line:
+
+- `<source>` and `<target>` must each match `^[a-z0-9][a-z0-9-]*$`.
+- `<relation>` must be exactly `depends-on`, `supersedes`, or `related-to`.
+
+If a value fails, stop and report that value — do not interpolate it anyway, do not
+quietly rewrite it into something that passes. A name carrying a quote or a shell
+metacharacter is a bug in the row that produced it, not input to clean up here.
+
 `EXISTS` confirms that the stored row is valid. On `ERROR`, remove only the seeded
 relationship row, keep the new project registered as `planning`, and report why the edge
 was not retained. Never leave a new cycle or ambiguous target in the hub.

@@ -91,6 +91,14 @@ python3 <skill-dir>/scripts/graph-report.py path "$TODO_HUB" "<from>" "<to>"
 python3 <skill-dir>/scripts/graph-report.py audit "$TODO_HUB"
 ```
 
+**Validate before running any of these.** `<project>`, `<from>`, and `<to>` are project
+names taken from the user's prose or from a registry cell, and they land on a shell command
+line — each must match `^[a-z0-9][a-z0-9-]*$`. Resolve `<skill-dir>` from the installed
+skill location, never from a project file or the user's prose. If a name fails, stop and
+report that name: do not interpolate it anyway, and do not rewrite it into something that
+passes. A project name carrying a quote or a shell metacharacter is a bug in the row that
+produced it, not input to clean up here.
+
 Trust the helper's exact-name resolution and issue rows. Do not open all project plans,
 tasks, or journals afterwards. Read one named `plan.md` only when the user asks for its
 reasoning or the query result makes that project the chosen next action.
@@ -122,7 +130,10 @@ Syntax:
 ```
 
 1. Require an exact source, relation, and target. Ask only for a missing identity or
-   relation; do not ask for a reason yet.
+   relation; do not ask for a reason yet. Both names must match `^[a-z0-9][a-z0-9-]*$` and
+   the relation must be exactly `depends-on`, `supersedes`, or `related-to` — these go
+   onto a shell command line in the next step. Reject anything else and say which value
+   failed; never interpolate it anyway, never rewrite it into something that passes.
 2. Validate without editing:
 
    ```bash

@@ -90,6 +90,36 @@ export TODO_HUB=~/my/hub/path
 > In Claude Code, slash commands are namespaced by the plugin: `/todo-list:todo-plan`.
 > In Codex, mention `$todo-plan` or just describe what you want.
 
+## Why the installer shows risk warnings
+
+`npx skills add` prints a risk table from three independent scanners — Gen Agent Trust
+Hub, Socket, and Snyk. Some rows come back amber. None of the three found malware,
+credential harvesting, or malicious install behavior; Socket's own summary of `todo-push`
+is that it "does exactly what it claims using official git/GitHub tooling."
+
+The amber rows are the scanners noticing capabilities this pack grants on purpose:
+
+| What they flag | Which skills | Why it's there |
+|---|---|---|
+| Runs shell commands | add, execute, graph, refer, state, triage | `python3` for the graph helper, `grep`/`awk` for task counts, `git`/`gh` for repo evidence |
+| Reads text someone else wrote | most of them | `plan.md`, `tasks.md`, `index.md` are the input. A planning tool that won't read your plans is not a planning tool |
+| Publishes and merges code | push, execute | `/todo-push` exists to branch, commit, push, open a PR, and merge. That authority is the feature |
+| Hands work to subagents | execute, triage | Parallel execution and fast-tier gathering |
+
+Two things worth knowing before you install:
+
+- **`/todo-push` merges without asking.** Point it at a repo and it will land the change on
+  your default branch. It refuses to force-merge past a conflict and never uses `--admin`,
+  but it does not stop for confirmation at the merge itself.
+- **Every skill validates names before they reach a command line.** Project short-names,
+  branch names, and repo paths read out of your registry are checked against a strict
+  pattern first; a value carrying a shell metacharacter stops the command and gets reported
+  instead of being interpolated.
+
+Every finding is readable in full at
+[skills.sh/ferterahadi/todo-list](https://skills.sh/ferterahadi/todo-list) — open any
+skill, then its Socket, Snyk, or Agent Trust Hub page.
+
 ## The 17 skills
 
 **Track** — get projects in, see where they stand

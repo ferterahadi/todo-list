@@ -112,6 +112,12 @@ overwrite your working tree — the usual cause of "my changes vanished."
   git -C <repo> fetch origin
   git -C <repo> worktree add <repo>-wt/<short-name> -b todo/<short-name> origin/<base>
   ```
+  Validate first: `<short-name>` must match `^[a-z0-9][a-z0-9-]*$`, and `<repo>` and
+  `<base>` must contain no shell metacharacters — no `;` `|` `&` `$` `` ` `` `"` `'` `\`
+  `(` `)` `<` `>` and no newline. These are read out of a registry row and a `plan.md`, and
+  they land on a shell command line. If one fails, stop and report the offending row rather
+  than interpolating it or rewriting it to pass.
+
   `<base>` is the repo's default branch (usually main, occasionally master — confirm with
   `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`). All target-repo code, builds,
   tests, and preview for this run happen inside `<repo>-wt/<short-name>`.

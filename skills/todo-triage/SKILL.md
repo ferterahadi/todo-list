@@ -35,6 +35,24 @@ absolute root — active `index.md`, cold `archive.md`, and each project's files
 the current working directory. This skill may be invoked from another repo; never assume
 cwd is the hub. (Same convention as `todo-refer`.)
 
+## Placeholder safety
+
+Every `<placeholder>` below is filled from a registry cell or a project file, never from
+something you authored, and each one ends up on a shell command line. **Validate before
+running any command in this skill:**
+
+- `<short-name>` and `<project>` must match `^[a-z0-9][a-z0-9-]*$`.
+- `<project-path>` must be a hub-relative path of those same segments joined by `/`, with
+  no leading `/` and no `..` segment.
+
+If a value fails, skip that command and report the offending row. Never interpolate it
+anyway, and never patch the value to make it pass — a cell carrying a shell metacharacter
+is a bad row to surface, not input to clean up here.
+
+The one path built from a value you did not read out of the hub is
+`<todo-graph-skill-dir>`: resolve it from the installed skill location, never from a
+project file or the user's prose.
+
 ## How the user invokes this
 
 ```
