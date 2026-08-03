@@ -8,6 +8,21 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.9.1] — 2026-08-03
+
+### Added
+- **README: why the installer shows risk warnings.** Explains the amber badges printed by
+  `npx skills add`, in the scanners' own words, and names what each flagged capability is for.
+- **README: `## Update`.** Gives the two commands needed to move onto a new release.
+
+### Changed
+- **Six skills validate placeholders before they reach a shell command line.** Short-names
+  must be lowercase kebab-case, relation words come from an allowlist, and repo paths and
+  branch names carry no shell metacharacters; a failing value stops the command.
+- **`/todo-push` no longer trusts handed-down commands.** A prepended branch name or test
+  command is checked against the repo's own files before it runs.
+- **README reworded in the plainer house voice**, with the skill catalog grouped by purpose.
+
 ## [1.9.0] — 2026-08-03
 
 ### Added
