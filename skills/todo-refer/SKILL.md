@@ -43,6 +43,22 @@ cwd is the hub.
 
 Never use a same-named `index.md` from the current code repo.
 
+## Placeholder safety
+
+Every `<placeholder>` in this skill's commands is filled from a registry cell, a project
+file, or free text the user typed — never from something you authored — and each one ends
+up on a shell command line. **Validate before running any command below:**
+
+- `<short-name>`, `<source>`, `<target>` must match `^[a-z0-9][a-z0-9-]*$`.
+- `<project-path>` must be a hub-relative path of those same segments joined by `/`, with
+  no leading `/` and no `..` segment.
+- `<repo>`, `<owner>`, `<base>` must contain no shell metacharacters — no `;` `|` `&` `$`
+  `` ` `` `"` `'` `\` `(` `)` `<` `>` and no newline.
+
+If a value fails, skip that command and report the offending row or argument. Never
+interpolate it anyway, and never patch the value to make it pass — a cell carrying a
+metacharacter is a bad row to surface, not input to clean up here.
+
 ## Invocation
 
 ```text
@@ -172,6 +188,9 @@ git -C <repo> log origin/<base>..todo/<short-name> --oneline | head -5   # unshi
 git -C <repo>-wt/<short-name> status --short 2>/dev/null | head -10      # uncommitted work
 gh pr list --repo <owner>/<repo> --head todo/<short-name> --state all --limit 3   # PR state (if gh works here)
 ```
+
+`<repo>`, `<owner>`, `<base>`, and `<short-name>` all come out of the registry row — check
+them against **Placeholder safety** above before running any of these.
 
 Take what succeeds and skip what doesn't (no repo, no gh auth) — note gaps rather than
 erroring. The point is to know whether work is **uncommitted, committed-but-unshipped,

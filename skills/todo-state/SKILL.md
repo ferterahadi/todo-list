@@ -191,6 +191,14 @@ Four sources, cross-checked:
    gh pr list --repo <owner>/<repo> --search 'head:todo/<short-name>' --state all --limit 3
    git -C <repo> worktree list | grep '<short-name>'
    ```
+   **Validate before running these.** `<repo>`, `<owner>`, `<base>`, `<short-name>`, and
+   `<plan-scoped-paths>` are all read out of a registry row or a `plan.md`, and each lands
+   on a shell command line. `<short-name>` must match `^[a-z0-9][a-z0-9-]*$`; the rest must
+   contain no shell metacharacters — no `;` `|` `&` `$` `` ` `` `"` `'` `\` `(` `)` `<` `>`
+   and no newline. A value that fails means skip that command and report the offending row
+   as an audit finding: never interpolate it anyway, never patch it to make it pass. A cell
+   carrying a metacharacter is exactly the kind of drift this audit exists to surface.
+
    Take what succeeds (no gh auth, no repo → note the gap, don't fail the audit). What
    you want per project: **branch merged / PR open / commits exist / worktree lingering /
    no trace at all**.
