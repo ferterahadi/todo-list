@@ -1,7 +1,7 @@
 {
   "name": "todo-list",
   "description": "An evidence-backed plan → do → check → revise hub for Claude Code, with a typed project graph for ready work, blockers, paths, and impact. Self-bootstrapping — no setup.",
-  "version": "1.8.7",
+  "version": "1.9.0",
   "author": {
     "name": "The todo-list contributors"
   },

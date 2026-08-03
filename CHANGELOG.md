@@ -8,7 +8,15 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
-## [Unreleased]
+## [1.9.0] — 2026-08-03
+
+### Added
+- **`/todo-style`: new `WRITING STYLE` section.** Both packs now ask for conversational
+  English with technical terms only where they are the correct name, and carry a good/bad pair.
+
+### Changed
+- **Four duplicated rule statements collapsed to one each** in `AUDIENCE`, `GROUND RULES`
+  and `VISUAL FIRST` — first-use naming, plain wording and the bullets trigger each appear once.
 
 ## [1.8.7] — 2026-07-30
 
