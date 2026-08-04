@@ -96,10 +96,13 @@ printf '%s\n' "$*" >> "${GH_STUB_LOG:?GH_STUB_LOG unset}"
 case "${1:-} ${2:-}" in
   "auth status")
     [ "${GH_STUB_AUTH:-ok}" = ok ] || { echo "not logged in" >&2; exit 1; }
-    echo "Logged in to github.com"
+    printf '  - Logged in to github.com account %s (keyring)\n' "${GH_STUB_ACCOUNT:-stub-user}"
     ;;
   "repo view")
-    if [ -n "${GH_STUB_REPO_VIEW:-}" ]; then
+    if [[ "$*" == *viewerPermission* ]]; then
+      printf '{"nameWithOwner":"acme/demo","viewerPermission":"%s"}\n' \
+        "${GH_STUB_VIEWER_PERMISSION:-WRITE}"
+    elif [ -n "${GH_STUB_REPO_VIEW:-}" ]; then
       printf '%s\n' "$GH_STUB_REPO_VIEW"
     else
       echo '{"mergeCommitAllowed":true,"squashMergeAllowed":false,"rebaseMergeAllowed":false}'
@@ -258,6 +261,29 @@ cd "$alpha"
 run env GH_STUB_AUTH=fail bash "$preflight"
 expect_equal "preflight fails when gh is unauthenticated" 1 "$run_code"
 expect_text_contains "unauthenticated gh names the reason" "$run_out$run_err" "gh auth"
+
+# Logged in is not the same as able to open a PR: an account with read-only access fails
+# here, before land.sh branches and pushes, and the message names the account to switch off.
+run env GH_STUB_VIEWER_PERMISSION=READ GH_STUB_ACCOUNT=work-account bash "$preflight"
+expect_equal "preflight fails on read-only access" 1 "$run_code"
+expect_text_contains "read-only access names the active account" \
+  "$run_out$run_err" "work-account"
+expect_text_contains "read-only access names the permission" "$run_out$run_err" "READ"
+expect_text_contains "read-only access names the repo" "$run_out$run_err" "acme/demo"
+expect_text_contains "read-only access points at the fix" "$run_out$run_err" "gh auth switch"
+
+run env GH_STUB_VIEWER_PERMISSION=NONE GH_STUB_ACCOUNT=work-account bash "$preflight"
+expect_equal "preflight fails when the account has no access" 1 "$run_code"
+expect_text_contains "no access names the active account" "$run_out$run_err" "work-account"
+
+for permission in WRITE ADMIN; do
+  run env GH_STUB_VIEWER_PERMISSION="$permission" GH_STUB_ACCOUNT=personal bash "$preflight"
+  expect_equal "preflight passes on $permission access" 0 "$run_code"
+  expect_equal "preflight reports $permission" "$permission" \
+    "$(field viewer_permission <<< "$run_out")"
+  expect_equal "preflight reports the active account" personal \
+    "$(field gh_account <<< "$run_out")"
+done
 
 # ---------------------------------------------------------------------------
 # land.sh — argument validation fails closed before touching the repo

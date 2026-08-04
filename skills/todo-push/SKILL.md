@@ -101,8 +101,10 @@ otherwise requires.
    It prints one JSON object: repo_root, base, current_branch, is_worktree,
    primary_worktree, dirty, ahead_of_base, changed_files, untracked_suspicious,
    allowed_merge_strategies, observed_merge_pattern, recent_merge_commits,
-   recent_commits_sampled, test_cmd_candidates. A non-zero exit means the ship can't
-   work — report the error and stop. Nothing was mutated.
+   recent_commits_sampled, test_cmd_candidates, gh_account, viewer_permission, repo_slug.
+   A non-zero exit means the ship can't work — report the error and stop. Nothing was
+   mutated. If the error names the active gh account's permission, tell the user which
+   account is active and that `gh auth switch` is theirs to run; don't switch it yourself.
 
 2. Run the tests, using test_cmd_candidates or the validated prepended command. Keep it
    cheap: if the diff clearly touches only a subset of packages and the tooling supports
