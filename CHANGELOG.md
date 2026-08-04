@@ -44,85 +44,36 @@ request; how it works lives in the diff.
 - **Four duplicated rule statements collapsed to one each** in `AUDIENCE`, `GROUND RULES`
   and `VISUAL FIRST` — first-use naming, plain wording and the bullets trigger each appear once.
 
-## [1.8.7] — 2026-07-30
+## [1.8.x] — 2026-07-28 → 2026-07-30
 
-### Changed
-- **`/todo-style`: a `**label:**` line is capped at one line, like a bullet.** Labelled
-  paragraphs no longer displace bullets in `Technical detail` and `VERDICT`.
-- **Bullets now trigger at two sentences in a row**, down from prose longer than three lines.
-  Below-the-fold evidence is bullets too, and `Left open:` splits at two or more loose ends.
-
-## [1.8.6] — 2026-07-30
-
-### Changed
-- **`/todo-style`: the packs govern replies, not what you write into a repo.** New `BEHAVIOR`
-  rule — commit messages, changelogs, docs and code comments follow that repo's own
-  conventions, so the pack's reasoning-forward prose stops at the reply boundary.
-- **Release notes are now one bullet per change, two lines at most.** The rule is stated in
-  CONTRIBUTING.md § Releasing, and this file was condensed from 411 lines to 188 under it.
-- **`/todo-style`: both packs cut by about a sixth** — 8,460 → 7,010 tokens combined. Repeated
-  rule statements collapsed to one each, and passages arguing for a rule rewritten as the rule.
-  Every rule and both worked examples kept.
-
-## [1.8.5] — 2026-07-30
-
-### Changed
-- **`/todo-style`: a `CHOOSE` block must be answerable.** Names the code invented — files,
-  classes, flags, acronyms — are barred between the banner and the last option.
-- **`/todo-style`: `CHOOSE` gains a required `What this is about:` line,** plus length caps on
-  options, trade-offs and table cells.
-- **`/todo-style`: the recommendation is two fixed labels,** `Suggestion:` and `Reason:`,
-  replacing the ad-hoc `Why this, not that` wording.
-
-## [1.8.4] — 2026-07-29
+### Added
+- **`/todo-review-handoff` — package a review so someone else can rule on it.** Each finding
+  is a numbered falsifiable claim with a confidence grade and a verification method, ending in
+  a ruling sheet whose columns include *the reviewer is wrong*. Hub-optional; never fixes code.
+- **`bootstrap-hub.sh` backfills every missing hub doc and template,** and
+  `hooks/migrate-registry-preamble.sh` strips prose preambles from an existing `index.md`
+  behind a `.pre-preamble.bak`. Registries are reported, never overwritten.
 
 ### Changed
 - **`/todo-style`: sixteen invented terms replaced with plain words** — `➡️ YOUR CALL` →
   `➡️ CHOOSE`, `Does:`/`Trade:` → `Action:`/`Trade-off:`, `CORE` → `GROUND RULES`,
-  `SOLUTION SPINE` → `PROPOSING A FIX`, and the four TRANSLATE FIRST lenses into one set.
-- **`/todo-style`: bullets are the pack's stated default shape,** with eight sections
-  converted from paragraphs to bullets.
-- **`/todo-style`: two new rules** — never invent a metaphor where a plain word exists, and a
-  wording question is not a decision block.
+  `SOLUTION SPINE` → `PROPOSING A FIX`, and no metaphor where a plain word exists.
+- **Bullets are the stated default shape** — they trigger at two sentences in a row, a
+  `**label:**` line is capped at one line, and below-the-fold evidence is always a `---` rule
+  plus `### Technical detail` (the `<details>` accordion is gone).
+- **A `CHOOSE` block must be answerable** — required `What this is about:` line, no
+  invented code names before the last option, length caps on options and table cells, and a
+  fixed `Suggestion:`/`Reason:` recommendation that may argue against the alternatives.
+- **The packs govern replies, not what you write into a repo.** Commit messages, changelogs,
+  docs and code comments follow that repo's own conventions; release notes are one bullet per
+  change, two lines at most (CONTRIBUTING.md § Releasing).
+- **Both packs cut by about a sixth** — 8,460 → 7,010 tokens, every rule and worked example
+  kept. `seed/index.md`, `seed/AGENTS.md`, `seed/REGISTRY.md` and `seed/archive.md` are data
+  only, carrying the registries-are-data routing table. Existing hubs untouched.
 
 ### Fixed
-- `tests/style-contract.sh` still required the `<details>` accordion rule that 1.8.3 deleted,
-  and had been failing on `main` since. It now checks what the packs actually promise.
-
-## [1.8.3] — 2026-07-28
-
-### Added
-- **`/todo-review-handoff` — package a review so someone else can rule on it.** Each finding
-  becomes a numbered falsifiable claim with a confidence grade and a verification method,
-  ending in a ruling sheet whose columns include *the reviewer is wrong*. Hub-optional, and
-  it never reviews code or applies a fix itself.
-
-### Changed
-- **`/todo-style`: below-the-fold evidence has one form** — a `---` rule plus
-  `### Technical detail`, always. The surface-dependent `<details>` accordion is gone.
-
-## [1.8.2] — 2026-07-28
-
-### Added
-- **`bootstrap-hub.sh` backfills every missing hub doc and template,** not just `archive.md`
-  and `REGISTRY.md`. Registries are never overwritten; differing docs are reported, not replaced.
-- **`hooks/migrate-registry-preamble.sh`** strips prose preambles from an existing hub's
-  `index.md`, behind a `.pre-preamble.bak` and a row-count guard.
-
-### Changed
-- `seed/AGENTS.md`, `seed/REGISTRY.md` and `seed/archive.md` carry the registries-are-data
-  rule, with a routing table for what to record where.
-
-## [1.8.1] — 2026-07-28
-
-### Changed
-- **`/todo-style`: a recommendation may argue against the alternatives** — a new
-  `Why this, not that` paragraph, required when options differ in kind rather than degree.
-- **`/todo-style`: the comparison table accepts categorical columns,** not only countable ones.
-- `seed/index.md` is data only — title and section tables. Existing hubs untouched.
-
-### Fixed
-- `.codex-plugin/plugin.json` was stuck at `1.7.0` while the Claude manifest read `1.7.1`.
+- `tests/style-contract.sh` still required the `<details>` rule these releases deleted and had
+  been failing on `main`; `.codex-plugin/plugin.json` was stuck at `1.7.0` against `1.7.1`.
 
 ## [1.7.0] — 2026-07-27
 
