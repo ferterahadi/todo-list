@@ -8,12 +8,14 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
-## [Unreleased]
+## [1.10.0] — 2026-08-04
 
 ### Changed
 - **`/todo-push` runs its git sequence from two scripts.** `preflight.sh` reports repo facts
   read-only and fails before anything mutates; `land.sh` owns branch-through-merge, commits
   only files named explicitly, and hands control back on a blocked merge or a real conflict.
+- **`/todo-push` matches the merge style a repo actually uses**, not just what it permits —
+  a squash-only history no longer gets a merge commit.
 - **The `frontier` tier routes to Fable 5.0 at high effort** on Claude Code, replacing
   Opus 5.0 at max effort.
 
