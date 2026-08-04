@@ -140,6 +140,15 @@ project, target-repo and `<repo>-wt/*` worktree sessions report only their own p
 unrelated sessions stay silent, and stub plans, fresh infographics, and stop-hook
 continuations never fire.
 
+Run `tests/push-contract.sh` for changes to `/todo-push` or its helpers. It stubs `gh` on
+`PATH` and drives scratch repos with local bare remotes, so it never talks to GitHub. It must
+prove `preflight.sh` stages nothing and fails closed on a missing `origin`, an
+unauthenticated `gh`, and a clean tree; and that `land.sh` rejects ref names carrying shell
+metacharacters, commits only the files named with `--file`, adds no second commit or PR on a
+repeat run, reports a blocked merge as exit 10 without ever passing `--admin` or
+force-pushing, and inside a linked worktree neither checks out the base branch nor passes
+`--delete-branch`.
+
 ## Releasing
 
 Pushing commits does **not** update installed users — Claude Code treats the `version`
