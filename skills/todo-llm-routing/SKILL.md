@@ -10,7 +10,7 @@ not part of a skill's behavior.
 
 | Tier | Claude Code | Codex | Use for |
 |---|---|---|---|
-| `frontier` | `Opus 5.0`, max effort | `gpt-5.6-sol`, max effort | Security, payments, data integrity, concurrency, multi-repo architecture |
+| `frontier` | `Fable 5.0`, high effort | `gpt-5.6-sol`, max effort | Security, payments, data integrity, concurrency, multi-repo architecture |
 | `deep` | `Opus 5.0`, high effort | `gpt-5.6-sol`, high effort | Ambiguous design, unknown-cause debugging, cross-file refactors |
 | `balanced` | `Opus 5.0`, medium effort | `gpt-5.6-sol`, medium effort | Well-scoped implementation, verification, visual generation |
 | `fast` | `Opus 5.0`, low effort | `gpt-5.6-sol`, low effort | Mechanical edits, formatting, state updates, routine Git operations |
