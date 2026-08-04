@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Read-only repo reconnaissance for /todo-push. Emits one JSON object describing the
 # facts the skill would otherwise re-derive in prose, and fails before anything mutates
-# when the ship can't work (no origin, no gh auth, nothing to ship).
+# when the ship can't work (no origin, no gh auth, no write access, nothing to ship).
 #
 # usage: preflight.sh          # operates on the current working directory's repo
 set -euo pipefail
@@ -32,6 +32,44 @@ git remote get-url origin > /dev/null 2>&1 ||
 
 gh auth status > /dev/null 2>&1 ||
   die "gh auth failed — authenticate before shipping (gh auth status)"
+
+# Being logged in proves only that *some* account is active. When that account has no write
+# access to this repo, `gh pr create` fails with "must be a collaborator" — by which point
+# land.sh has already branched, committed and pushed. Resolve the permission here instead,
+# while nothing has moved, and fail closed if it can't be read.
+# "Logged in to github.com account <login> (keyring)" — match the field, not a substring:
+# a login can itself end in "account".
+gh_account="$(gh auth status --active 2>/dev/null |
+  awk '{for (i = 1; i < NF; i++) if ($i == "account") { print $(i + 1); exit }}')"
+[ -n "$gh_account" ] || gh_account="unknown"
+
+access_facts="$(
+  gh repo view --json nameWithOwner,viewerPermission 2>/dev/null |
+    python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    data = {}
+print(data.get("nameWithOwner") or "")
+print((data.get("viewerPermission") or "").upper())
+' 2>/dev/null || true
+)"
+repo_slug="$(printf '%s\n' "$access_facts" | sed -n 1p)"
+viewer_permission="$(printf '%s\n' "$access_facts" | sed -n 2p)"
+[ -n "$repo_slug" ] || repo_slug="$(git remote get-url origin)"
+
+case "$viewer_permission" in
+  ADMIN | MAINTAIN | WRITE) ;;
+  "")
+    die "could not read the gh account's permission on $repo_slug — active account is \
+$gh_account; confirm it has access, or switch (gh auth switch)"
+    ;;
+  *)
+    die "gh account $gh_account has $viewer_permission access to $repo_slug — the PR could \
+not be opened after the branch was pushed; switch accounts (gh auth switch) and re-run"
+    ;;
+esac
 
 # Base branch: the remote's default, then the remote's own report, then convention.
 base=""
@@ -162,6 +200,9 @@ IS_WORKTREE="$is_worktree" \
 PRIMARY_WORKTREE="$primary_worktree" \
 BASE="$base" \
 CURRENT_BRANCH="$current_branch" \
+GH_ACCOUNT="$gh_account" \
+VIEWER_PERMISSION="$viewer_permission" \
+REPO_SLUG="$repo_slug" \
 DIRTY="$dirty" \
 AHEAD_OF_BASE="$ahead_of_base" \
 CHANGED_FILES="$changed_list" \
@@ -193,6 +234,9 @@ print(json.dumps({
     "changed_files": lines("CHANGED_FILES"),
     "untracked_suspicious": lines("SUSPICIOUS"),
     "gh_auth": True,
+    "gh_account": os.environ["GH_ACCOUNT"],
+    "viewer_permission": os.environ["VIEWER_PERMISSION"],
+    "repo_slug": os.environ["REPO_SLUG"],
     "has_origin": True,
     "allowed_merge_strategies": lines("STRATEGIES"),
     "observed_merge_pattern": os.environ["OBSERVED_PATTERN"],
