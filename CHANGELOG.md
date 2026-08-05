@@ -8,12 +8,15 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
-## [Unreleased]
+## [1.10.1] — 2026-08-05
 
 ### Changed
 - **`/todo-push` checks the active GitHub account can write to the repo.** Preflight reads
   the account's permission and stops — naming the account and repo — instead of branching,
   committing and pushing only for `gh pr create` to fail on access.
+- **`/todo-style` now selects one response mode instead of stacking formats.** Quick answers
+  have a 120-word budget, decisions use one harness-native surface, visuals scale with
+  complexity, and verdict receipts appear only after changed or verified work.
 
 ## [1.10.0] — 2026-08-04
 

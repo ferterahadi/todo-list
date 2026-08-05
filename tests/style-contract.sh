@@ -62,6 +62,28 @@ for asset in "$claude_asset" "$codex_asset"; do
     fail "style pack names a job title instead of describing the reader: ${asset#"$repo_root"/}"
   grep -Fq '## AUDIENCE' "$asset" ||
     fail "style pack has no AUDIENCE section: ${asset#"$repo_root"/}"
+  grep -Fq 'Select exactly one primary response mode' "$asset" ||
+    fail "style pack lost exclusive response-mode selection: ${asset#"$repo_root"/}"
+  grep -Fq '120 words or eight visible lines' "$asset" ||
+    fail "style pack lost its quick-answer budget: ${asset#"$repo_root"/}"
+  grep -Fq 'A recommendation that does not block progress' "$asset" ||
+    fail "style pack turns every recommendation into a decision: ${asset#"$repo_root"/}"
+  grep -Fq 'Recommend by cost asymmetry' "$asset" ||
+    fail "style pack lost cost-aware decision guidance: ${asset#"$repo_root"/}"
+  grep -Fq 'Use Completion mode only after state-changing work' "$asset" ||
+    fail "style pack lost its conditional verdict gate: ${asset#"$repo_root"/}"
+  grep -Fq 'Use one idea per bullet or table cell' "$asset" ||
+    fail "style pack lost its semantic chunking rule: ${asset#"$repo_root"/}"
+  grep -Fq 'compact Decision and Verdict tables are intentional exceptions' "$asset" ||
+    fail "style pack conflicts with its compact decision or verdict tables: ${asset#"$repo_root"/}"
+  grep -Fq 'Progress: 2/5' "$asset" ||
+    fail "style pack lost its interruption-safe resume cue: ${asset#"$repo_root"/}"
+  grep -Fq 'A recommendation IS a choice' "$asset" &&
+    fail "style pack still escalates every recommendation into a choice: ${asset#"$repo_root"/}"
+  grep -Fq 'One line per point' "$asset" &&
+    fail "style pack still enforces physical lines instead of ideas: ${asset#"$repo_root"/}"
+  [ "$(wc -l < "$asset")" -le 170 ] ||
+    fail "style pack exceeds the 170-line context budget: ${asset#"$repo_root"/}"
 done
 
 # Both packs put below-the-fold evidence behind the same rule and heading — one form, not
@@ -75,30 +97,33 @@ done
 grep -Fq 'Never use `<details>`' "$codex_asset" ||
   fail "the Codex pack must forbid <details> outright"
 
-# Harness-specific rules must actually differ — a copy-paste of the Claude pack into the
-# Codex slot would tell Codex to emit artifact widgets and click-to-choose pickers a
-# terminal cannot render.
+# Harness-specific rules must actually differ. Each harness gets one decision surface and
+# one complex-visual form; neither repeats options in a table, cards, and a picker.
 grep -Fq 'artifact' "$claude_asset" ||
   fail "the Claude pack lost its artifact-widget rule"
 grep -Fq 'artifact' "$codex_asset" &&
   fail "the Codex pack points at artifact widgets Codex cannot render"
 grep -Fq 'no click-to-choose control' "$codex_asset" ||
   fail "the Codex pack must say the comparison table is the whole interface"
+grep -Fq 'do not add a comparison table or option cards before the picker' "$claude_asset" ||
+  fail "the Claude pack must use the interactive picker as its only decision surface"
+grep -Fq 'do not repeat options in cards or a closing list' "$codex_asset" ||
+  fail "the Codex pack must use one comparison table without repeated option cards"
+grep -Fq 'do not bold the whole row' "$codex_asset" ||
+  fail "the Codex pack must not turn its recommended row into a wall of bold text"
 
-# --- the call-to-action stays one word, and one word only -------------------
-# The banner is the landmark the reader scrolls for. Two spellings across the two packs,
-# or a stray second arrow, and it stops being a landmark.
+# --- decision and completion landmarks -------------------------------------
 for asset in "$claude_asset" "$codex_asset"; do
   grep -Fq '## ➡️ CHOOSE' "$asset" ||
     fail "style pack lost the '## ➡️ CHOOSE' banner: ${asset#"$repo_root"/}"
   grep -Fq 'YOUR CALL' "$asset" &&
     fail "style pack still uses the old 'YOUR CALL' banner: ${asset#"$repo_root"/}"
-  grep -Fq '**Action:**' "$asset" ||
-    fail "style pack lost the 'Action:' option label: ${asset#"$repo_root"/}"
-  grep -Fq '**Trade-off:**' "$asset" ||
-    fail "style pack lost the 'Trade-off:' option label: ${asset#"$repo_root"/}"
-  grep -Fq 'Bullets are the default shape for explanation' "$asset" ||
+  grep -Fq '## VERDICT' "$asset" ||
+    fail "style pack lost the conditional verdict landmark: ${asset#"$repo_root"/}"
+  grep -Fq 'Bullets are the default for two or more independent points' "$asset" ||
     fail "style pack lost the bullets-by-default rule: ${asset#"$repo_root"/}"
+  grep -Fq '### A —' "$asset" &&
+    fail "style pack still carries duplicate option-card examples: ${asset#"$repo_root"/}"
 done
 
 # --- sandbox ----------------------------------------------------------------
