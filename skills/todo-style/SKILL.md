@@ -20,13 +20,12 @@ surfaces render and accept different things:
 
 | | Claude Code | Codex |
 |-|-|-|
-| Diagrams | artifact widget | written-to-disk HTML (never mermaid) |
-| Decision picker | interactive picker tool, fired last | tag table at the top of the block |
+| Complex diagrams | artifact widget | written-to-disk HTML (never mermaid) |
+| Decision surface | interactive picker only | comparison table only |
 
-The picker split is the one to remember: Claude Code has a click-to-choose control, so its
-pack drops the closing `### ➡️ Choose` table and lets the tool be the click surface. A
-terminal has no such control, so Codex's pack keeps a tag table — moved to the top of the
-CHOICES block, where it is read before the option detail rather than after it.
+The decision split is the one to remember: Claude Code puts the options in its interactive
+picker, while Codex puts them in one compact table. Neither pack repeats the same options in
+a comparison, cards, and a closing picker.
 
 This is deterministic file work — the script does it all. Use the **fast** tier from
 [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). Your judgment is spent on
