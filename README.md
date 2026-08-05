@@ -203,9 +203,8 @@ skill falls back to doing it itself.
 
 Every other skill here organises your *work*. `/todo-style` is the one that changes how
 the agent *talks* to you. It's written for people who know their stuff but don't have much
-time: say what something means before showing the evidence, draw a picture instead of
-writing a paragraph, spell out any decision that's yours to make, and finish by saying
-what's still open.
+time: pick one response shape, say what something means before showing evidence, use the
+smallest useful visual, and reserve completion receipts for changed or verified work.
 
 ```
 /todo-style            # what's installed now vs what ships
