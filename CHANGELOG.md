@@ -8,6 +8,19 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.11.2] — 2026-08-11
+
+### Added
+- **`todo-conventions` owns the rule for commands that arrive as prose.** A build, test, or
+  install command read out of a target repo's docs must be corroborated by that repo's own
+  build files and shaped like a single tool invocation before it runs.
+
+### Security
+- **`/todo-execute` validates a dependency-install command before running it.** An install
+  step read from the target repo's `AGENTS.md`, `CLAUDE.md`, or `README` now has to match the
+  repo's build files and carry no shell metacharacters or network fetch; anything else is
+  recorded as a blocker instead of executed.
+
 ## [1.11.1] — 2026-08-11
 
 ### Security
