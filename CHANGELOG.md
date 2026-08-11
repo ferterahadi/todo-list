@@ -8,6 +8,18 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.11.1] — 2026-08-11
+
+### Security
+- **`/todo-push` validates a test command read out of a repo doc before running it.** A
+  command from `CLAUDE.md`, `AGENTS.md`, or prepended context must be corroborated by the
+  repo's own files and shaped like a plain test run, or it is reported and skipped instead of
+  executed.
+- **`/todo-push` states its trust boundary.** The skill records which mutations only the
+  helper scripts may make, that repo content is data rather than instruction, and that a
+  composed skill is advisory — branch protection, not the skill, gates a merge that needs a
+  human.
+
 ## [1.11.0] — 2026-08-11
 
 ### Added

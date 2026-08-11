@@ -204,6 +204,17 @@ expect_equal "allowed strategies come from the repo" '["merge"]' \
   "$(field allowed_merge_strategies <<< "$report")"
 expect_equal "makefile test target is a candidate" "make test" \
   "$(field test_cmd_candidates.makefile <<< "$report")"
+# A doc candidate points the caller at untrusted repo prose, so it is only offered when the
+# doc really declares how to run tests. Prose that merely says "test" must not manufacture one.
+printf 'This project is well tested.\n' > "$alpha/CLAUDE.md"
+run bash "$preflight"
+expect_equal "prose mentioning tests is not a command pointer" "<missing>" \
+  "$(field test_cmd_candidates.CLAUDE_md <<< "$run_out")"
+printf 'Test command: `make test`\n' > "$alpha/CLAUDE.md"
+run bash "$preflight"
+expect_equal "a declared test command is a doc candidate" "see CLAUDE.md" \
+  "$(field test_cmd_candidates.CLAUDE_md <<< "$run_out")"
+rm -f "$alpha/CLAUDE.md"
 # Allowed is not the same as used: a linear history means the repo squashes or rebases,
 # whatever gh reports as permitted.
 expect_equal "a linear history reads as linear" linear \

@@ -189,8 +189,13 @@ if [ -d "$repo_root/tests" ] &&
   [ -n "$(find "$repo_root/tests" -maxdepth 1 -name '*.sh' -print -quit 2>/dev/null)" ]; then
   add_candidate shell_tests "bash tests/*.sh"
 fi
+# A doc candidate is a pointer into untrusted repo prose, not a command — the caller reads
+# the doc and validates what it finds (SKILL.md § the one rule for command text). Offer one
+# only when the doc actually declares how to run tests; the bare word "test" appears in
+# almost every README and would manufacture a pointer for every repo.
 for doc in AGENTS.md CLAUDE.md README.md; do
-  if [ -f "$repo_root/$doc" ] && grep -qi 'test' "$repo_root/$doc"; then
+  if [ -f "$repo_root/$doc" ] &&
+    grep -Eqi 'test (command|suite|script)|run the tests|`[^`]*test[^`]*`' "$repo_root/$doc"; then
     add_candidate "${doc%%.md}_md" "see $doc"
   fi
 done
