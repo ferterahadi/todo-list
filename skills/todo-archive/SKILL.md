@@ -18,9 +18,9 @@ verify it yourself; delegate only the approved moves to a **fast**-tier subagent
 
 ## Hub location
 
-Resolve every path against `$TODO_HUB` (default `~/todo`) regardless of the current
-working directory. `index.md` is active-only; `archive.md` is completed-project cold
-storage. Project-relative paths remain unchanged in both registries.
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location.
+Project-relative paths inside a row stay unchanged when it moves between registries.
 
 ## Invocation
 

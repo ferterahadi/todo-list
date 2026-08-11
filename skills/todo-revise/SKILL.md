@@ -16,7 +16,9 @@ to the fast tier.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** hub path against this absolute root — active `index.md`, cold `archive.md`, each project's `path`, `plan.md`, and `tasks.md` — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's where the fixes land.) (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. The `repo`
+column points at the target codebase elsewhere — that's where the fixes land.
 
 ## How the user invokes this
 
@@ -46,13 +48,9 @@ Record the ID in the revision entry's Gap line (e.g. `Gap (⟵ F3): …`) so the
 
 ## Step 1 — Resolve the project
 
-Resolve the short-name in `$TODO_HUB/index.md` first, then `$TODO_HUB/archive.md` only
-on an exact active miss. A duplicate across both registries is corruption: stop instead
-of choosing one. Record the owning registry and section with the full `path` + `status`.
-
-- Short name → look it up active-first; not found in either registry → tell the user and stop.
-- Full path → use as-is.
-- No project named and not obvious from context → ask which project before doing anything.
+Resolve the project per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
+recording the owning registry and section with the full `path` and `status`.
 
 ## Step 2 — Orient and show what's reviewable
 
@@ -135,14 +133,14 @@ Rules:
 - If a completed source task no longer holds, leave its original `[x]` as-is but note in the revision that the source is being corrected; the project status reconcile (Step 7) handles the rest.
 - If the project row came from `archive.md`, opening the first revision also reopens the
   project: move the row verbatim back to the same section in `index.md`, set status to
-  `in-progress`, and clear `completed` / `elapsed (days)` per `todo-state` Step
-  3.5. Treat the row move and status edit as one atomic change.
+  `in-progress`, and clear `completed` / `elapsed (days)` per `todo-state` § Date
+  stamping. Treat the row move and status edit as one atomic change.
 
 ## Step 5 — Execute the fix
 
 Work each open revision like `todo-execute` does: complete it fully, write outputs to `artifacts/` (following the artifact conventions — dated `YYYY-MM-DD-<kind>-<slug>.md` name, backlink header blockquote, and a row in `artifacts/README.md`), drop notes in `research/` if useful.
 
-**Match the fix to an installed skill** — a revision exists because the first pass drifted, so front-load procedure instead of retrying bare: a code-correctness gap → run `code-review` on the fix diff before presenting it; a UI/"looks wrong" gap → load a frontend-design or design-critique skill if installed; a chart/visual gap → `dataviz`. Only use skills that actually exist in the session's listing — skip silently if none fits. Hit a credential/service/API blocker → record it in `artifacts/blockers.md` and move on; never silently skip. Check the revision's `- [ ]` → `- [x]` when the code/work is done (not yet verified).
+**Match the fix to an installed skill** ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Composing with installed skills) — a revision exists because the first pass drifted, so front-load procedure instead of retrying bare: a code-correctness gap → run `code-review` on the fix diff before presenting it; a UI/"looks wrong" gap → a frontend-design or design-critique skill; a chart/visual gap → `dataviz`. Hit a credential/service/API blocker → record it in `artifacts/blockers.md` and move on; never silently skip. Check the revision's `- [ ]` → `- [x]` when the code/work is done (not yet verified).
 
 ## Step 6 — Verify and loop
 
@@ -163,11 +161,9 @@ Never claim a revision is fixed without the user accepting it or you having run 
 **Status honesty** (mirror `todo-state` Step S4): case-insensitive open revisions
 on a project marked `done` mean it is not truly done. Flag it and offer to move an
 archived row back to `index.md` when needed, then set `in-progress`. All revisions whose
-tags start with `[done` and all tasks `[x]` → run `todo-graph`'s bounded
-`context "$TODO_HUB" "<short-name>"` gate. Offer to set `done` only when every hard
-prerequisite is settled and no incident identity/cycle issue exists. If the helper is
-unavailable or the graph is blocked, keep `in-progress` and report the exact next graph
-command. Context and lineage edges never gate.
+tags start with `[done` and all tasks `[x]` → run the gate from
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § The status-flip gate, and
+offer `done` only if it passes.
 
 **Recurring-gap memory.** If a gap repeats a pattern you've seen before (same class of drift across items or sessions — e.g. "marked done before e2e", "ignored the plan's scope boundary"), *offer* to persist the *why* as a `feedback` memory, and write it only on the user's OK. Follow the memory format: `feedback` type, with `**Why:**` and `**How to apply:**` lines, linked to related memories like `[[definition-of-done]]`. Do not auto-write without asking; do not nag if they decline.
 
@@ -193,36 +189,25 @@ the `## Revisions` block in tasks.md speaks for itself.
 
 ## Archival rule — done revisions leave the hot file
 
-`tasks.md` is read repeatedly; closed history must not tax every future read. When a
-revision tag starts with `[done` in any letter case:
+`tasks.md` is read repeatedly; closed history must not tax every future read. The moment a
+revision tag starts with `[done` in any letter case, apply `todo-archive` Step 2 to that
+one entry: its detail moves under an `<a id="revision-r4"></a>` anchor in
+`artifacts/journal.md`, and the entry collapses to a two-line tombstone under its verbatim
+heading:
 
-1. **Append the full entry** (heading + its detail bullets) to `artifacts/journal.md`
-   under a dated section, creating the file if needed. Preserve the heading exactly and
-   add a stable lowercase anchor:
-   ```markdown
-   <a id="revision-r4"></a>
-   ### R4 ⟵ Task 5.2 — rotate audit log   [DONE 2026-07-10]
-   - Gap: rotate skips audit log
-   - Expected: every rotation writes an audit row
-   - Actual: only manual rotations logged
-   - Fix: moved audit write into RotateService.execute
-   - [x] implement + re-verify
-   ```
-2. **Collapse the entry in `tasks.md`** to a direct two-line tombstone. The heading stays
-   verbatim because numbering is permanent and `todo-verify` matches it:
-   ```markdown
-   ### R4 ⟵ Task 5.2 — rotate audit log   [DONE 2026-07-10]
-   - archived → [journal:R4](artifacts/journal.md#revision-r4) (2026-07-10)
-   ```
+```markdown
+### R4 ⟵ Task 5.2 — rotate audit log   [DONE 2026-07-10]
+- archived → [journal:R4](artifacts/journal.md#revision-r4) (2026-07-10)
+```
 
-Never archive an `[open]` entry. Match `[done` case-insensitively so `[DONE …]` and
-annotated forms cannot escape. Leave `[superseded …]`, `[fixed …]`, and every other
-non-done tag untouched. Before appending, check for an existing anchor or exact
-`##`/`### R<n>` journal heading; reuse only an identical entry and never duplicate it.
-The canonical repair and conflict rules live in `todo-archive`. If 3+ completed entries
-still carry detail, offer `/todo-archive <short-name>`.
+Read the procedure and its safety rules there rather than from memory — the anchor format,
+the legacy-link repair, and the interrupted-run conflict handling all live in that one
+place, and a second copy here is how the two drift apart. If 3+ completed entries still
+carry detail, offer `/todo-archive <short-name>` for the sweep.
 
 ## Notes
-- **Session handoff:** when open revisions or tasks remain after this session's rework wraps, recommend `/todo-refer <short-name> resume` as the next-session entry point — it re-orients on current state and routes back here itself. Name `/todo-revise <short-name> R<n>` directly only as an immediate next step within the same session.
+- **Session handoff:** open revisions left at the end of a session hand off through
+  `/todo-refer <short-name> resume`; `/todo-revise <short-name> R<n>` is an act-now pointer
+  only. See [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Session handoff.
 - This skill edits `tasks.md` (the `## Revisions` block) and project code/artifacts — it does not rewrite `plan.md`. If a gap reveals the *plan itself* was wrong, say so and point to `/todo-plan` rather than silently editing the plan.
 - Revisions feed the infographic: the Stop hook (`infographic-staleness.sh`) will regenerate `artifacts/infographic.html` after rework lands.

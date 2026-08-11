@@ -21,37 +21,23 @@ Hybrid, matching the hub's house pattern:
 
 - **Gathering is mechanical** — reading `index.md`, counting checkboxes, extracting open
   task lines. When triaging **3+ projects**, delegate gathering to a **fast**-tier
-  subagent when dispatching is available. It returns, per project:
-  status, `done/total`, the verbatim open task lines grouped by phase, open `## Revisions`
-  headings, and any `artifacts/blockers.md` one-liners. For 1–2 projects just read inline.
+  subagent when dispatching is available; for 1–2 projects just read inline. The subagent
+  returns the object declared in [Step 2](#step-2--gather-remaining-work) and nothing else.
 - **The recommendation is judgment** — classifying each task against the routing rubric
   requires reading the plan's context. Do this **inline on the main model**; never
   delegate the tier-per-task decision to the gathering subagent.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this
-absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of
-the current working directory. This skill may be invoked from another repo; never assume
-cwd is the hub. (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location.
 
 ## Placeholder safety
 
-Every `<placeholder>` below is filled from a registry cell or a project file, never from
-something you authored, and each one ends up on a shell command line. **Validate before
-running any command in this skill:**
-
-- `<short-name>` and `<project>` must match `^[a-z0-9][a-z0-9-]*$`.
-- `<project-path>` must be a hub-relative path of those same segments joined by `/`, with
-  no leading `/` and no `..` segment.
-
-If a value fails, skip that command and report the offending row. Never interpolate it
-anyway, and never patch the value to make it pass — a cell carrying a shell metacharacter
-is a bad row to surface, not input to clean up here.
-
-The one path built from a value you did not read out of the hub is
-`<todo-graph-skill-dir>`: resolve it from the installed skill location, never from a
-project file or the user's prose.
+Validate every `<placeholder>` before it reaches a shell:
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Placeholder safety. Here
+that means `<short-name>`, `<project>`, and `<project-path>`. On a failure, skip the
+command and report the offending row.
 
 ## How the user invokes this
 
@@ -71,8 +57,9 @@ Read active `$TODO_HUB/index.md` for default and section scopes.
 - No argument → every project with status `ready` or `in-progress`. Mention `planning`
   projects only in a footer line ("N projects still in planning — no tasks to triage;
   run `/todo-plan`").
-- Short name → resolve active-first, then by exact match in `archive.md`; duplicates stop
-  the run. An archived project with no open work produces an empty result.
+- Short name → resolve per
+  [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project. An
+  archived project with no open work produces an empty result.
 - Section name (`work` / `self-initiative`) → all `ready`/`in-progress` rows in that table.
 - `done` projects are skipped unless they have **open Revisions** — those still count as
   remaining work and get triaged.
@@ -109,15 +96,37 @@ For each in-scope project (via the fast-tier gathering subagent when 3+, else in
   ```bash
   grep -nE '^(#{2,3} |\s*- \[ \])' tasks.md    # phase headers + open items only
   ```
-  Use the shared counting rules: **skip the `## Status` legend block** and
-  **skip anything inside HTML comments** (same awk snippet as `todo-list` sort mode /
-  `todo-state`).
+  Apply the shared exclusions from
+  [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks.
 - **Open Revisions**: every case-insensitive `### R<n> … [open]` heading, including
   suffixed IDs, with its `Gap:` line
   (`grep -iA1 -E '^### R[0-9]+[A-Za-z]*.*\[open\]' tasks.md`).
-- **Completion**: `done/total` via the shared awk snippet.
+- **Completion**: `done/total` via that same shared count.
 - **Blockers**: if `artifacts/blockers.md` exists, one line per blocker — a blocked task
   gets flagged, not model-routed (no model fixes a missing credential).
+
+**Return contract** — whether gathered inline or by subagent, the result takes this shape
+([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Subagent return
+contracts):
+
+```json
+{
+  "projects": [{
+    "short_name": "<registry short-name>",
+    "status": "planning | ready | in-progress | done",
+    "done": 14,
+    "total": 20,
+    "open_tasks": [{"id": "5.2", "phase": "<phase header>", "text": "<verbatim task line>"}],
+    "open_revisions": [{"id": "R3", "source_task": "4.1", "gap": "<the Gap: line>"}],
+    "blockers": ["<one line each, or [] when blockers.md is absent>"]
+  }]
+}
+```
+
+`text` is the task line **verbatim** — the board renders it and `/todo-execute` targets it
+by `id`, so a helpfully reworded task is a broken handle. An empty `open_tasks` with a
+`done` below `total` means the gatherer could not parse the file: say so rather than
+routing a project as finished.
 
 Also read each project's `plan.md` (Goal, Constraints, Key Decisions) — you need it to
 judge task complexity in Step 3. For a big sweep, the `## Goal` + `## Constraints`
@@ -182,13 +191,10 @@ Render the tier and resolved host model in the model cell, for example
 
 ### Skill pairing (procedure beats raw intelligence)
 
-For each item, also recommend a **skill to invoke** during execution. A skill is a
-distilled procedure — pairing the right one lets a *cheaper* model succeed where a
-bare expensive model would flail and retry, which is the real token win.
-
-**Only recommend skills that actually exist** — check the session's available-skills
-listing plus `.agents/skills/`, `.claude/skills/`, and installed plugins first. Never
-invent a skill name; if no installed skill fits, the cell is `—`.
+For each item, also recommend a **skill to invoke** during execution — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Composing with installed
+skills. Check `.agents/skills/`, `.claude/skills/`, and installed plugins alongside the
+session listing; when nothing installed fits, the cell is `—`.
 
 | Task smells like | Pair with (if installed) |
 |---|---|

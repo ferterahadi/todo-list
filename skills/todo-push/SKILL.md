@@ -68,12 +68,44 @@ Dispatch one general-purpose worker with shell and GitHub CLI access. Its prompt
 self-contained string. The worker may have no conversation history, so include every
 fact it needs. Wait for its result before taking the next step.
 
-## Handling a NEEDS_DECISION return
+## The worker's return contract
 
-The worker has no channel to the user, so it never asks questions. If its result starts
-with `NEEDS_DECISION:`, it stopped before mutating anything. The invoking session must
-ask the user through the host's structured choice prompt when available, using the
-worker's proposed groupings as options. Fold the answer into the prompt and dispatch the
+The worker returns this object and nothing else
+([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Subagent return
+contracts):
+
+```json
+{
+  "outcome": "shipped | pr-open | needs-decision | blocked | failed",
+  "pr_url": "<url, or null>",
+  "branch": "<name, or null>",
+  "base": "<base branch>",
+  "strategy": "merge | squash | rebase | null",
+  "committed": ["<every file passed as --file>"],
+  "left_out": [{"path": "<path>", "why": "<build output, scratch file, unrelated>"}],
+  "tests": {"command": "<what ran>", "scope": "full | scoped | skipped | none", "result": "passed | failed | not-run"},
+  "decision": {"kind": "split-or-bundle", "groups": [{"files": ["<path>"], "rationale": "<one line>"}]},
+  "cleanup_hint": "<commands for the user, or null>",
+  "error": "<one line, or null>"
+}
+```
+
+`outcome` is the whole handoff, and it maps to `land.sh`'s exit codes rather than to prose:
+
+| `outcome` | Means | Caller does |
+|---|---|---|
+| `shipped` | exit 0 — merged and landed on base | report `pr_url`, `left_out`, and any `cleanup_hint` |
+| `pr-open` | `--no-merge` was requested, or exit 10 blocked the merge | an orchestrator owns the merge; otherwise report the blocker and stop |
+| `needs-decision` | stopped at step 3, **nothing mutated** | ask the user, then re-dispatch |
+| `blocked` | exit 11 — a real rebase conflict, already aborted | the user decides; never guess a resolution |
+| `failed` | preflight non-zero or exit 12, **nothing mutated** | fix and re-run |
+
+`left_out` is not optional politeness — a file dropped silently is the failure this field
+exists to prevent, so an empty array is a claim that nothing was dropped.
+
+**On `needs-decision`:** the worker has no channel to the user and never asks questions.
+The invoking session asks through the host's structured choice prompt when available,
+using `decision.groups` as the options. Fold the answer into the prompt and dispatch the
 same task again. Never resolve the decision yourself.
 
 ## The task text to give the subagent
@@ -151,31 +183,33 @@ otherwise requires.
 5. Handle the result. land.sh prints JSON — pr_url, merged, branch, base, strategy,
    base_synced, unstaged_reported, conflict_files, cleanup_hint — and exits:
 
-   - 0  shipped and landed. Report the PR link, what merged, and what you deliberately
-        left out and why. In worktree mode, pass cleanup_hint back to the user as commands
-        to run — do not run them yourself and do not remove the worktree you are in.
-   - 10 the PR is open but the merge is blocked (branch protection, required review).
-        Report the blocker and the PR link, and stop. Never --admin, never force-merge.
+   - 0  shipped and landed → outcome "shipped". Carry cleanup_hint through in worktree
+        mode as commands for the user — do not run them yourself and do not remove the
+        worktree you are in.
+   - 10 the PR is open but the merge is blocked (branch protection, required review) →
+        outcome "pr-open", with the blocker in error. Stop. Never --admin, never
+        force-merge.
    - 11 a rebase onto the base branch conflicted. It was already aborted and nothing was
         forced. Look at conflict_files: if the overlap is mechanical, resolve it, then
         re-run the same land.sh command. If it is a real semantic overlap with what another
-        session landed, STOP and let the user decide — never guess a resolution.
-   - 12 a precondition failed (invalid argument, missing file). Fix the arguments and
-        re-run; nothing was mutated.
+        session landed, return outcome "blocked" and let the user decide — never guess a
+        resolution.
+   - 12 a precondition failed (invalid argument, missing file) → outcome "failed". Fix the
+        arguments and re-run; nothing was mutated.
 
 Judgment calls:
 - Unrelated changes bundled in the working tree (e.g. an app bugfix + an unrelated
   infra edit): you cannot ask the user directly. Stop at step 3, before running land.sh,
-  and return a message starting with the literal line `NEEDS_DECISION: split-or-bundle`
-  followed by the proposed groupings (files per group, one-line rationale each).
-  Do not proceed on your own. If the task text already states a split/bundle decision,
-  follow it without stopping.
+  and return `outcome: "needs-decision"` with `decision.groups` filled in — files per
+  group, one-line rationale each. Do not proceed on your own. If the task text already
+  states a split/bundle decision, follow it without stopping.
 - Nothing to ship: preflight.sh already reports this and exits non-zero. Say so instead of
   inventing a no-op branch and PR.
 - Never `git clean` or delete untracked files to "clean up" — leave them out of the
   --file list and mention them instead.
 
 Run fully autonomously — no pausing for confirmation between steps (the single
-exception is the NEEDS_DECISION early return above) — but narrate briefly as you go
-(branch name, PR link, merge result) and return a final summary.
+exception is the needs-decision early return above) — but narrate briefly as you go
+(branch name, PR link, merge result). Your return is the JSON object the skill declares
+under "The worker's return contract", and nothing else.
 ```

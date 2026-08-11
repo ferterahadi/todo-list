@@ -24,7 +24,10 @@ This is judgment work. Run it inline on the current session model; use at least 
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve every hub path against this absolute root regardless of the current working directory — this skill is usually invoked FROM the target repo, so never assume cwd is the hub. (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. This skill
+is usually invoked from the target repo, so the cwd is the one thing the hub is never
+resolved against.
 
 ## How the user invokes this
 
@@ -37,8 +40,9 @@ Plain language counts too: "review this against the plan", "did the parallel age
 
 ## Step 1 — Resolve project and load the plan
 
-Resolve an explicit short-name using `todo-refer`'s active-first, archive-on-exact-miss
-rules. With no name, match the current repo only against active `index.md` rows first;
+Resolve an explicit short-name per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project.
+With no name, match the current repo only against active `index.md` rows first;
 search `archive.md` only when no active row matches. One match → use it and say which
 registry supplied it; several or none → ask.
 
@@ -111,8 +115,9 @@ Verdict: not ready for /todo-verify — P2 is a claimed-done gap.
 The verdict line answers one question: **is this ready for `/todo-verify` / `/todo-push`,
 or does something go back?** Findings that survive user triage become `/todo-revise`
 gaps — offer to carry them over, don't write Revisions entries yourself. The `▶ Next`
-command is an act-now pointer; if the user will act in a later session instead,
-recommend `/todo-refer <short-name> resume` as the entry point.
+command is an act-now pointer; a later session gets `/todo-refer <short-name> resume`
+instead — see [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Session
+handoff.
 
 ## Notes
 - Hub-read-only; repo-read-only. This skill changes nothing — it produces findings.

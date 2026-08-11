@@ -22,7 +22,9 @@ use at least the **balanced** tier from [`../todo-llm-routing/SKILL.md`](../todo
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. Hub files
+are always edited in the hub, never in a target-repo worktree.
 
 ## How the user invokes this
 
@@ -35,15 +37,11 @@ The hub repo root is `$TODO_HUB` — an environment variable pointing at your hu
 
 ## Step 1 — Resolve the project path
 
-Resolve the short-name in `$TODO_HUB/index.md` first, then `$TODO_HUB/archive.md` only
-on an exact active miss.
+Resolve the project per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
+recording the `path`, owning registry, and section.
 
-- Short name → get the full `path`, status, owning registry, and section
-- Duplicate across registries → stop; do not choose one
-- Not found in either registry → tell the user and stop
-- Full path passed directly → use as-is
-
-Check the project status:
+Then check the project status:
 - `ready` or `in-progress` → proceed
 - `planning` → warn the user that plan.md/tasks.md may be empty, ask if they want to continue anyway
 - archived `done` → invocation is intent to resume execution; say that you will reopen it,
@@ -51,23 +49,11 @@ Check the project status:
 
 ## Step 1.5 — Enforce the project-graph gate
 
-Before loading full project context, run the bounded graph query:
-
-```bash
-python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
-  "$TODO_HUB" "<short-name>"
-```
-
-- Any unsatisfied `depends-on` edge → stop before changing status or creating a worktree.
-  Name the exact blockers and point at `/todo-graph why <short-name>`.
-- An identity, edge, or cycle issue incident to this project → stop and point at
-  `/todo-graph audit`; graph corruption makes execution order untrustworthy.
-- An `in-progress` project whose dependency regressed is **at risk**. Do not silently
-  demote it or continue.
-- `related-to`, `supersedes`, and legacy registry `related` hints never block.
-
-If the graph helper is unavailable, say so and stop rather than guessing dependencies
-from prose. This cheap gate exists to avoid loading and executing a blocked project.
+Run the gate from [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § The
+status-flip gate **before loading full project context**. It is cheap, and running it
+first is the point: a refusal stops the run before you have read the plan, changed a
+status, or created a worktree. Graph corruption makes execution order untrustworthy, so it
+stops the run too.
 
 ## Step 2 — Orient yourself
 
@@ -112,11 +98,10 @@ overwrite your working tree — the usual cause of "my changes vanished."
   git -C <repo> fetch origin
   git -C <repo> worktree add <repo>-wt/<short-name> -b todo/<short-name> origin/<base>
   ```
-  Validate first: `<short-name>` must match `^[a-z0-9][a-z0-9-]*$`, and `<repo>` and
-  `<base>` must contain no shell metacharacters — no `;` `|` `&` `$` `` ` `` `"` `'` `\`
-  `(` `)` `<` `>` and no newline. These are read out of a registry row and a `plan.md`, and
-  they land on a shell command line. If one fails, stop and report the offending row rather
-  than interpolating it or rewriting it to pass.
+  Validate `<short-name>`, `<repo>`, and `<base>` first — they come out of a registry row
+  and a `plan.md`, and they land on a command line. See
+  [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Placeholder safety. On a
+  failure, stop and report the offending row.
 
   `<base>` is the repo's default branch (usually main, occasionally master — confirm with
   `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`). All target-repo code, builds,
@@ -144,14 +129,13 @@ running it:
 
 Never batch steps 2–4 across multiple tasks. Rules of the road:
 
-- **Front-load installed process skills per task** — this skill organizes the work;
-  the craft comes from skills the user already has. A code feature/bugfix task →
-  invoke `superpowers:test-driven-development` if installed; a task that hits
+- **Front-load installed process skills per task**
+  ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Composing with
+  installed skills). A code feature/bugfix task → `superpowers:test-driven-development`;
   unexpected failures or a bug with unknown cause → `superpowers:systematic-debugging`
-  before proposing fixes (the per-task evidence loop above is
+  before proposing fixes. The per-task evidence loop above is
   verification-before-completion applied per task — if that skill is installed, its
-  discipline governs step 3). Only invoke skills present in the session's listing —
-  never invent one; if none fits, the loop above is the complete fallback.
+  discipline governs step 3.
 - Complete each task fully before moving to the next
 - Target-repo code changes go in the Step 4 worktree; hub outputs (docs, analysis,
   scripts) go to `artifacts/`
@@ -214,10 +198,9 @@ Summarize:
 
 Keep it short. The artifacts speak for themselves.
 
-**Session handoff:** a command named in this report is an *act-now* pointer for the
-current session. When the remaining work is for a later session, recommend
-`/todo-refer <short-name> resume` instead — it re-orients on current tasks/revisions/git
-state and routes to the right work command itself.
+**Session handoff:** the commands above are act-now pointers. Work left for a later session
+gets `/todo-refer <short-name> resume` instead — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Session handoff.
 
 ---
 
@@ -281,9 +264,27 @@ Every prompt MUST contain these slots:
    Tell the agent to use installed process skills for the craft
    (`superpowers:test-driven-development` for the code, `systematic-debugging` on
    unexpected failures) when they appear in its session listing.
-4. **Return contract** — branch name, worktree path, files added/changed, blockers.
-   Implement agents NEVER edit hub files, NEVER open PRs, NEVER merge — review and
-   shipping belong to step P4.
+4. **Return contract** — this object and nothing else
+   ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Subagent return
+   contracts):
+
+   ```json
+   {
+     "feature": "<feature name from the P1 partition>",
+     "status": "implemented | blocked",
+     "branch": "feat/<name>",
+     "worktree": "<absolute path>",
+     "tasks_covered": ["<task ids this feature closed>"],
+     "files": [{"path": "<repo-relative>", "change": "added | modified | removed | renamed"}],
+     "tests": {"command": "<what was run>", "result": "passed | failed | not-run"},
+     "blockers": [{"what": "<blocker>", "needs": "<what would clear it>"}]
+   }
+   ```
+
+   `status: "blocked"` requires a non-empty `blockers`, and `tests.result` must be
+   `not-run` rather than absent when no suite exists — those pairings are what stop a
+   half-built feature reading as a finished one. Implement agents NEVER edit hub files,
+   NEVER open PRs, NEVER merge — review and shipping belong to step P4.
 
 Agents that hit an external blocker (creds, live services) report it in their return
 and stop that feature — same rule as sequential Step 6, but the blocker lands in
@@ -303,17 +304,41 @@ slots:
 4. **Coverage gate** — for every file the diff ADDS: find all its call sites
    (grep the repo for imports/usages of its exported symbols), then run the repo's
    coverage tooling scoped to the added files and those call-site files. Require 100%
-   line coverage on all of them; write unit tests and re-run until green. Report the
-   final coverage numbers — never claim the gate passed without the run output.
+   line coverage on all of them; write unit tests and re-run until green.
 5. **Ship to PR only** — invoke the `todo-push` skill with the instruction: "You are in a
    linked worktree. Stop at the PR — do not merge; the orchestrator owns the merge
    queue." (todo-push's worktree mode handles the rest.)
-6. **Return contract** — PR URL, branch name, worktree path, review findings applied,
-   coverage output, blockers. Review agents NEVER edit hub files and NEVER merge.
+6. **Return contract** — this object and nothing else
+   ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Subagent return
+   contracts):
+
+   ```json
+   {
+     "feature": "<feature name from the P1 partition>",
+     "status": "pr-open | blocked",
+     "pr_url": "<url, or null when blocked>",
+     "branch": "feat/<name>",
+     "worktree": "<absolute path>",
+     "review_findings": [{"finding": "<one line>", "where": "<file:line>", "applied": true}],
+     "coverage": {
+       "command": "<what was run>",
+       "line_pct": 100,
+       "files": ["<the added files and their call sites>"],
+       "result": "passed | failed | not-run"
+     },
+     "blockers": [{"what": "<blocker>", "needs": "<what would clear it>"}]
+   }
+   ```
+
+   `coverage.line_pct` is a number the agent read out of a real run — that field is the
+   gate, so an agent that cannot fill it returns `result: "not-run"` rather than a claim.
+   Review agents NEVER edit hub files and NEVER merge.
 
 ## Step P5 — Serial merge queue
 
-Parallel until PR; **serial at merge**. When agents return, merge PRs one at a time:
+Parallel until PR; **serial at merge**. Queue only the returns whose `status` is
+`pr-open`; a `blocked` return has no PR and goes to Step P7 as a blocker, not to the
+queue. Merge the rest one at a time, reading `pr_url` and `worktree` from each return:
 
 ```
 git -C <repo>-wt/<feat> fetch origin
@@ -348,14 +373,17 @@ git -C <repo> pull --ff-only        ← once, if primary sits on <base> and is c
 
 ## Step P7 — Reconcile hub state and report
 
-Only now, and only you: tick the completed task lines in `tasks.md`, write blockers to
-`artifacts/blockers.md`, and set the active registry status per sequential Step 7 (a
-`## Verification` block in plan.md means stay `in-progress` and point at
-`/todo-verify` — merged PRs + unit tests ≠ done).
+Only now, and only you: tick the task lines named in each merged feature's
+`tasks_covered`, write every return's `blockers` into `artifacts/blockers.md`, and set the
+active registry status per sequential Step 7 (a `## Verification` block in plan.md means
+stay `in-progress` and point at `/todo-verify` — merged PRs + unit tests ≠ done).
 
-Report per feature: PR link, merge result, coverage numbers, blockers. Keep it short.
-The sequential Step 7 session-handoff rule applies here too: work left for a later
-session gets `/todo-refer <short-name> resume`, not a direct work command.
+Tick from `tasks_covered`, not from your own reading of the diff — the implement agent
+declared which tasks it closed, and re-deriving that is how a task nobody built gets
+ticked.
+
+Report per feature: `pr_url`, merge result, `coverage.line_pct`, blockers. Keep it short.
+Step 7's session-handoff rule applies here too.
 
 ## Parallel-mode rules
 

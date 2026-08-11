@@ -16,8 +16,9 @@ least the **balanced** tier.
 
 ## Hub and compiler
 
-Resolve the hub from `$TODO_HUB` (default `~/todo`) regardless of the current working
-directory. The deterministic compiler is:
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. The
+deterministic compiler is:
 
 ```bash
 python3 <todo-graph-skill-dir>/scripts/graph-report.py <mode> "$TODO_HUB" [args]
@@ -91,13 +92,11 @@ python3 <skill-dir>/scripts/graph-report.py path "$TODO_HUB" "<from>" "<to>"
 python3 <skill-dir>/scripts/graph-report.py audit "$TODO_HUB"
 ```
 
-**Validate before running any of these.** `<project>`, `<from>`, and `<to>` are project
-names taken from the user's prose or from a registry cell, and they land on a shell command
-line — each must match `^[a-z0-9][a-z0-9-]*$`. Resolve `<skill-dir>` from the installed
-skill location, never from a project file or the user's prose. If a name fails, stop and
-report that name: do not interpolate it anyway, and do not rewrite it into something that
-passes. A project name carrying a quote or a shell metacharacter is a bug in the row that
-produced it, not input to clean up here.
+**Validate before running any of these** —
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Placeholder safety.
+`<project>`, `<from>`, and `<to>` come from the user's prose or a registry cell and must
+match `^[a-z0-9][a-z0-9-]*$`; `<skill-dir>` resolves from the installed skill location. On
+a failure, stop and report that name.
 
 Trust the helper's exact-name resolution and issue rows. Do not open all project plans,
 tasks, or journals afterwards. Read one named `plan.md` only when the user asks for its

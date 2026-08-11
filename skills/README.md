@@ -12,6 +12,13 @@ process skills the session has (superpowers brainstorming / TDD / systematic-deb
 finishing-a-development-branch, code-review, dataviz, …), each with a complete built-in
 fallback when nothing relevant is installed.
 
+Second house rule: **each shared rule is written once.** `todo-conventions` holds the
+contract every skill follows; a skill carries the operative one-liner where the rule binds
+and links back for the reasoning. Where a rule has a natural owner it stays there —
+date stamping in `todo-state`, revision archival in `todo-archive`, model tiers in
+`todo-llm-routing` — and everyone else points at it. Two copies of a rule are two rules
+waiting to disagree.
+
 | Skill | Purpose |
 |-------|---------|
 | `todo-list` | Show active projects at a glance; `archive` reads the cold completed registry and `sort` reorders active rows by task completion (fast tier) |
@@ -31,6 +38,7 @@ fallback when nothing relevant is installed.
 | `todo-infographic` | Turn a plan into a one-page HTML infographic, fresh theme each time (+ staleness hook). Generation uses balanced tier, high effort |
 | `todo-push` | General-purpose git shipping workflow (any repo): branch off main, commit, push, PR, merge, land back on main (fast tier) |
 | `todo-style` | Install the bundled response-style pack into the *global* agent instruction file — `~/.claude/CLAUDE.md` for Claude Code, `~/.codex/AGENTS.md` for Codex — after backing the current file up into `$TODO_HUB/backups/agent-instructions/`. Opt-in, confirmation-gated, reversible via `restore` (fast tier) |
+| `todo-conventions` | The contract every skill shares: hub-relative path resolution, active-first project lookup, placeholder validation before a shell, real-task counting, the status-flip graph gate, session handoff, and pointers to the canonical owners of date stamping and revision archival. A reference, never invoked directly |
 | `todo-llm-routing` | Map frontier/deep/balanced/fast capability tiers to the available Claude Code or Codex model |
 
 Status lifecycle: `planning → ready → in-progress → done`. The `plan → do → check → revise`

@@ -30,34 +30,13 @@ Run inline on at least the **balanced** tier from
 work — assembling the picture means deciding what matters — so keep it on the session
 model rather than delegating it.
 
-## Hub location and registry contract
+## Hub location and placeholder safety
 
-The hub root is `$TODO_HUB` (default `~/todo`) — an environment variable pointing at your
-hub folder. Resolve **every** hub path against this absolute root regardless of the
-current working directory; this skill is often invoked from another repo, so never assume
-cwd is the hub.
-
-- `index.md` contains active projects and is the default hot path.
-- `archive.md` contains completed projects and is read only for an explicit archive view
-  or when an exact short-name is absent from `index.md`.
-
-Never use a same-named `index.md` from the current code repo.
-
-## Placeholder safety
-
-Every `<placeholder>` in this skill's commands is filled from a registry cell, a project
-file, or free text the user typed — never from something you authored — and each one ends
-up on a shell command line. **Validate before running any command below:**
-
-- `<short-name>`, `<source>`, `<target>` must match `^[a-z0-9][a-z0-9-]*$`.
-- `<project-path>` must be a hub-relative path of those same segments joined by `/`, with
-  no leading `/` and no `..` segment.
-- `<repo>`, `<owner>`, `<base>` must contain no shell metacharacters — no `;` `|` `&` `$`
-  `` ` `` `"` `'` `\` `(` `)` `<` `>` and no newline.
-
-If a value fails, skip that command and report the offending row or argument. Never
-interpolate it anyway, and never patch the value to make it pass — a cell carrying a
-metacharacter is a bad row to surface, not input to clean up here.
+Resolve every hub path against `$TODO_HUB`, and validate every `<placeholder>` before it
+reaches a shell — [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md)
+§ Hub location and § Placeholder safety. This skill touches the widest set of values in
+the hub (`<short-name>`, `<project-path>`, `<repo>`, `<owner>`, `<base>`); on a failure,
+skip the command and report the offending row rather than repairing it.
 
 ## Invocation
 
@@ -75,18 +54,15 @@ mean grounding; "where did we leave the token rotation work", "continue where we
 
 ## Step 1 — Resolve the project
 
-1. Run bounded exact-name checks against both registry tables; do not load either file
-   into model context.
-2. If both match, stop and report registry corruption.
-3. Otherwise select `index.md` first; select `archive.md` only on an active miss. Say so
-   when the project turns out to be archived.
-4. If exact lookup fails, fuzzy-match names from both files and ask for confirmation.
-5. With no name in grounding mode, list active names from `index.md` only and ask which
-   project.
-6. With no name in resume mode, pick the active `in-progress` project whose files changed
-   most recently (`ls -t` the project folders' `tasks.md`), say which one you picked, and
-   offer the others. No `in-progress` projects at all → show the index the way
-   `/todo-list` does and ask.
+Resolve per [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a
+project, using **bounded exact-name checks** against both registry tables rather than
+loading either file into model context. Three fallbacks are this skill's own:
+
+- Exact lookup fails → fuzzy-match names from both files and ask for confirmation.
+- No name, grounding mode → list active names from `index.md` only and ask which project.
+- No name, resume mode → pick the active `in-progress` project whose `tasks.md` changed
+  most recently (`ls -t`), say which one you picked, and offer the others. No
+  `in-progress` projects at all → show the index the way `/todo-list` does and ask.
 
 Record the owning registry, section, path, repo, status, and related names. Resolve the
 project folder as `$TODO_HUB/<path>`.

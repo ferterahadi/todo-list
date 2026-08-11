@@ -13,7 +13,10 @@ run it inline.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, the new project folder under `projects/work/` or `projects/self-initiative/`, and its files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to the scaffolding subagent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — including the new project folder under
+`projects/work/` or `projects/self-initiative/`. See
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location, and pass
+that absolute root to the scaffolding subagent so it writes there, not into the cwd.
 
 ## How the user invokes this
 
@@ -96,12 +99,9 @@ Add a row to the correct section table (`## Work` or `## Self-initiative`) in `i
 - `path` is the project folder path relative to the hub root.
 - `repo` stays `-` — the local codebase path is confirmed later during `/todo-plan`.
 - `status` is `planning` — the plan isn't filled in yet.
-- `started` is today's date (`YYYY-MM-DD`) — the lowest-tier provisional stamp in the
-  `in-progress` > `ready` > `planning` > `completed` fallback chain (`todo-state`
-  Step 3.5). It gets overwritten by a `ready` or `in-progress` flip later; this is just the
-  earliest signal available. `completed` stays `-`.
-- `elapsed (days)` stays `-` — computed once the project reaches `done` (`completed −
-  started` in whole days).
+- `started` is today's date (`YYYY-MM-DD`) — the lowest-tier provisional stamp, overwritten
+  by a later `ready` or `in-progress` flip. `completed` and `elapsed (days)` stay `-`. See
+  `todo-state` § Date stamping for the full tier chain.
 - `infographic` stays `-` — `/todo-infographic` fills it after the plan exists.
 - `related` stays `-` for new projects. It is a legacy context-only field retained for
   existing hubs; canonical typed relationships now live in `plan.md`.
@@ -115,15 +115,10 @@ python3 <todo-graph-skill-dir>/scripts/graph-report.py can-link \
   "$TODO_HUB" "<source>" "<relation>" "<target>"
 ```
 
-**Validate before running it.** `<source>` and `<target>` are derived from free text the
-user typed or read out of a registry cell, and they land on a shell command line:
-
-- `<source>` and `<target>` must each match `^[a-z0-9][a-z0-9-]*$`.
-- `<relation>` must be exactly `depends-on`, `supersedes`, or `related-to`.
-
-If a value fails, stop and report that value — do not interpolate it anyway, do not
-quietly rewrite it into something that passes. A name carrying a quote or a shell
-metacharacter is a bug in the row that produced it, not input to clean up here.
+**Validate before running it** —
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Placeholder safety.
+`<source>` and `<target>` come from free text the user typed or a registry cell; on a
+failure, stop and report that value.
 
 `EXISTS` confirms that the stored row is valid. On `ERROR`, remove only the seeded
 relationship row, keep the new project registered as `planning`, and report why the edge

@@ -8,6 +8,32 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.11.0] — 2026-08-11
+
+### Added
+- **`todo-conventions` holds the contract every skill shares.** Hub-relative path
+  resolution, active-first project lookup, placeholder validation, real-task counting, the
+  status-flip graph gate, session handoff, and composing with installed skills are written
+  once and linked from the skills that apply them.
+
+### Changed
+- **Shared rules now live with one owner and are referenced, not restated.** Date stamping
+  stays in `todo-state`, revision archival in `todo-archive`, and the skills that apply
+  them carry the operative line plus a link instead of a second copy.
+- **Subagents return a declared JSON object instead of prose.** `/todo-execute`'s implement
+  and review waves, `/todo-triage` and `/todo-state audit` gathering, `/todo-infographic`
+  builds, and the `/todo-push` worker each declare their fields, enums, and failure states.
+- **`/todo-push` reports an `outcome` enum rather than a `NEEDS_DECISION:` string prefix**,
+  mapping `land.sh`'s exit codes to `shipped`, `pr-open`, `needs-decision`, `blocked`, and
+  `failed`.
+- **`/todo-state audit` distinguishes unchecked evidence from absent evidence.** Repo fields
+  carry an explicit `unknown`, so a project nobody could check is reported as unverifiable
+  rather than drifted.
+
+### Fixed
+- **Four skills pointed at a `todo-state` "Step 3.5" that does not exist.** `todo-add`,
+  `todo-plan`, `todo-revise`, and `todo-verify` now cite `todo-state` § Date stamping.
+
 ## [1.10.1] — 2026-08-05
 
 ### Changed

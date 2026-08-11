@@ -41,11 +41,9 @@ See the README for how to point this at a concrete server.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder
-(default `~/todo`). Resolve **every** hub path against this root — active `index.md`,
-cold `archive.md`, and each project's files — regardless of the current working directory.
-This skill may be invoked from another repo; never assume cwd is the hub. Pass this root
-to the edit sub-agent so it writes there, not into the cwd. (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. Pass that
+root to the edit subagent so it writes there, not into the cwd.
 
 ## How the user invokes this
 
@@ -60,13 +58,9 @@ Plain language counts too: "verify the token feature", "did the lifecycle spec p
 
 ## Step 1 — Resolve the project
 
-Resolve the short-name in `$TODO_HUB/index.md` first, then `$TODO_HUB/archive.md` only
-on an exact active miss. Record the owning registry, section, full path, and status.
-
-- Short name → look it up active-first; a duplicate across registries stops the run.
-- Not found in either registry → tell the user and stop.
-- Full path → use as-is.
-- No project named and not obvious from context → ask which project before doing anything.
+Resolve the project per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
+recording the owning registry, section, full path, and status.
 
 ## Step 2 — Read the `## Verification` block
 
@@ -133,17 +127,10 @@ If `Coverage source` is not set, skip this step.
 Apply these rules. Mechanical `tasks.md` / registry edits may be delegated to a
 fast-tier subagent (as `todo-state` does); the interpretation is yours.
 
-Before any green result can flip the project to `done`, run:
-
-```bash
-python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
-  "$TODO_HUB" "<short-name>"
-```
-
-Passed tests may still tick their covered tasks, but an unsatisfied hard dependency or
-incident graph identity/cycle issue keeps status `in-progress`. Report the exact graph
-blocker and point at `/todo-graph why <short-name>` or `/todo-graph audit`. If the helper
-is unavailable, do not cross the `done` gate. Context and lineage edges never gate.
+Before any green result can flip the project to `done`, run the gate from
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § The status-flip gate.
+Passing tests still tick their covered tasks when the gate refuses — a blocked graph holds
+the *status* at `in-progress`, not the evidence.
 
 | Verification result | tasks.md | owning registry status | Revisions |
 |---|---|---|---|
@@ -196,7 +183,7 @@ two skills interlock. Append to (or create) the `## Revisions` block at the bott
 
 **Status honesty** (mirror `todo-state` / `todo-revise`): open Revisions on a
 project marked `done` mean it isn't done. If archived, move the row back to `index.md`;
-set `in-progress` and clear `completed` / `elapsed (days)` (Step 3.5). All tasks `[x]`
+set `in-progress` and clear `completed` / `elapsed (days)` (§ Date stamping). All tasks `[x]`
 and no case-insensitive open Revisions, with a clean project-graph gate → offer `done`,
 stamping `completed` = today and `elapsed (days)` when accepted.
 
@@ -205,9 +192,9 @@ stamping `completed` = today and `elapsed (days)` when accepted.
 - Grounded coverage % and gap counts, if coverage ran.
 - Exactly what was written: which tasks ticked, status before → after (plus any
   `started`/`completed`/`elapsed (days)` stamped or cleared), which `R<n>` Revisions opened.
-- If Revisions were opened: "Run `/todo-revise <short-name>` to fix now — or
-  `/todo-refer <short-name> resume` when picking this up in a later session." Direct work
-  commands are act-now pointers; `/todo-refer … resume` is the entry point for deferred pickup.
+- If Revisions were opened: `/todo-revise <short-name>` to fix now, or
+  `/todo-refer <short-name> resume` for a later session — see
+  [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Session handoff.
 
 ## Notes
 - This is the producer half of the Revisions loop; `todo-revise` is the consumer. Keep the
