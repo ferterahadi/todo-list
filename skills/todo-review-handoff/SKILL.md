@@ -27,10 +27,10 @@ floor.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder
-(default `~/todo`). Resolve every hub path against this absolute root regardless of the
-current working directory — this skill is usually invoked FROM the target repo, so never
-assume cwd is the hub. (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. This skill
+is usually invoked from the target repo, so the cwd is the one thing the hub is never
+resolved against.
 
 **The hub is optional here.** A review handoff is frequently about a pull request in a
 repo that has no hub project — another team's, another product's. Both paths are
@@ -74,8 +74,9 @@ only reads source cannot produce those claims.
 
 ## Step 2 — Resolve the target and the recipient
 
-**Hub project?** Resolve an explicit short-name using `todo-refer`'s active-first,
-archive-on-exact-miss rules. With no name, match the current repo against active
+**Hub project?** Resolve an explicit short-name per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project. With
+no name, match the current repo against active
 `index.md` rows first, `archive.md` only on a miss. One match → use it and say which
 registry supplied it. Several or none → treat it as standalone; don't ask twice.
 

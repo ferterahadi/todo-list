@@ -14,8 +14,10 @@ current session model; use at least the **balanced** tier from
 ## Compose with installed skills — organize, don't replace
 
 This skill owns the **organization layer**: hub resolution, the plan.md/tasks.md format,
-the quality gate, index bookkeeping. The **thinking** belongs to the best process skill
-the user already has installed — check the session's available-skills listing:
+the quality gate, index bookkeeping. The **thinking** belongs to the best process skill the
+user already has — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Composing with installed
+skills. Here that means:
 
 - **Discovery/design** — if `superpowers:brainstorming` is installed, run it FIRST; it
   explores intent, requirements, and design better than a question list. Step 2's seven
@@ -25,8 +27,6 @@ the user already has installed — check the session's available-skills listing:
   multi-step code change, let it draft the implementation plan, then translate the result
   into the hub format (Steps 5–6). Any doc it writes into the target repo
   (`docs/superpowers/…`) gets an immediate pointer row in `research/superpowers-docs.md`.
-- Never invent a skill name; if nothing relevant is installed, the built-in steps below
-  are the complete fallback.
 
 Delegation changes who thinks, not what ships: the output always lands in the hub's
 plan.md/tasks.md shape, and the Step 6.5 gate runs on the final files regardless of
@@ -34,7 +34,9 @@ which skill produced the content.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. (The `repo` column still points at the *target* codebase elsewhere — that's separate from the hub.) (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. The `repo`
+column points at the target codebase elsewhere and is not resolved against the hub.
 
 ## How the user invokes this
 
@@ -45,13 +47,9 @@ The hub repo root is `$TODO_HUB` — an environment variable pointing at your hu
 
 ## Step 1 — Resolve the project path
 
-Resolve the project active-first in `$TODO_HUB/index.md`, then by exact short-name in
-`$TODO_HUB/archive.md`.
-
-- Short name → get the full `path`, `repo`, owning registry, and section
-- Duplicate across registries → stop; do not choose one
-- Not found in either registry → tell the user and stop
-- Full path → use as-is, still resolve its owning registry row
+Resolve the project per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
+recording the `path`, `repo`, owning registry, and section.
 
 ## Step 2 — Ask questions first
 
@@ -173,13 +171,10 @@ never present a plan that fails one:
   `index.md` before changing it. Replanning makes the project active again.
 - Set `status` to `ready`
 - Set `repo` to the confirmed absolute local path
-- Set `started` to today's date **only if the prior status was `planning`** (the normal
-  case — overwriting the tier-3 creation stamp `/todo-add` set). This is `todo-state`
-  Step 3.5's tier-2 signal — the `in-progress` > `ready` > `planning` > `completed` chain.
-  A later genuine flip to `in-progress` overwrites it again with the real, final start
-  date. If you're **re-planning** a project that already progressed past `ready` (status
-  was `in-progress` or `done`), leave `started` alone — it holds the real start date and
-  must never be clobbered by a replan.
+- Set `started` to today's date **only if the prior status was `planning`**, overwriting the
+  creation stamp `/todo-add` left. Re-planning a project that already reached `in-progress`
+  or `done` leaves `started` alone — it holds the real start date and a replan must never
+  clobber it. See `todo-state` § Date stamping.
 
 ## Step 8 — Confirm with a plan-at-a-glance render
 

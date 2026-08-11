@@ -46,12 +46,9 @@ The drift *verdicts* are judgment — always yours, inline on the main model.
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder
-(default `~/todo`). Resolve **every** path against this absolute root — active
-`index.md`, cold `archive.md`, and each project's `path`/`tasks.md` — regardless of the
-current working directory. This skill may be invoked from another repo; never assume cwd
-is the hub. Pass this absolute root to any edit subagent so it writes there, not into the
-cwd. (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. Pass that
+absolute root to any edit subagent so it writes there, not into the cwd.
 
 ## How the user invokes this
 
@@ -75,14 +72,10 @@ accurate". Interpret that against the resolved project.
 
 ## Step S1 — Resolve the project
 
-Resolve exact short-names in `$TODO_HUB/index.md` first, then `$TODO_HUB/archive.md`
-only on an active miss. Record the owning file and section with the full path and status.
-
-- Short name → look it up active-first to get the `path`
-- Full path passed directly → use as-is
-- Duplicate across both registries → stop; the hub is corrupt and choosing one loses state
-- Not found in either registry → tell the user and stop
-- No project named and it's not obvious from context → ask which project before changing anything
+Resolve the project per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
+recording the owning file and section with the full path and status. This skill writes to
+that row, so getting the owner wrong writes state into the wrong registry.
 
 ## Step S2 — Show current state before editing
 
@@ -113,19 +106,10 @@ in Step S2.
 **Change status only** — update the owning row's `status` column to one of `planning` /
 `ready` / `in-progress` / `done`; the archived-project reopen rule below still applies.
 
-Before a flip to `in-progress` or `done`, run:
-
-```bash
-python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
-  "$TODO_HUB" "<short-name>"
-```
-
-Refuse the status flip when a hard prerequisite is unsatisfied or an incident graph
-identity/cycle issue exists. Name the blocker and point at `/todo-graph why <short-name>`
-or `/todo-graph audit`. Context and lineage edges never gate state. A direct state edit
-must not bypass the same dependency gate that `/todo-execute` enforces.
-If the helper is unavailable, stop before a flip to `in-progress` or `done`; do not infer
-dependency safety from the registry's legacy `related` cell.
+Before a flip to `in-progress` or `done`, run the gate from
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § The status-flip gate. A
+direct state edit must not bypass the dependency check `/todo-execute` enforces — that
+loophole is the whole reason the gate is repeated here.
 
 **Reopen an archived project** — any status change away from `done` is also a registry
 move. Remove the row verbatim from its section in `archive.md`, append it to the same
@@ -151,8 +135,8 @@ ready" while tasks are all checked, do what they asked and just note the mismatc
 
 **Archive housekeeping:** if the `tasks.md` you touched exceeds 20,480 bytes, mention it
 and offer `/todo-archive <short-name>`. When this skill itself flips a revision tag to a
-case-insensitive `[done…]`, immediately apply `todo-archive`'s canonical single-entry
-rule: add `<a id="revision-r<n>"></a>` before the exact journal entry and leave
+case-insensitive `[done…]`, apply `todo-archive` Step 2 to that entry immediately — an
+`<a id="revision-r<n>"></a>` anchor before the journal entry and
 `[journal:R<n>](artifacts/journal.md#revision-r<n>)` in the two-line tombstone. Never
 archive ordinary task checkboxes.
 
@@ -173,15 +157,16 @@ corrections the user confirms, through set mode's edit rules.
 ## Step A1 — Resolve scope
 
 Read `$TODO_HUB/index.md`. Default scope is every active `ready`, `in-progress`, or
-`done` row; `planning` has nothing to drift against. An explicit short-name resolves
-active-first, then by exact match in `archive.md`. Duplicate or missing names stop.
+`done` row; `planning` has nothing to drift against. An explicit short-name resolves per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project.
 
 ## Step A2 — Gather evidence per project
 
 Four sources, cross-checked:
 
 1. **Recorded status** — the `status` column.
-2. **Task state** — `done/total` via the [shared awk snippet](#counting-tasks), plus
+2. **Task state** — `done/total` via the shared count in
+   [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks, plus
    case-insensitive open `### R<n> … [open]` revision headings.
 3. **Repo evidence** — when the row names a local repo:
    ```bash
@@ -191,20 +176,48 @@ Four sources, cross-checked:
    gh pr list --repo <owner>/<repo> --search 'head:todo/<short-name>' --state all --limit 3
    git -C <repo> worktree list | grep '<short-name>'
    ```
-   **Validate before running these.** `<repo>`, `<owner>`, `<base>`, `<short-name>`, and
-   `<plan-scoped-paths>` are all read out of a registry row or a `plan.md`, and each lands
-   on a shell command line. `<short-name>` must match `^[a-z0-9][a-z0-9-]*$`; the rest must
-   contain no shell metacharacters — no `;` `|` `&` `$` `` ` `` `"` `'` `\` `(` `)` `<` `>`
-   and no newline. A value that fails means skip that command and report the offending row
-   as an audit finding: never interpolate it anyway, never patch it to make it pass. A cell
-   carrying a metacharacter is exactly the kind of drift this audit exists to surface.
+   **Validate before running these** —
+   [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Placeholder safety.
+   `<repo>`, `<owner>`, `<base>`, `<short-name>`, and `<plan-scoped-paths>` all come out of
+   a registry row or a `plan.md`. A value that fails means skip that command and report the
+   offending row **as an audit finding** — a cell carrying a metacharacter is exactly the
+   kind of drift this audit exists to surface.
 
-   Take what succeeds (no gh auth, no repo → note the gap, don't fail the audit). What
-   you want per project: **branch merged / PR open / commits exist / worktree lingering /
-   no trace at all**.
+   Take what succeeds (no gh auth, no repo → record the gap, don't fail the audit).
 
    Hub-only projects (repo `-`) are checked on sources 1–2 plus artifacts: `done` with an
    empty `artifacts/` is suspicious; say so.
+
+   **Return contract** — whether gathered inline or by the fast-tier subagent, evidence
+   lands in this shape
+   ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Subagent return
+   contracts):
+
+   ```json
+   {
+     "projects": [{
+       "short_name": "<registry short-name>",
+       "recorded_status": "planning | ready | in-progress | done",
+       "done": 12,
+       "total": 20,
+       "open_revisions": ["R3"],
+       "repo": {
+         "checked": true,
+         "branch": "merged | open | absent | unknown",
+         "pr": "merged | open | none | unknown",
+         "commits": 3,
+         "worktree": "present | absent | unknown"
+       }
+     }]
+   }
+   ```
+
+   **`unknown` is mandatory, not optional.** A repo that isn't on disk, a `gh` call that
+   failed, a command skipped by placeholder validation — each yields `unknown` for that
+   field, never `absent` or `none`. `absent` means checked and not there; `unknown` means
+   not checked. Step A3 turns the first into drift and the second into *unverifiable*, and
+   collapsing them is how a project nobody could check gets reported as a project that
+   failed.
 
 4. **Project-graph evidence** — run one bounded audit for the hub, then associate its
    incident issues and hard blockers with each in-scope project:
@@ -229,8 +242,9 @@ Compare the sources. The canonical mismatches and their fixes:
 | `in-progress` | hard prerequisite is no longer settled | execution order at risk | stop execution; `/todo-graph why <name>` |
 | `done` | hard prerequisite is unresolved or dishonest | completion graph is inconsistent | audit evidence; do not auto-reopen |
 
-Evidence gaps (couldn't check gh, repo missing locally) make a project **unverifiable**,
-not drifted — report it in its own bucket, never guess a verdict from partial evidence.
+Any `unknown` in a project's `repo` block makes it **unverifiable**, not drifted — report
+it in its own bucket, never guess a verdict from partial evidence. That is a field check,
+not a judgment call: read the value, don't reason about what it probably was.
 
 ## Step A4 — Report the drift board
 
@@ -309,25 +323,6 @@ SessionStart hook (`hooks/migrate-index-dates.sh`) migrates and git-backfills it
 next session. If you hit an unmigrated table mid-edit, widen it yourself first: insert
 `started` / `completed` / `elapsed (days)` after `status` in the header and separator, and
 `-` cells in every row, then apply the stamp.
-
-## Counting tasks
-
-To report progress (e.g. "5/8 done"), count the checkboxes — but skip the `## Status`
-legend block that the `tasks.md` template includes (its `- [ ] Not started` / `- [x] Done`
-lines are documentation, not real tasks), skip `## Notes` / `## Context` sections, skip
-anything inside HTML comments (the template's `## Revisions` section ships a commented-out
-example with a `- [ ]` line), and skip fenced code blocks. These are the same exclusions
-the deterministic helpers apply (`graph-report.py`, `archive-report.sh`), so counts agree
-everywhere. Count only checkboxes under the actual work sections (`## Tasks`,
-`## Phase …`, or real `## Revisions` entries).
-
-A quick count from the shell (the shared snippet `todo-list` sort mode, `todo-triage`, and
-`todo-infographic` also use):
-
-```bash
-# completed/total real tasks — skips ## Status/Notes/Context, HTML comments, and fences
-awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^[[:space:]]*(```|~~~)/{f=!f; next} f{next} /^## /{p=($0!~/^## (Status|Notes|Context)([[:space:]]|$)/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
-```
 
 ## Notes
 

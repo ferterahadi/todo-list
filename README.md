@@ -187,9 +187,10 @@ file.
 
 |Skill|Purpose|
 |-|-|
+|`todo-conventions`|The hub contract every skill follows — where files live, how a project is looked up, what gets checked before a status changes|
 |`todo-llm-routing`|The shared settings that decide which model each skill asks for|
 
-All 17 above share it.
+All 17 above share both.
 
 Projects move through `planning → ready → in-progress → done`. If you want the full rules
 for a skill, they're in [`skills/`](skills/).

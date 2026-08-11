@@ -9,7 +9,9 @@ You turn a project's `plan.md` + `tasks.md` into a **one-page, self-contained HT
 
 ## Hub location
 
-The hub repo root is `$TODO_HUB` — an environment variable pointing at your hub folder (default `~/todo`). Resolve **every** path against this absolute root — active `index.md`, cold `archive.md`, and each project's files — regardless of the current working directory. This skill may be invoked from another repo; never assume cwd is the hub. Pass this absolute root to each build subagent so it reads and writes there, not into the cwd. (Same convention as `todo-refer`.)
+Resolve every hub path against `$TODO_HUB` — see
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. Pass that
+absolute root to each build subagent so it reads and writes there, not into the cwd.
 
 ## Execution tier
 
@@ -22,11 +24,31 @@ resolve projects, check stubs, register the result, and confirm.
 When dispatching, spawn **one subagent per project** and run them in parallel only when
 the user explicitly requested several projects. Give each subagent that project's
 `plan.md`, `tasks.md`, any existing HTML, and the Step 3 specification. It writes
-`artifacts/infographic.html` and returns a one-line confirmation. Then the orchestrator
-handles Steps 4–5. Use the host-specific balanced model only when the host supports
-per-dispatch model selection; never invent unsupported parameters.
+`artifacts/infographic.html` and returns this object and nothing else
+([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Subagent return
+contracts):
 
-**Compose with design skills.** Instruct each build subagent to load the `artifact-design` skill (if installed) before designing, and `dataviz` before drawing any chart-like element — progress bars, stat cards, phase meters all count. These skills are distilled design procedure; loading them is cheaper than a redesign round. If a design-critique / frontend-design skill is installed, the subagent runs one self-critique pass against it before writing the final file — one pass, not a loop.
+```json
+{
+  "short_name": "<project short-name>",
+  "result": "written | skipped-stub",
+  "path": "<hub-relative path to infographic.html, or null when skipped>",
+  "theme": "preserved | new",
+  "sections_dropped": ["flow", "footprint"]
+}
+```
+
+`theme` is the one field the orchestrator cannot check cheaply and the one rule most
+easily broken: `preserved` is only honest when `existingHtml` was supplied and every
+visual property carried over unchanged. `sections_dropped` names the sections Step 3 said
+to delete for want of data, so a thin infographic is explained rather than mistaken for a
+bad build.
+
+Then the orchestrator handles Steps 4–5, registering only the projects whose `result` is
+`written`. Use the host-specific balanced model only when the host supports per-dispatch
+model selection; never invent unsupported parameters.
+
+**Compose with design skills** ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Composing with installed skills). Instruct each build subagent to load `artifact-design` before designing, and `dataviz` before drawing any chart-like element — progress bars, stat cards, phase meters all count. If a design-critique / frontend-design skill is installed, the subagent runs one self-critique pass against it before writing the final file — one pass, not a loop.
 
 **Before dispatching**, check whether `artifacts/infographic.html` already exists for each project. If it does, read its full content and pass it to the subagent as `existingHtml`. The subagent uses this to preserve the theme exactly (see Step 3). Also gather the file footprint (Step 2.5) and pass it as `fileFootprint` — the subagent must never run git itself or invent file paths.
 
@@ -45,12 +67,10 @@ It is also fired automatically by the plugin's **Stop hook** (`infographic-stale
 
 ## Step 1 — Resolve the project(s)
 
-Resolve named projects active-first in `$TODO_HUB/index.md`, then by exact short-name in
-`$TODO_HUB/archive.md`. Record the owning registry.
+Resolve named projects per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
+recording the owning registry. Two scope rules are this skill's own:
 
-- Short name → look it up active-first; duplicates are corruption and stop the run.
-- Not found in either registry → tell the user and stop.
-- Full path → use as-is.
 - `all` → read both registries and operate on every `ready`, `in-progress`, or `done`
   project. Only when the user explicitly passes `all`.
 - No argument → resolve to the single project in scope for this session. If that's ambiguous, ask — do **not** default to every project.
@@ -117,11 +137,10 @@ Every reviewable element carries a short stable ID rendered as a small chip in i
 Rules: assign in document order on first generation. On regeneration, an element that still exists **keeps its ID**; new elements take the next unused number; never renumber or reuse a removed ID. Style the chip small and muted — it's a handle, not decoration.
 
 ### Counting tasks for the bars
-Count `- [ ]` (open) and `- [x]` (done) checkboxes per phase. **Skip the `## Status` legend block** that the tasks.md template ships (its `- [ ] Not started` / `- [x] Done` lines are documentation, not tasks), **skip `## Notes` / `## Context` sections**, **skip anything inside HTML comments** (the template's `## Revisions` section has a commented-out example with a `- [ ]` line), and **skip fenced code blocks** — the same exclusions the deterministic helpers apply. A shell count, if useful:
 
-```bash
-awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^[[:space:]]*(```|~~~)/{f=!f; next} f{next} /^## /{p=($0!~/^## (Status|Notes|Context)([[:space:]]|$)/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
-```
+Count open and done checkboxes **per phase**, applying the shared exclusions in
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks — the
+snippet there gives a whole-file count; scope it to each phase's line range for the bars.
 
 ## Step 4 — Register it in the owning registry
 
