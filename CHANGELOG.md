@@ -8,6 +8,12 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.11.3] — 2026-08-19
+
+### Changed
+- **Claude's `/todo-style` pack leads with the practical answer.** Briefings scan as
+  problem, fix, why it works, and next step; technical evidence follows only when useful.
+
 ## [1.11.2] — 2026-08-11
 
 ### Added
