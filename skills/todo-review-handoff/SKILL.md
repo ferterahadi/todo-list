@@ -253,7 +253,7 @@ script, fill the ruling sheet, hand it to a second agent), one line that the
 *reviewer is wrong* column is real, and one line naming the product decisions as the rows
 only they can settle.
 
-Keep it under 300 words. It competes with everything else in their inbox.
+Keep it short enough to read in an inbox skim — it competes with everything else there.
 
 ## Step 6 — Register and report
 

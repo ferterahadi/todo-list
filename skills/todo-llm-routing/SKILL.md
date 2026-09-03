@@ -10,15 +10,16 @@ not part of a skill's behavior.
 
 | Tier | Claude Code | Codex | Use for |
 |---|---|---|---|
-| `frontier` | `Fable 5.0`, high effort | `gpt-5.6-sol`, max effort | Security, payments, data integrity, concurrency, multi-repo architecture |
+| `frontier` | `Fable 5.1`, high effort | `gpt-5.6-sol`, max effort | Security, payments, data integrity, concurrency, multi-repo architecture |
 | `deep` | `Opus 5.0`, high effort | `gpt-5.6-sol`, high effort | Ambiguous design, unknown-cause debugging, cross-file refactors |
 | `balanced` | `Opus 5.0`, medium effort | `gpt-5.6-sol`, medium effort | Well-scoped implementation, verification, visual generation |
 | `fast` | `Opus 5.0`, low effort | `gpt-5.6-sol`, low effort | Mechanical edits, formatting, state updates, routine Git operations |
 
-This is a workload mapping, not a claim that the models are identical. On Claude Code all
-four tiers resolve to Opus and **reasoning effort is the only lever**; on Codex the tier picks
-between two models (`sol` above, `terra` below) and an effort level. Sonnet, Haiku, and Fable
-are never defaults — if Claude Code plan quota is tight, drop the tier rather than the model.
+This is a workload mapping, not a claim that the models are identical. On Claude Code the
+`frontier` tier resolves to Fable and the other three to Opus, with **reasoning effort as the
+lever between them**; on Codex the tier picks between two models (`sol` above, `terra` below)
+and an effort level. Sonnet and Haiku are never defaults — if Claude Code plan quota is
+tight, drop the tier rather than the model.
 
 ## When dispatching
 

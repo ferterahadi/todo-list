@@ -8,6 +8,16 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.11.4] — 2026-09-04
+
+### Changed
+- **Skill wording is simpler.** `/todo-*` skills remove repeated rules, caps-lock emphasis,
+  and model-hedging rationales while retaining their safeguards.
+- **Length guidance is qualitative.** `/todo-refer`, `/todo-triage`, `/todo-review-handoff`,
+  and both `/todo-style` packs describe the reader instead of word, line, or diff-line counts.
+- **`todo-llm-routing` prose matches its table.** The frontier tier resolves to Fable 5.1 on
+  Claude Code; the other tiers stay on Opus.
+
 ## [1.11.3] — 2026-08-19
 
 ### Changed

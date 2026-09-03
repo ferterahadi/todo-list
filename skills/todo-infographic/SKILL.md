@@ -58,10 +58,8 @@ model selection; never invent unsupported parameters.
 /todo-infographic event-fanout   ← one project by short-name
 /todo-infographic projects/work/...                ← full path also works
 /todo-infographic all                              ← every ready/in-progress/done project (explicit opt-in only)
-/todo-infographic                                  ← the project in scope for this session (NOT all stale ones)
+/todo-infographic                                  ← the project in scope for this session (not all stale ones)
 ```
-
-**Scope: single-project by default.** Generate the infographic only for the project the session is working on. Do **not** fan out to every project. `all` is an explicit opt-in — never inferred. If no single project is clearly in scope and no argument was given, ask which project rather than defaulting to all.
 
 It is also fired automatically by the plugin's **Stop hook** (`infographic-staleness.sh`, auto-registered): when a project whose status is `ready` or `in-progress` has a missing or stale `artifacts/infographic.html`, the hook lists it before ending the turn. The hook's list is a repo-wide staleness scan, **not** a scope instruction — regenerate only the listed project(s) you actually worked on this session, and leave the rest stale. If none of the listed projects relate to this session, stop without generating anything.
 
@@ -79,7 +77,7 @@ recording the owning registry. Two scope rules are this skill's own:
 
 For each target project read `plan.md` and `tasks.md`.
 
-**Stub check (important):** if `plan.md` still contains the template text `What success looks like in one sentence.` or has no real Goal/Scope content, it is an unfilled stub. **Do not generate an infographic for a stub.** Report it: e.g. "reserve-mcp-integration is marked `ready` but plan.md is still the template — run `/todo-plan <name>` to fill it first." Then skip that project.
+**Stub check:** if `plan.md` still contains the template text `What success looks like in one sentence.` or has no real Goal/Scope content, it is an unfilled stub. Don't generate an infographic for a stub; report it instead, e.g. "reserve-mcp-integration is marked `ready` but plan.md is still the template — run `/todo-plan <name>` to fill it first." Then skip that project.
 
 ## Step 2.5 — Gather the file footprint (git evidence, orchestrator side)
 

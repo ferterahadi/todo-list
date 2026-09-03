@@ -97,7 +97,7 @@ This is the binding to the verification MCP:
 ## Step 3 — Drive the gate run (record-only)
 
 Drive the verification MCP in **record-only** mode — you observe, you do not repair. If the
-server has an auto-repair / "heal" mode, turn it OFF:
+server has an auto-repair / "heal" mode, turn it off:
 
 1. Start the run for the feature, reusing a stable session/conversation handle if the
    server supports it. For a rerun (a run id was passed, e.g. `7cvh`), start from that id.
@@ -109,8 +109,8 @@ server has an auto-repair / "heal" mode, turn it OFF:
    Prefer the wait/stream tool over busy-polling a status endpoint.
 4. Pull the verdict from the result tool: which tests passed (ids / names) and which failed.
 
-**Degradation rule (important):** if the app can't boot — no creds, blocked deploy,
-health-check timeout — do **not** hard-fail. Set the run result to `blocked`, capture the
+**Degradation rule:** if the app can't boot — no creds, blocked deploy, health-check
+timeout — don't hard-fail. Set the run result to `blocked`, capture the
 blocker reason verbatim, and continue to Step 4 (coverage-only). Report the blocker
 prominently in Step 6.
 
@@ -199,8 +199,6 @@ stamping `completed` = today and `elapsed (days)` when accepted.
 ## Notes
 - This is the producer half of the Revisions loop; `todo-revise` is the consumer. Keep the
   schema identical so they interlock — same `### R<n> ⟵ Task N … [open]` + `- [ ]` shape.
-- Record-only by design: you transcribe the verification MCP's verdict, you don't repair.
-  If the server defaults to auto-repair, disabling it here is deliberate.
 - Reconciled state feeds the infographic: the Stop hook (`infographic-staleness.sh`)
   regenerates `artifacts/infographic.html` after the tasks.md/index.md edits land.
 - If a run keeps blocking on the same missing prerequisite (e.g. a deploy that never

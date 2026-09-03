@@ -174,7 +174,7 @@ in an open PR, or merged**.
 
 ## Step 6 — Emit the digest
 
-**Grounding mode** — about 5–8 lines plus related projects:
+**Grounding mode** — a compact digest plus related projects:
 
 ```text
 Loaded context: service-auth ($TODO_HUB/projects/work/service-auth)
@@ -211,7 +211,7 @@ Next open task: 4.2 dead-letter exchange for poison messages
 ▶ Next: /todo-execute queue-migration   (or /todo-push from the worktree to ship the 3 commits first)
 ```
 
-The `▶ Next` line is resume mode's deliverable — pick ONE primary recommendation from the
+The `▶ Next` line is resume mode's deliverable — pick one primary recommendation from the
 evidence, with at most one alternative:
 
 | Evidence | Recommend |

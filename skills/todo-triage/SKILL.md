@@ -138,16 +138,15 @@ Classify each open task and open Revision against this rubric. **Default to the
 cheapest model that can do the job safely; when torn between adjacent tiers, bump up
 one tier — never two.**
 
-**Deterministic routing — answer these in order, first YES wins.** This makes the
-classification reproducible regardless of which model runs it; the rubric table below
-is the reference, this list is the procedure:
+**Routing — answer these in order; the first yes wins.** The rubric table below is the
+reference; this list is the procedure:
 
 1. Does the task touch auth/tokens/crypto/payments, migrate data, change concurrent
    behavior, or span 2+ repos? → **frontier**
 2. Is there a "how" question about this task that plan.md doesn't answer? Apply the
    **quote test**: try to quote the plan sentence that answers it — no quotable sentence
-   → that's a YES → **deep**. (Don't reason your way to an answer the plan never wrote
-   down; inability to quote IS the signal.)
+   → that's a yes → **deep**. (Don't reason your way to an answer the plan never wrote
+   down; inability to quote is the signal.)
 3. Does it change code or system behavior at all? → **balanced**
 4. Otherwise (text/state/config edits whose exact content is already specified) → **fast**
 
@@ -172,8 +171,8 @@ Modifiers that keep a task **down**:
   expensive model with no gate.
 - `research/findings.md` already answers the open questions.
 
-Each recommendation carries a **why** of at most ~6 words ("auth token exchange —
-security-sensitive", "mechanical checkbox sync"). No paragraphs.
+Each recommendation carries a short **why** that fits its table cell ("auth token
+exchange — security-sensitive", "mechanical checkbox sync").
 
 ### Effort tier (the second dial)
 
