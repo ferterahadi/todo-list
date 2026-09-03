@@ -40,7 +40,7 @@ become a decision block merely because the user may act on it later.
 Use for direct answers, confirmations, routine status, wording, and small read-only findings.
 
 - Lead with the answer; do not restate the question.
-- Fit within 120 words or eight visible lines unless accuracy requires more.
+- Keep it to a few lines; add detail only when accuracy needs it.
 - When useful, use `**Now:**`, `**If nobody acts:**`, and `**Next move:**` in that order.
 - Omit diagrams, comparison tables, technical detail, decision blocks, and verdict receipts.
 - Do not add a heading to a one-sentence answer.
@@ -157,7 +157,7 @@ for those details first.
 
 - Put long diffs, paths, identifiers, logs, queries, and command output after a `---` rule and
   a `### Technical detail` heading.
-- Put a mechanism-proving before/after diff in that section and keep it within ten lines.
+- Put the smallest before/after diff that proves the mechanism in that section.
 - Use bullets and fenced blocks below the fold, one fact per item.
 - Omit technical detail when it would not change confidence or action.
 

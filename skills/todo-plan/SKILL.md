@@ -19,7 +19,7 @@ user already has — see
 [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Composing with installed
 skills. Here that means:
 
-- **Discovery/design** — if `superpowers:brainstorming` is installed, run it FIRST; it
+- **Discovery/design** — if `superpowers:brainstorming` is installed, run it first; it
   explores intent, requirements, and design better than a question list. Step 2's seven
   questions then become the *coverage checklist*: after brainstorming, ask only what it
   didn't surface. Not installed → run Step 2 yourself.
@@ -75,7 +75,7 @@ As plain questions in the accompanying message:
 4. Does it require, replace, or merely relate to another tracked project? Ask for exact
    short-names and a one-clause reason; do not infer dependencies from similar names.
 
-Wait for answers. Do not proceed until you have them.
+Wait for the answers before continuing.
 
 ## Step 3 — Verify the repo
 
@@ -137,11 +137,10 @@ Break the work into a concrete checklist:
   never inline in the task line. `tasks.md` is read whole by several skills; it must stay a
   checklist, not a journal.
 
-## Step 6.5 — Quality gate (mandatory, before anything is shown)
+## Step 6.5 — Quality gate, before anything is shown
 
-This gate exists so the plan's quality does not depend on the model running this skill.
-Walk every check literally; a failed check means **fix the file, then re-run the gate** —
-never present a plan that fails one:
+A failed check means fix the file and re-run the gate; a plan that fails a check is not
+shown:
 
 - [ ] **Goal test**: one sentence, and it names an observable outcome (a number, a state
   someone can check, or a named artifact). If it contains "improve", "support",
@@ -153,7 +152,7 @@ never present a plan that fails one:
 - [ ] **Task test**: every task line starts with a verb, names its target (file, system,
   endpoint), and fits on one line. "Think about X" / "handle Y properly" fail.
 - [ ] **Dependency walk**: read tasks.md top to bottom once; if any task needs an output
-  produced by a LATER task, reorder now.
+  produced by a later task, reorder now.
 - [ ] **Project-graph test**: run `todo-graph`'s bundled
   `graph-report.py audit "$TODO_HUB"` after writing Relationships. Missing targets,
   ambiguous identities, unknown types, self-edges, duplicate edges, or dependency cycles
@@ -162,7 +161,7 @@ never present a plan that fails one:
   publishing an unvalidated hard dependency.
 - [ ] **Cold-session test**: for each task ask "would a fresh session need to ask the
   user anything to do this?" If yes, the answer belongs in plan.md Context — add it.
-- [ ] **Repo check**: the Repo path in plan.md was verified on disk THIS session (you
+- [ ] **Repo check**: the Repo path in plan.md was verified on disk this session (you
   saw the `ls`/git output in Step 3, not remembered it).
 
 ## Step 7 — Update the active registry
@@ -178,8 +177,8 @@ never present a plan that fails one:
 
 ## Step 8 — Confirm with a plan-at-a-glance render
 
-**Do not dump the raw plan.md/tasks.md** — the user is a visual reader; render the plan
-as a compact widget block and offer the full files only on request:
+Render the plan as a compact block rather than pasting plan.md/tasks.md — the user is a
+visual reader — and offer the full files on request:
 
 ```
 ## 📋 rmq-dlq-support — plan at a glance

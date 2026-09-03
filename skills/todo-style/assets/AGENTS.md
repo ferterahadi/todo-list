@@ -38,7 +38,7 @@ become a decision block merely because the user may act on it later.
 Use for direct answers, confirmations, routine status, wording, and small read-only findings.
 
 - Lead with the answer; do not restate the question.
-- Fit within 120 words or eight visible lines unless accuracy requires more.
+- Keep it to a few lines; add detail only when accuracy needs it.
 - When useful, use `**Now:**`, `**If nobody acts:**`, and `**Next move:**` in that order.
 - Omit diagrams, comparison tables, technical detail, decision blocks, and verdict receipts.
 - Do not add a heading to a one-sentence answer.
@@ -152,7 +152,7 @@ Complex system   → self-contained HTML file
 
 Keep explanation above the fold and verification evidence below it.
 
-- Put a mechanism-proving before/after diff near the claim it proves; keep it within ten lines.
+- Put the smallest before/after diff that proves the mechanism near the claim it proves.
 - Put long diffs, paths, identifiers, logs, queries, and command output after a `---` rule and
   a `### Technical detail` heading.
 - Use bullets and fenced blocks below the fold, one fact per item.

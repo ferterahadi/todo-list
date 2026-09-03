@@ -68,7 +68,7 @@ Read these files in order:
    `research/superpowers-docs.md` → add a pointer bullet now (absolute path + one-line
    summary).
 
-Do not start executing until you've read all of them. If `plan.md` is missing critical info (goal unclear, no repo path, no context), state exactly what's missing and stop — suggest running `/todo-plan <name>` first.
+If `plan.md` is missing critical info (goal unclear, no repo path, no context), state exactly what's missing and stop — suggest running `/todo-plan <name>` first.
 
 **Parallel mode branches off here** — jump to [Parallel mode](#parallel-mode).
 
@@ -90,7 +90,7 @@ overwrite your working tree — the usual cause of "my changes vanished."
 
 - Scope: this applies **only** to code in the target repo (the `path`/repo named in
   `plan.md`). Hub files under `$TODO_HUB` — `artifacts/`, `tasks.md`, `index.md`,
-  `research/` — are ALWAYS edited in the hub, never in the worktree.
+  `research/` — are edited in the hub, never in the worktree.
 - If the project produces only hub artifacts (analysis, docs) and touches no target-repo
   code, skip this step and note that you did.
 - Create it off the base branch, named from the project short-name:
@@ -107,22 +107,20 @@ overwrite your working tree — the usual cause of "my changes vanished."
   `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`). All target-repo code, builds,
   tests, and preview for this run happen inside `<repo>-wt/<short-name>`.
 - Resumed run: if that worktree/branch already exists, reuse it — don't recreate.
-- Do NOT push or merge here. Shipping is a separate, deliberate `/todo-push` the user runs
-  when ready (see Step 7) — never auto-ship from this skill.
+- Do not push or merge here — shipping is a separate `/todo-push` the user runs when
+  ready (see Step 7).
 
 ## Step 5 — Execute tasks top to bottom
 
-Work through `tasks.md` one task at a time, running this **per-task loop for every
-task, no exceptions** — it is what keeps execution quality independent of the model
-running it:
+Work through `tasks.md` one task at a time, running this loop for every task:
 
 1. **Define done first**: read the task line + the plan.md section it belongs to, and
-   state in one line what evidence will prove THIS task is done (a passing test, a file
+   state in one line what evidence will prove this task is done (a passing test, a file
    existing, an output matching). If you can't state it, the task is ambiguous → Step 6.
 2. **Do the work.**
 3. **Verify with evidence**: run the proof you named in 1 and look at the output. Code
    → run the test/build. Doc/artifact → open it and check it answers the task. No
-   runnable proof and no observable output → it is NOT done; treat as blocked.
+   runnable proof and no observable output → it is not done; treat as blocked.
 4. **Only now tick the checkbox.** Ticking before step 3 is the failure mode this loop
    exists to prevent — a checked box is a claim, and claims need evidence first.
 5. **One-line record** of what changed and where (worktree file, artifacts path).
@@ -157,7 +155,7 @@ Never batch steps 2–4 across multiple tasks. Rules of the road:
   `research/superpowers-docs.md` in the same task — doc path + source + one-line summary.
   A plan/spec that exists only in the target repo is invisible to the hub; the hub's
   Stop hook flags unreferenced docs, but record the pointer yourself, don't rely on it
-- When plan.md doesn't answer a question, that IS the answer — record the ambiguity
+- When plan.md doesn't answer a question, that is the answer — record the ambiguity
   (Step 6), don't improvise a decision the plan never made
 
 After completing each task, check it off in `tasks.md`:
@@ -223,22 +221,21 @@ above.
 ## Step P1 — Partition tasks into features
 
 Group the unchecked tasks into **file-disjoint features**: tasks that touch the same
-files, or depend on each other's output, go in the SAME feature (they run sequentially
+files, or depend on each other's output, go in the same feature (they run sequentially
 inside one agent). Judge overlap from plan.md scope notes and a quick read of the repo.
 
 - 1 feature after grouping → parallelism buys nothing; say so and run the sequential
   mode (steps 3–7) instead.
 - State the grouping (feature → task lines) before spawning so it's on record.
 
-**Gate A — before spawning (every box checked, literally, or don't spawn):**
+**Gate A — before spawning, all three:**
 
-- [ ] For each feature, the expected file/dir set is WRITTEN OUT (from plan.md scope +
+- [ ] For each feature, the expected file/dir set is written out (from plan.md scope +
   a grep of the repo), and every pairwise intersection between features is empty. Two
   features sharing even one file → merge them into one feature now.
 - [ ] Every agent prompt contains all four slots from step P3 (intent verbatim,
-  workspace commands, implement instruction, return contract) — reread each prompt and
-  point at the four slots before sending.
-- [ ] `gh auth status` succeeded in the target repo THIS session (output seen, not
+  workspace commands, implement instruction, return contract).
+- [ ] `gh auth status` succeeded in the target repo this session (output seen, not
   assumed).
 
 ## Step P2 — Inherit the session model
@@ -252,11 +249,11 @@ routing; do not override it.
 Start one background implementation subagent per feature on the inherited session model;
 do not request a model override. Each prompt is self-contained — subagents may start
 with zero history.
-Every prompt MUST contain these slots:
+Every prompt contains these slots:
 
 1. **Intent** — plan.md `## Goal` + relevant context/constraints, and the exact task
    lines this feature covers, verbatim. This grounds the code review later.
-2. **Workspace** — create an isolated worktree of the TARGET repo (never the hub):
+2. **Workspace** — create an isolated worktree of the target repo (never the hub):
    ```
    git -C <repo> fetch origin
    git -C <repo> worktree add <repo>-wt/<feat> -b feat/<name> origin/<base>
@@ -296,12 +293,12 @@ Every prompt MUST contain these slots:
 
    `status: "blocked"` requires a non-empty `blockers`, and `tests.result` must be
    `not-run` rather than absent when no suite exists — those pairings are what stop a
-   half-built feature reading as a finished one. Implement agents NEVER edit hub files,
-   NEVER open PRs, NEVER merge — review and shipping belong to step P4.
+   half-built feature reading as a finished one. Implement agents never edit hub files,
+   open PRs, or merge — review and shipping belong to step P4.
 
 Agents that hit an external blocker (creds, live services) report it in their return
 and stop that feature — same rule as sequential Step 6, but the blocker lands in
-`artifacts/blockers.md` via YOU, not the agent.
+`artifacts/blockers.md` via you, not the agent.
 
 ## Step P4 — Review wave (no model pin — inherited session model)
 
@@ -345,7 +342,7 @@ slots:
 
    `coverage.line_pct` is a number the agent read out of a real run — that field is the
    gate, so an agent that cannot fill it returns `result: "not-run"` rather than a claim.
-   Review agents NEVER edit hub files and NEVER merge.
+   Review agents never edit hub files and never merge.
 
 ## Step P5 — Serial merge queue
 
@@ -364,11 +361,11 @@ gh pr merge <url> --merge                          ← never --delete-branch her
   otherwise skip the PR, finish the queue, and open a Revisions entry in tasks.md.
 - Never merge two PRs concurrently, and never merge before its rebase + push.
 
-**Gate B — before EACH merge (re-run per PR, not once for the queue):**
+**Gate B — before each merge, re-run per PR:**
 
 - [ ] The previous PR in the queue is confirmed merged (`gh pr view <prev> --json state`
   shows `MERGED` — output seen).
-- [ ] This PR's branch was rebased onto latest `origin/<base>` in THIS queue round —
+- [ ] This PR's branch was rebased onto latest `origin/<base>` in this queue round —
   a rebase from before the previous merge doesn't count; redo it.
 - [ ] Tests/CI are green on the post-rebase commit, with the run output in hand. No
   output → run them now; red → this PR skips the queue and gets a Revisions entry.
@@ -400,7 +397,7 @@ Step 7's session-handoff rule applies here too.
 
 ## Parallel-mode rules
 
-- Parallel until PR, serial at merge — no exceptions, races corrupt main.
+- Parallel until PR, serial at merge — races corrupt main.
 - Review always runs as a separate agent from implementation, but neither wave pins
   a model — both inherit the session model.
 - Agents never write hub files; the orchestrator is the only hub writer.

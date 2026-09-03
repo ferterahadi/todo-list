@@ -64,8 +64,8 @@ for asset in "$claude_asset" "$codex_asset"; do
     fail "style pack has no AUDIENCE section: ${asset#"$repo_root"/}"
   grep -Fq 'Select exactly one primary response mode' "$asset" ||
     fail "style pack lost exclusive response-mode selection: ${asset#"$repo_root"/}"
-  grep -Fq '120 words or eight visible lines' "$asset" ||
-    fail "style pack lost its quick-answer budget: ${asset#"$repo_root"/}"
+  grep -Fq 'Keep it to a few lines; add detail only when accuracy needs it' "$asset" ||
+    fail "style pack lost its quick-answer length rule: ${asset#"$repo_root"/}"
   grep -Fq 'A recommendation that does not block progress' "$asset" ||
     fail "style pack turns every recommendation into a decision: ${asset#"$repo_root"/}"
   grep -Fq 'Recommend by cost asymmetry' "$asset" ||

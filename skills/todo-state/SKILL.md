@@ -212,7 +212,7 @@ Four sources, cross-checked:
    }
    ```
 
-   **`unknown` is mandatory, not optional.** A repo that isn't on disk, a `gh` call that
+   **`unknown` is a value, never an omission.** A repo that isn't on disk, a `gh` call that
    failed, a command skipped by placeholder validation — each yields `unknown` for that
    field, never `absent` or `none`. `absent` means checked and not there; `unknown` means
    not checked. Step A3 turns the first into drift and the second into *unverifiable*, and
