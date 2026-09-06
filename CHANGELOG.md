@@ -8,6 +8,12 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.11.5] — 2026-09-06
+
+### Changed
+- **Model routing balances cost and accuracy.** Each tier now selects a distinct model,
+  with current API prices, effort defaults, and evidence-based escalation guidance.
+
 ## [1.11.4] — 2026-09-04
 
 ### Changed
