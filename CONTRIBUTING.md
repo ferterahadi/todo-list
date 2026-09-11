@@ -135,10 +135,10 @@ backups are only ever added, and that a bad agent or mode fails closed. It sandb
 `CLAUDE_CONFIG_DIR` and `CODEX_HOME`, so it never touches the machine's real files.
 
 Run `tests/infographic-hook-contract.sh` for staleness-hook changes. It must prove the
-hub resolves from `TODO_HUB`, hub sessions report every stale `ready`/`in-progress`
-project, target-repo and `<repo>-wt/*` worktree sessions report only their own project,
-unrelated sessions stay silent, and stub plans, fresh infographics, and stop-hook
-continuations never fire.
+hub resolves from `TODO_HUB`, old staleness from before the current session stays silent,
+current-session source edits fire once per revision, target-repo and `<repo>-wt/*`
+worktree sessions report only their own project, and unrelated sessions, stub plans,
+fresh infographics, and stop-hook continuations never fire.
 
 Run `tests/push-contract.sh` for changes to `/todo-push` or its helpers. It stubs `gh` on
 `PATH` and drives scratch repos with local bare remotes, so it never talks to GitHub. It must

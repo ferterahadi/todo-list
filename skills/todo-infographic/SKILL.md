@@ -1,6 +1,6 @@
 ---
 name: todo-infographic
-description: Use when the user invokes /todo-infographic, says "make an infographic", "visualize this plan", "I can't read walls of text", or after a plan is finished. Also auto-triggered by the Stop hook when a ready/in-progress project's infographic is missing or stale. Builds artifacts/infographic.html and links it in the project's active or archived registry row.
+description: Use when the user invokes /todo-infographic, says "make an infographic", "visualize this plan", "I can't read walls of text", or after a plan is finished. Also auto-triggered when current-session plan or task edits make a ready/in-progress project's infographic stale. Builds artifacts/infographic.html and links it in the project's active or archived registry row.
 ---
 
 # Project Infographic Skill
@@ -61,7 +61,7 @@ model selection; never invent unsupported parameters.
 /todo-infographic                                  ← the project in scope for this session (not all stale ones)
 ```
 
-It is also fired automatically by the plugin's **Stop hook** (`infographic-staleness.sh`, auto-registered): when a project whose status is `ready` or `in-progress` has a missing or stale `artifacts/infographic.html`, the hook lists it before ending the turn. The hook's list is a repo-wide staleness scan, **not** a scope instruction — regenerate only the listed project(s) you actually worked on this session, and leave the rest stale. If none of the listed projects relate to this session, stop without generating anything.
+It is also fired automatically by the plugin's **Stop hook** (`infographic-staleness.sh`, auto-registered): when a `ready` or `in-progress` project's `plan.md` or `tasks.md` changed during the current session and its `artifacts/infographic.html` is now missing or stale, the hook lists that project before ending the turn. Each unchanged source revision is reported at most once per session. The hook still applies the session's repo scope; `all` remains explicit opt-in.
 
 ## Step 1 — Resolve the project(s)
 
