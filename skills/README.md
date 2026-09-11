@@ -78,12 +78,13 @@ The plugin ships five hooks in [`../hooks/`](../hooks/), registered automaticall
 - **`archive-candidates.sh`** (SessionStart) — emits one compact report when revision
   detail, legacy tombstone links, oversized task files, or completed active rows need a
   reviewed `/todo-archive` sweep; it never edits or blocks.
-- **`infographic-staleness.sh`** (Stop) — when a `ready`/`in-progress` project has a
-  missing or stale `artifacts/infographic.html`, nudges the agent to regenerate it via
+- **`infographic-staleness.sh`** (Stop) — when a `ready`/`in-progress` project's
+  `plan.md` or `tasks.md` changed in the current session and its infographic is now
+  missing or stale, nudges the agent once per source revision to regenerate it via
   `todo-infographic` before the turn ends. It resolves the hub from `$TODO_HUB` and
-  self-scopes: a stale project is reported from a session in the hub itself or inside
-  that project's target repo (including its `<repo>-wt/*` worktrees), so it stays quiet
-  in unrelated repos.
+  self-scopes by both session time and repo: a changed project is reported from a session
+  in the hub itself or inside that project's target repo (including its `<repo>-wt/*`
+  worktrees), so old or unrelated staleness stays quiet.
 - **`superpowers-doc-sync.sh`** (Stop) — ensures superpowers plans/specs written into a
   target repo get a pointer row in the project's `research/superpowers-docs.md`.
 

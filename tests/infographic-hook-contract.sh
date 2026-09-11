@@ -34,9 +34,15 @@ expect_empty() {
 
 run_hook() {
   local cwd="$1"
-  local payload="${2:-{\}}"
+  local session_id="${2:-session-default}"
+  local transcript="$transcripts/$session_id.jsonl"
+  [ -f "$transcript" ] || printf '{}\n' > "$transcript"
+  local payload="{\"session_id\":\"$session_id\",\"transcript_path\":\"$transcript\"}"
   printf '%s' "$payload" |
-    TODO_HUB="$hub" CLAUDE_PROJECT_DIR="$cwd" bash "$hook"
+    TODO_HUB="$hub" \
+    TODO_INFOGRAPHIC_HOOK_STATE_DIR="$state_dir" \
+    CLAUDE_PROJECT_DIR="$cwd" \
+    bash "$hook"
 }
 
 [ -f "$hook" ] || fail "staleness hook is missing"
@@ -48,6 +54,8 @@ hub="$tmp/hub"
 alpha_repo="$tmp/repos/alpha-repo"
 beta_repo="$tmp/repos/beta-repo"
 elsewhere="$tmp/elsewhere"
+transcripts="$tmp/transcripts"
+state_dir="$tmp/state"
 mkdir -p \
   "$hub/projects/work/alpha/artifacts" \
   "$hub/projects/work/beta/artifacts" \
@@ -55,7 +63,8 @@ mkdir -p \
   "$hub/projects/work/delta/artifacts" \
   "$alpha_repo" \
   "$tmp/repos/alpha-repo-wt/alpha" \
-  "$elsewhere"
+  "$elsewhere" \
+  "$transcripts"
 
 real_plan() {
   printf '# Project: %s\n\n## Goal\nA concrete observable goal.\n' "$1"
@@ -87,47 +96,83 @@ cat > "$hub/index.md" <<INDEX
 | delta | projects/work/delta | $alpha_repo | done | - | - | - | - | - |
 INDEX
 
-# 1 — hub session reports every stale ready/in-progress project, skips stubs and done.
-out="$(run_hook "$hub")"
-expect_contains "hub session" "$out" '"decision":"block"'
-expect_contains "hub session" "$out" 'alpha'
-expect_contains "hub session" "$out" 'beta'
-expect_not_contains "hub session" "$out" 'gamma'
-expect_not_contains "hub session" "$out" 'delta'
+# Inputs that predate the session are stale globally but unrelated to this turn.
+touch -t 202001010000 \
+  "$hub/projects/work/alpha/plan.md" "$hub/projects/work/alpha/tasks.md" \
+  "$hub/projects/work/beta/plan.md" "$hub/projects/work/beta/tasks.md"
 
-# 2 — a session inside a project's target repo reports only that project.
-out="$(run_hook "$alpha_repo")"
+# 1 — a hub session stays silent for stale projects untouched this session.
+out="$(run_hook "$hub" session-old-staleness)"
+expect_empty "old hub staleness" "$out"
+
+# 2 — a source changed during a hub session is reported; stubs and done stay out.
+printf '{}\n' > "$transcripts/session-hub-change.jsonl"
+sleep 1
+touch "$hub/projects/work/alpha/plan.md" "$hub/projects/work/beta/tasks.md"
+out="$(run_hook "$hub" session-hub-change)"
+expect_contains "hub session change" "$out" '"decision":"block"'
+expect_contains "hub session change" "$out" 'alpha'
+expect_contains "hub session change" "$out" 'beta'
+expect_not_contains "hub session change" "$out" 'gamma'
+expect_not_contains "hub session change" "$out" 'delta'
+expect_not_contains "focused hook message" "$out" 'repo-wide staleness scan'
+
+# 3 — the same source revision is reported only once per session.
+out="$(run_hook "$hub" session-hub-change)"
+expect_empty "repeat source revision" "$out"
+
+# A later edit is a new revision and may be reported again in that session.
+sleep 1
+touch "$hub/projects/work/alpha/plan.md"
+out="$(run_hook "$hub" session-hub-change)"
+expect_contains "new source revision" "$out" 'alpha'
+expect_not_contains "new source revision" "$out" 'beta'
+
+# 4 — a target-repo session reports only its matching project after a new edit.
+printf '{}\n' > "$transcripts/session-target-repo.jsonl"
+sleep 1
+touch "$hub/projects/work/alpha/tasks.md" "$hub/projects/work/beta/tasks.md"
+out="$(run_hook "$alpha_repo" session-target-repo)"
 expect_contains "target-repo session" "$out" 'alpha'
 expect_not_contains "target-repo session" "$out" 'beta'
 
-# 3 — a session inside the project's -wt worktree counts as its repo.
-out="$(run_hook "$tmp/repos/alpha-repo-wt/alpha")"
+# 5 — a session inside the project's -wt worktree counts as its repo.
+out="$(run_hook "$tmp/repos/alpha-repo-wt/alpha" session-worktree)"
+expect_empty "worktree without current edit" "$out"
+printf '{}\n' > "$transcripts/session-worktree-edit.jsonl"
+sleep 1
+touch "$hub/projects/work/alpha/tasks.md"
+out="$(run_hook "$tmp/repos/alpha-repo-wt/alpha" session-worktree-edit)"
 expect_contains "worktree session" "$out" 'alpha'
 expect_not_contains "worktree session" "$out" 'beta'
 
-# 4 — unrelated repos stay silent.
-out="$(run_hook "$elsewhere")"
+# 6 — unrelated repos stay silent.
+out="$(run_hook "$elsewhere" session-elsewhere)"
 expect_empty "unrelated session" "$out"
 
-# 5 — stop-hook continuations never re-trigger.
-out="$(run_hook "$hub" '{"stop_hook_active":true}')"
+# 7 — stop-hook continuations never re-trigger.
+out="$(printf '{"stop_hook_active":true}' | \
+  TODO_HUB="$hub" CLAUDE_PROJECT_DIR="$hub" bash "$hook")"
 expect_empty "stop-hook continuation" "$out"
 
-# 6 — a fresh infographic (newer than plan and tasks) is not stale.
-touch -t 202001010000 \
-  "$hub/projects/work/alpha/plan.md" "$hub/projects/work/alpha/tasks.md"
+# 8 — a fresh infographic (newer than plan and tasks) is not stale.
 printf '<html></html>\n' > "$hub/projects/work/alpha/artifacts/infographic.html"
-out="$(run_hook "$hub")"
-expect_contains "fresh infographic" "$out" 'beta'
+out="$(run_hook "$hub" session-fresh)"
 expect_not_contains "fresh infographic" "$out" 'alpha'
 
-# 7 — an infographic older than plan.md is stale again.
+# 9 — a new plan edit after an older infographic is stale again.
 touch -t 202001010000 "$hub/projects/work/alpha/artifacts/infographic.html"
+printf '{}\n' > "$transcripts/session-new-edit.jsonl"
+sleep 1
 touch "$hub/projects/work/alpha/plan.md"
-out="$(run_hook "$hub")"
+out="$(run_hook "$hub" session-new-edit)"
 expect_contains "stale after plan edit" "$out" 'alpha'
 
-# 8 — no hub at TODO_HUB means silence, not an error.
+# 10 — missing session identity/transcript fails quiet instead of scanning globally.
+out="$(printf '{}' | TODO_HUB="$hub" CLAUDE_PROJECT_DIR="$hub" bash "$hook")"
+expect_empty "missing session context" "$out"
+
+# 11 — no hub at TODO_HUB means silence, not an error.
 out="$(printf '{}' | TODO_HUB="$tmp/nohub" CLAUDE_PROJECT_DIR="$hub" bash "$hook")"
 expect_empty "missing hub" "$out"
 

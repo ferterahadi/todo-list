@@ -8,6 +8,12 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.11.6] — 2026-09-11
+
+### Fixed
+- **The infographic Stop hook no longer nags about old, unrelated projects.** It reports
+  only source files changed in the current session and only once per unchanged revision.
+
 ## [1.11.5] — 2026-09-06
 
 ### Changed
