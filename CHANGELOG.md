@@ -8,6 +8,12 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.11.7] — 2026-09-16
+
+### Changed
+- **`todo-style` uses visibly separated sections with flexible headings.** Both packs explain current
+  behavior, proposed changes, mechanisms, tradeoffs, and evidence before asking for a decision.
+
 ## [1.11.6] — 2026-09-11
 
 ### Fixed
