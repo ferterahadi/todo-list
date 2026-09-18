@@ -1,160 +1,117 @@
 ---
 name: todo-infographic
-description: Use when the user invokes /todo-infographic, says "make an infographic", "visualize this plan", "I can't read walls of text", or after a plan is finished. Also auto-triggered when current-session plan or task edits make a ready/in-progress project's infographic stale. Builds artifacts/infographic.html and links it in the project's active or archived registry row.
+description: Use when the user invokes /todo-infographic, asks to visualize a hub project, or current-session plan/task edits make its infographic stale. Builds or incrementally refreshes artifacts/infographic.html and registers it without rebuilding unchanged visual structure.
 ---
 
-# Project Infographic Skill
+# Project Infographic
 
-You turn a project's `plan.md` + `tasks.md` into a **one-page, self-contained HTML infographic** — a visual the user can review at a glance instead of reading the full plan. The plan stays the source of truth; this is the scannable view.
+Turn one project's `plan.md` and `tasks.md` into a self-contained, scannable HTML
+one-pager. The plan remains the source of truth. Prefer the cheapest safe refresh;
+a task checkbox change is not a design assignment.
 
-## Hub location
+## Hub and scope
 
-Resolve every hub path against `$TODO_HUB` — see
-[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. Pass that
-absolute root to each build subagent so it reads and writes there, not into the cwd.
+Resolve every hub path against `$TODO_HUB` using
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md). Resolve named
+projects active-first and record the owning registry row.
 
-## Execution tier
+- A named project or the project clearly in scope means that project only.
+- `all` means every ready, in-progress, or done project, but only when the user
+  explicitly requests `all`.
+- With no inferable project, ask; never turn a staleness list into bulk scope.
 
-The infographic generation — the token-heavy, creative design and HTML work in Step 3 —
-uses the **balanced** tier with **high** reasoning effort from
-[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). Delegate the build when dispatching is
-available; otherwise build inline. The orchestrating session does the light work:
-resolve projects, check stubs, register the result, and confirm.
+The orchestrator reads `plan.md` and `tasks.md` for resolution, stub checks, and
+classification. If `plan.md` contains `What success looks like in one sentence.`
+or lacks real Goal/Scope content, report the stub and stop. Semantic agents receive
+only the compact manifest; a full-build agent may read the source files.
 
-When dispatching, spawn **one subagent per project** and run them in parallel only when
-the user explicitly requested several projects. Give each subagent that project's
-`plan.md`, `tasks.md`, any existing HTML, and the Step 3 specification. It writes
-`artifacts/infographic.html` and returns this object and nothing else
-([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Subagent return
-contracts):
+## Gather the file footprint
+
+The orchestrator gathers execution-time truth from the target repo before
+classification:
+
+- Feature branch: diff merge-base with the default branch, then add uncommitted and
+  untracked files.
+- Default branch: use attributable uncommitted files or an identifiable merged
+  range/PR from project evidence.
+- Missing repo or no attributable changes: no footprint.
+
+Write the flat status/path/optional-task-reason list to a temporary JSON file. Do
+not put a large footprint directly in a subagent prompt. Reasons must come from a
+clear task match; never invent them.
+
+## Classify before designing
+
+Read [references/refresh-contract.md](references/refresh-contract.md), then run its
+`inspect` command with the project, registry status, today's date, current HTML,
+and footprint JSON when one exists.
+
+| Mode | Execution |
+|---|---|
+| `fresh` | No write and no model call |
+| `fast-refresh` | Run deterministic `apply` inline; no subagent |
+| `semantic-refresh` | Give one balanced-tier, medium-effort build agent only the compact manifest; apply its plain-text patch |
+| `full-build` | Use the full design path below |
+
+The semantic agent does **not** receive the full HTML, unchanged plan sections,
+unchanged task phases, or design skills. It returns only the content-patch JSON
+defined by the refresh contract. If it needs a new card, section, list row,
+diagram node, rich markup, or an absent binding, escalate to `full-build`.
+
+For a Stop-hook auto-trigger, run `fresh`, `fast-refresh`, and
+`semantic-refresh`. Do not start a foreground full build merely to let the parent
+turn stop: report that the legacy/structural infographic still needs explicit
+`/todo-infographic <short-name>`. An explicit user invocation authorizes the full
+build; dispatch it in the background when the host supports that while the
+orchestrator remains responsive.
+
+## Full design path
+
+Use the balanced tier with high reasoning effort. Read
+[references/design-spec.md](references/design-spec.md) and give the build agent:
+
+- the absolute project and output paths;
+- `plan.md`, `tasks.md`, the compact inspection manifest, and the temporary
+  footprint JSON;
+- existing HTML only when upgrading or structurally rebuilding an existing page;
+- the design specification and refresh-marker contract.
+
+Only full builds load `artifact-design`, `dataviz`, and at most one installed
+design-critique/frontend-design pass. A content-only refresh never loads them.
+Spawn one agent per project and parallelize only when the user explicitly asked
+for several projects.
+
+The agent writes marked HTML, then the orchestrator runs `apply --initialize` and
+`verify` from the refresh contract. For an existing page, pass the pre-build CSS
+hash from the inspection manifest so initialization proves the theme stayed
+unchanged. A legacy unmarked page therefore pays for one final content-preserving
+rebuild; later routine updates use the cheap paths.
+
+The full-build agent returns exactly:
 
 ```json
 {
   "short_name": "<project short-name>",
   "result": "written | skipped-stub",
-  "path": "<hub-relative path to infographic.html, or null when skipped>",
+  "path": "<hub-relative infographic path, or null>",
   "theme": "preserved | new",
   "sections_dropped": ["flow", "footprint"]
 }
 ```
 
-`theme` is the one field the orchestrator cannot check cheaply and the one rule most
-easily broken: `preserved` is only honest when `existingHtml` was supplied and every
-visual property carried over unchanged. `sections_dropped` names the sections Step 3 said
-to delete for want of data, so a thin infographic is explained rather than mistaken for a
-bad build.
+`theme: preserved` is valid only when every visual property and the CSS hash are
+unchanged. Validate the object before using it; malformed output is a failed build,
+not prose to interpret.
 
-Then the orchestrator handles Steps 4–5, registering only the projects whose `result` is
-`written`. Use the host-specific balanced model only when the host supports per-dispatch
-model selection; never invent unsupported parameters.
+## Register and confirm
 
-**Compose with design skills** ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Composing with installed skills). Instruct each build subagent to load `artifact-design` before designing, and `dataviz` before drawing any chart-like element — progress bars, stat cards, phase meters all count. If a design-critique / frontend-design skill is installed, the subagent runs one self-critique pass against it before writing the final file — one pass, not a loop.
+After a successful `apply` and `verify`, set the owning `index.md` or `archive.md`
+row's `infographic` cell to:
 
-**Before dispatching**, check whether `artifacts/infographic.html` already exists for each project. If it does, read its full content and pass it to the subagent as `existingHtml`. The subagent uses this to preserve the theme exactly (see Step 3). Also gather the file footprint (Step 2.5) and pass it as `fileFootprint` — the subagent must never run git itself or invent file paths.
-
-## How the user invokes this
-
-```
-/todo-infographic event-fanout   ← one project by short-name
-/todo-infographic projects/work/...                ← full path also works
-/todo-infographic all                              ← every ready/in-progress/done project (explicit opt-in only)
-/todo-infographic                                  ← the project in scope for this session (not all stale ones)
+```markdown
+[open](projects/<category>/<short-name>/artifacts/infographic.html)
 ```
 
-It is also fired automatically by the plugin's **Stop hook** (`infographic-staleness.sh`, auto-registered): when a `ready` or `in-progress` project's `plan.md` or `tasks.md` changed during the current session and its `artifacts/infographic.html` is now missing or stale, the hook lists that project before ending the turn. Each unchanged source revision is reported at most once per session. The hook still applies the session's repo scope; `all` remains explicit opt-in.
-
-## Step 1 — Resolve the project(s)
-
-Resolve named projects per
-[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
-recording the owning registry. Two scope rules are this skill's own:
-
-- `all` → read both registries and operate on every `ready`, `in-progress`, or `done`
-  project. Only when the user explicitly passes `all`.
-- No argument → resolve to the single project in scope for this session. If that's ambiguous, ask — do **not** default to every project.
-
-## Step 2 — Read the plan and guard against stubs
-
-For each target project read `plan.md` and `tasks.md`.
-
-**Stub check:** if `plan.md` still contains the template text `What success looks like in one sentence.` or has no real Goal/Scope content, it is an unfilled stub. Don't generate an infographic for a stub; report it instead, e.g. "reserve-mcp-integration is marked `ready` but plan.md is still the template — run `/todo-plan <name>` to fill it first." Then skip that project.
-
-## Step 2.5 — Gather the file footprint (git evidence, orchestrator side)
-
-The file footprint is **execution-time truth** — it always comes from git in the target repo (the `repo` column / plan.md Repo path), never from what the plan predicted. Run this in the orchestrating session before dispatching:
-
-- On a feature branch → `git diff --name-status $(git merge-base <default-branch> HEAD)..HEAD`, plus `git status --porcelain` for uncommitted/untracked files.
-- On the default branch → uncommitted/untracked only; if tasks.md or `artifacts/journal.md` names an identifiable merged range or PR, diff that range instead.
-- Repo missing on disk, or no changes attributable to this project → no footprint; the section is dropped (see Step 3).
-
-Produce a flat list of `path` + status (`A` added / `M` modified / `D` removed / `R` renamed). For each file, try to match it to a tasks.md line for a one-line "why"; leave the why blank when no task clearly matches — **never invent one**.
-
-## Step 3 — Build the infographic (balanced tier, high effort)
-
-Produce `artifacts/infographic.html` inside the project folder through the execution path
-above. Keep it self-contained: no network, no external assets, everything inline. It
-must open offline and print cleanly.
-
-**Theme: existing vs. new — decide first.**
-
-- **`existingHtml` provided** → **preserve the theme exactly.** Extract the CSS — palette (hex values / CSS variables), font stack, card styles, layout structure, spacing, visual personality — and carry it forward unchanged into the new file. Your job is **content-only**: update stat numbers, bullet text, phase progress bars, and section data to match the current `plan.md` / `tasks.md`. Do not change any visual property. **Content additions are allowed**: if the existing file predates the What & why / footprint / trade-off / forgone / limitations sections or the ID chips, add them — styled with the existing theme's CSS, not a new look.
-- **No `existingHtml`** → **invent a fresh visual theme.** Pick a distinctive palette, typographic treatment, and layout personality that suits this specific project; let it differ from other projects. Everything visual is yours to design.
-
-In both cases: aim for a polished, genuinely scannable one-pager, not a generic dashboard. The structural constants are the content sections below and the at-a-glance, no-walls-of-text discipline.
-
-Fill these sections from the plan. **Summarise — never transcribe.** No walls of text; if a bullet runs long, compress it to a clause.
-
-- **Header** — project name, short-name · category, status pill (`ready`/`in-progress`/`done`), repo path.
-- **Goal** — the one-sentence goal, lightly bolded on the key noun.
-- **What & why** (`W1`) — 2–3 sentences from plan.md Context: what is being implemented and the approach taken. Not a restatement of the goal — the goal says *where we end up*, this says *what we're building and how*.
-- **Stat cards** — 3–5 at-a-glance numbers. Always include phase count and task count (`N done`). Add 2–3 project-specific metrics that matter (channels, new apps, LOC, before→after footprint, target version — whatever the plan emphasises).
-- **Scope** — In (green) vs Out (muted), the most important items only.
-- **Flow / Topology** — if the plan has an architecture or data-flow (ASCII diagram, "topology", request path), render it as boxes + arrows. Mark net-new pieces `.new`, the focal path `.accent`, untouched/legacy `.old`. Delete the section entirely if there is no flow — don't ship an empty shell.
-- **File footprint** (`F1`, `F2`, …) — render `fileFootprint` as an indented tree grouped by directory. Per-file: a status badge (added = green, modified = amber, removed = red), its `F` ID, and the one-line "why" where known. Collapse directories with many same-status files into one row (`hooks/ +4 added`). No `fileFootprint` data → drop the section entirely.
-- **Trade-off ledger** (`D1`, `D2`, …) — one card per Key Decision, keeping the plan's `D` numbering. Each card: the decision one-liner, then a gain (green) / cost (coral) pair from plan.md Trade-offs. Plans without a Trade-offs section fall back to the old style: numbered decision cards with one-line rationale. Note the "don't re-litigate" framing if the plan has it.
-- **Forgone** (`X1`, `X2`, …) — a muted strip: alternatives rejected and scope deliberately cut, each with its one-clause why. From Trade-offs **Forgone** plus any Scope Out item that carries a reason. Nothing recorded → drop the section.
-- **Limitations** (`L1`, `L2`, …) — amber chips: what this build deliberately does **not** handle. From Trade-offs **Known gaps**. These are accepted gaps, not risks — the risk stays in **Note**. Nothing recorded → drop the section.
-- **Constraints** — chips; mark hard non-negotiables with `.warn`.
-- **Execution Plan** — one `.phase` block per phase header in `tasks.md`. Each shows a `done/total` badge, a progress bar whose width = `round(done/total*100)%`, and a short summarised bullet list of that phase's tasks. Flag the riskiest/biggest phase with a distinct badge.
-- **Note** — the single biggest risk or gotcha from the plan (its `## Notes` section when present, else the sharpest constraint or context caveat). Drop the section when nothing qualifies.
-- **Footer** — "Generated from plan.md + tasks.md · <today's date>" + "plan.md remains the source of truth". Use today's date from context — do not invent a timestamp. Below that, one feedback line: *"Feedback: quote an ID in chat ('D2 is wrong because…'). This session: `/todo-revise <short-name>`. Later session: start with `/todo-refer <short-name> resume`."*
-
-### Section IDs — the feedback handle
-
-Every reviewable element carries a short stable ID rendered as a small chip in its corner, so the user can give feedback by pointing at an ID instead of describing a location. The registry:
-
-|Prefix|Element|
-|-|-|
-|`W1`|What & why|
-|`D<n>`|Decision / trade-off card (numbering **must** match plan.md's Key Decisions)|
-|`F<n>`|File row in the footprint|
-|`X<n>`|Forgone item|
-|`L<n>`|Limitation chip|
-|(task no.)|Phase tasks already have numbers (`4.5`) — no extra ID|
-
-Rules: assign in document order on first generation. On regeneration, an element that still exists **keeps its ID**; new elements take the next unused number; never renumber or reuse a removed ID. Style the chip small and muted — it's a handle, not decoration.
-
-### Counting tasks for the bars
-
-Count open and done checkboxes **per phase**, applying the shared exclusions in
-[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks — the
-snippet there gives a whole-file count; scope it to each phase's line range for the bars.
-
-## Step 4 — Register it in the owning registry
-
-The owning row in `index.md` or `archive.md` has an `infographic` column. Set that cell
-to a link to the file you generated:
-
-```
-[open](projects/<cat>/<name>/artifacts/infographic.html)
-```
-
-Projects without one stay `-`. There is no separate Infographics table — the column is the only place this is tracked, so don't create one.
-
-## Step 5 — Confirm
-
-Tell the user, briefly, which infographics you generated/updated (with clickable paths), which projects you skipped as stubs, and that they can open the `.html` in a browser. Don't paste the HTML.
-
-## Notes
-- Visual quality matters — this exists because the user can't review walls of text. Favour structure, colour-coding, and whitespace over completeness. If a detail doesn't earn its place on one screen, leave it in plan.md.
-- Give each **new** infographic its own character — a different palette and personality per project is the point. Don't converge on one house style when starting fresh. When updating an existing one, do the opposite: preserve the CSS verbatim so it stays visually consistent across refreshes.
+Do not create a separate infographic table. Report the generated/refreshed files,
+the mode used, and any stubs or deferred full builds. Link the HTML; do not paste
+it.

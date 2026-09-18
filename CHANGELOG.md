@@ -8,6 +8,12 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.12.0] — 2026-09-18
+
+### Changed
+- **`todo-infographic` refreshes marked pages incrementally.** Checkbox and status updates use a
+  deterministic helper, while prose and structural changes take progressively heavier paths.
+
 ## [1.11.7] — 2026-09-16
 
 ### Changed
