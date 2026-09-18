@@ -25,7 +25,8 @@ subagent prompt.
 | `fresh` | Sources and derived values match | Do nothing |
 | `fast-refresh` | Only checkbox state, status, date, or another derived value changed | Run `apply`; no model or design skill |
 | `semantic-refresh` | Existing prose may be stale, but the marked structure still fits | Produce a small content patch, then run `apply` |
-| `full-build` | HTML is missing/legacy, phase or decision structure changed, or footprint structure changed | Run the full design path |
+| `legacy-migration` | Existing HTML has no embedded refresh state, but its bindings can be inserted safely | Run `migrate`, optionally with one bounded exact patch |
+| `full-build` | HTML is missing, legacy migration is ambiguous, or phase/decision/footprint structure changed | Run the full design path |
 
 ## Required HTML markers
 
@@ -38,8 +39,9 @@ existing classes and visual markup; add only the attributes.
 <time data-todo-value="generated-date">2026-09-18</time>
 ```
 
-Optional derived bindings are `task-done`, `task-total`, `task-open`, and
-`project-status`. When present, the helper updates them too.
+`task-summary` may be replaced by the pair `task-done` plus `task-total` when the
+design renders the two numbers separately. Optional derived bindings are `task-open`
+and `project-status`. When present, the helper updates them too.
 
 Each phase needs one leaf count and one progress element. The key is the lower-case
 phase number from its `## Phase` heading (`Phase 6a` becomes `phase-6a`):
@@ -50,6 +52,13 @@ phase number from its `## Phase` heading (`Phase 6a` becomes `phase-6a`):
      data-todo-phase-progress="phase-6"
      style="width: 77%"
      aria-valuenow="77"></div>
+```
+
+When the design also prints a percentage beside the bar, bind that leaf too so it
+cannot drift from the width:
+
+```html
+<span data-todo-phase-percent="phase-6">77%</span>
 ```
 
 Put `data-todo-review-id="D<n>"` on each decision card. The set must match the
@@ -109,6 +118,52 @@ If the changed source does not affect any visible prose, use
 needs markup rather than plain text, escalate to `full-build`; do not force prose
 into the wrong existing element.
 
+## Legacy migration
+
+`legacy-migration` is the one-time bridge for an existing page that predates refresh
+markers. The helper reads its source positions and inserts attributes/wrappers without
+serializing the document, so the stylesheet stays byte-identical.
+
+Finish source edits first, then keep the inspection manifest. It freezes the complete
+HTML, plan, tasks, optional footprint, and CSS. Because legacy HTML has no semantic
+baseline, migration requires either a bounded exact patch or an explicit bounded review
+that found its visible content current. The latter needs no model to read the full HTML:
+
+```bash
+python3 <skill-dir>/scripts/refresh-infographic.py migrate \
+  <project-dir> --html <infographic.html> --date <YYYY-MM-DD> \
+  --status <registry-status> --manifest <inspection-manifest.json> \
+  --confirm-content-current \
+  [--footprint-json <temporary-footprint.json>]
+```
+
+If the manifest reports stale content, extract only the relevant fragment:
+
+```bash
+python3 <skill-dir>/scripts/refresh-infographic.py fragment \
+  --html <infographic.html> --needle '<stable ID or text>' \
+  [--contains '<additional anchor>'] --output <fragment.json>
+```
+
+Give the content agent only the changed source block plus that fragment. It returns:
+
+```json
+{
+  "replacements": [
+    {
+      "before": "<exact fragment from fragment.json>",
+      "after": "<small corrected fragment>"
+    }
+  ]
+}
+```
+
+Apply it with `migrate --exact-patch <patch.json>`. The helper accepts at most eight
+replacements and 64 KiB total, requires every `before` value to occur exactly once,
+and rejects changed sources, changed CSS, unknown structure, or incomplete bindings.
+Run `verify` afterward. If inspection says `legacy-migration-ambiguous`, use a full
+build rather than guessing a patch.
+
 ## Full build and one-time legacy upgrade
 
 After the design agent writes HTML with all required markers, initialize the
@@ -125,11 +180,12 @@ python3 <skill-dir>/scripts/refresh-infographic.py verify \
   <project-dir> --html <infographic.html>
 ```
 
-For an existing infographic, pass the pre-build `theme.style_sha256` emitted by
+For an existing infographic that could not be migrated, pass the pre-build
+`theme.style_sha256` emitted by
 `inspect`; initialization then refuses a rebuild whose CSS changed. A missing
 infographic has no expected hash. An existing unmarked infographic requires one
-full content-preserving rebuild to add the contract. After that migration, routine
-refreshes use the cheap paths.
+deterministic migration or, when ambiguous, one content-preserving rebuild to add the
+contract. After that migration, routine refreshes use the cheap paths.
 
 The helper records a hash of every `<style>` block and refuses later refreshes if
 the theme CSS drifted. It also refuses network-loaded assets and unknown content

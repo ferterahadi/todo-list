@@ -51,6 +51,7 @@ and footprint JSON when one exists.
 | `fresh` | No write and no model call |
 | `fast-refresh` | Run deterministic `apply` inline; no subagent |
 | `semantic-refresh` | Give one balanced-tier, medium-effort build agent only the compact manifest; apply its plain-text patch |
+| `legacy-migration` | Insert refresh markers deterministically; use one bounded exact patch only when stale prose or cards must change |
 | `full-build` | Use the full design path below |
 
 The semantic agent does **not** receive the full HTML, unchanged plan sections,
@@ -58,16 +59,47 @@ unchanged task phases, or design skills. It returns only the content-patch JSON
 defined by the refresh contract. If it needs a new card, section, list row,
 diagram node, rich markup, or an absent binding, escalate to `full-build`.
 
-For a Stop-hook auto-trigger, run `fresh`, `fast-refresh`, and
-`semantic-refresh`. Do not start a foreground full build merely to let the parent
-turn stop: report that the legacy/structural infographic still needs explicit
-`/todo-infographic <short-name>`. An explicit user invocation authorizes the full
-build; dispatch it in the background when the host supports that while the
-orchestrator remains responsive.
+Finish every in-scope `plan.md` and `tasks.md` edit before `inspect`. The manifest
+freezes both source hashes; never dispatch a content agent and then change either
+source. If a source changes, discard the patch, inspect again, and redispatch.
+
+For a Stop-hook auto-trigger, run `fresh`, `fast-refresh`, and `semantic-refresh`.
+`legacy-migration` always needs an explicit semantic review decision, so do not start
+it—or a foreground full build—merely to let the parent turn stop: report the exact
+explicit command still needed.
+An explicit user invocation authorizes a bounded legacy content patch or full build;
+dispatch it in the background when the host supports that while the orchestrator
+remains responsive.
+
+## Legacy migration
+
+Read [references/refresh-contract.md](references/refresh-contract.md). The helper
+recognizes unambiguous task totals, phase meters, generated date, and decision cards,
+then inserts markers without serializing the page. It preserves every `<style>` byte
+and refuses ambiguous structure.
+
+Legacy HTML has no source baseline, so absence of a structural mismatch does not prove
+its prose is current. After a bounded review finds no stale content, run `migrate
+--confirm-content-current`; no model reads the full HTML. When stale content must change:
+
+1. Extract only the changed source block and the smallest matching HTML fragment with
+   `fragment`. Never give the agent the full HTML, unchanged phases, or design skills.
+2. Use the balanced tier at medium effort. Ask for only the exact-patch JSON from the
+   refresh contract. The bounded patch may replace at most eight exact fragments and
+   64 KiB total; it is not a rewritten page.
+3. Run `migrate --exact-patch`, then `verify`. Migration rejects a stale inspection
+   manifest, a non-unique replacement, a source edit made after inspection, CSS drift,
+   missing bindings, or stale decision structure.
+
+If the helper reports `legacy-migration-ambiguous`, use `full-build`; do not weaken its
+proof checks or guess selectors.
 
 ## Full design path
 
-Use the balanced tier with high reasoning effort. Read
+Use the balanced tier with **exactly high** reasoning effort. High is the ceiling as
+well as the floor: never request or inherit `xhigh` or `max`. If the host cannot select
+the worker's effort, use a supported scoped session set to high; do not send a large
+build into an inherited higher effort. Read
 [references/design-spec.md](references/design-spec.md) and give the build agent:
 
 - the absolute project and output paths;
@@ -81,11 +113,17 @@ design-critique/frontend-design pass. A content-only refresh never loads them.
 Spawn one agent per project and parallelize only when the user explicitly asked
 for several projects.
 
+Monitor a background build by agent events, not a shell loop that polls for a marker.
+If three minutes pass without a tool call or file write, stop it once and redispatch
+with the source/HTML split into smaller relevant chunks. A second silent stall is a
+failed build to report, not another retry.
+
 The agent writes marked HTML, then the orchestrator runs `apply --initialize` and
 `verify` from the refresh contract. For an existing page, pass the pre-build CSS
 hash from the inspection manifest so initialization proves the theme stayed
 unchanged. A legacy unmarked page therefore pays for one final content-preserving
-rebuild; later routine updates use the cheap paths.
+rebuild only when deterministic migration refused it; later routine updates use the
+cheap paths.
 
 The full-build agent returns exactly:
 
