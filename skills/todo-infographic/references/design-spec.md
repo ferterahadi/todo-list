@@ -1,8 +1,8 @@
 # Full infographic design specification
 
-Read this reference only for `full-build`: a new infographic, a one-time upgrade of
-legacy unmarked HTML, or a structural change. Routine and semantic refreshes do not
-need design instructions.
+Read this reference only for `full-build`: a new infographic, legacy HTML whose
+deterministic migration was ambiguous, or a structural change. Routine, semantic,
+and deterministic legacy migrations do not need design instructions.
 
 Produce `artifacts/infographic.html` inside the project folder. Keep it
 self-contained: no network-loaded assets, everything inline, opens offline, and

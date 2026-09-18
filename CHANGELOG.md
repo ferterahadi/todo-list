@@ -8,6 +8,12 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.13.0] — 2026-09-18
+
+### Changed
+- **`todo-infographic` migrates legacy pages without regenerating them.** It inserts refresh
+  bindings deterministically and limits stale content work to frozen, exact HTML patches.
+
 ## [1.12.0] — 2026-09-18
 
 ### Changed
