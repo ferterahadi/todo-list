@@ -134,8 +134,8 @@ stale="$(echo "$stale" | xargs)"
 
 reason="One-pager infographic(s) became stale from plan.md or tasks.md changes in \
 this session for: ${stale}. Invoke the todo-infographic skill only for the listed \
-project(s); it writes artifacts/infographic.html and updates the infographic column \
-in index.md."
+project(s). It must inspect first and use the cheapest safe refresh mode; an automatic \
+Stop-hook continuation must not start a foreground full design build."
 
 # Emit the block decision as JSON (printf keeps it valid without jq).
 printf '{"decision":"block","reason":"%s"}\n' "$reason"
