@@ -15,6 +15,7 @@ kept separate from the repos where your actual code lives:
   index.md                     ← active projects, one row each
   archive.md                   ← finished rows, kept rather than deleted
   REGISTRY.md                  ← what each registry column means
+  .todo-list/                  ← plugin bookkeeping (drift-notice marker); safe to ignore
   projects/
     work/api-rate-limiting/
       plan.md                       goal, scope, decisions
@@ -164,7 +165,7 @@ file.
 |`todo-graph`|Say which projects block which, then ask what's ready, what's stuck, and why|
 |`todo-review`|Checks a diff against the plan — did it drift, is anything unproven|
 |`todo-review-handoff`|Packages a review so someone else can make the call — claims, what to check, a sheet to fill in|
-|`todo-verify`|The check: runs the tests, ticks tasks, opens Revisions for anything that failed|
+|`todo-verify`|The check: runs the tests, ticks tasks, opens Revisions for anything that failed, and marks the project done once it's green and shipped|
 |`todo-revise`|Fixes what the check caught, then checks again|
 
 **Bridge** — connecting the hub to your real repos
@@ -174,7 +175,7 @@ file.
 |`todo-refer`|Loads a project's context from any repo; `resume` works out where things stopped|
 |`todo-push`|The whole shipping run: branch → commit → push → PR → merge|
 |`todo-infographic`|Turns a plan into a one-page HTML infographic|
-|`todo-learn`|Saves a correction as a lasting rule in that repo's own skill files|
+|`todo-learn`|Turns "don't do that again" into a standing rule in that repo's own skill files|
 
 **Housekeeping**
 
@@ -211,7 +212,8 @@ smallest useful visual, and reserve completion receipts for changed or verified 
 /todo-style            # what's installed now vs what ships
 /todo-style diff       # exactly which lines would change
 /todo-style install    # back up, then swap in
-/todo-style restore    # put your old file back
+/todo-style restore    # put your old file back — or remove the pack if there was none
+/todo-style backups    # every saved copy, restore point marked
 ```
 
 It writes to your **global** agent instruction file — `~/.claude/CLAUDE.md` for Claude
@@ -223,7 +225,8 @@ protect you, because that file is usually one you've tuned yourself:
 - Your current file is copied to `$TODO_HUB/backups/agent-instructions/` and checked byte
   for byte **before** anything is written over. If the copy doesn't come out right, the
   install stops.
-- Nothing in that folder is ever deleted, and `restore` puts the most recent one back.
+- Nothing in that folder is ever deleted. `restore` returns to the file you had before the
+  first install (or removes the pack if you had none), and running it twice changes nothing.
 
 Installing the plugin doesn't do this to you — `/todo-style install` is the only thing
 that writes to that file, and updating the plugin later won't rewrite it either. Run

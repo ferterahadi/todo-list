@@ -1,6 +1,6 @@
 ---
 name: todo-verify
-description: Use when the user invokes /todo-verify, says "verify this project", "did the e2e pass", "run the verification layer", or names a project and wants its verification result reconciled into the todo. Detection only — reads results, ticks tasks/flips status, opens Revisions on gaps; never edits code.
+description: Use when the user invokes /todo-verify, says "verify this project", "did the e2e pass", "run the verification layer", or names a project and wants its verification result reconciled into the todo. Detection only — reads results, ticks tasks, flips status, opens Revisions on failures and records coverage gaps as advisory; never edits code.
 ---
 
 # Project Verify Skill
@@ -8,19 +8,18 @@ description: Use when the user invokes /todo-verify, says "verify this project",
 You are the **check** gate in the hub's `plan → do → check → revise` loop. `todo-execute`
 *builds*; you *verify* — reading the project's result from its **verification MCP** (the
 user's verification layer) and reconciling it into todo state. You **detect and record**;
-you never edit code, never run repair. Failures and coverage gaps become structured
-`## Revisions` entries that `todo-revise` then consumes and fixes.
+you never edit code, never run repair. Run failures become `[open]` `## Revisions` entries
+that `todo-revise` then consumes and fixes; coverage gaps become `[advisory]` entries that
+inform but never block.
 
 Division of labor: **the verification MCP attests; you transcribe its verdict into
-`tasks.md` plus the owning registry row.** The run is the hard gate that flips status;
-coverage only emits Revisions.
+`tasks.md` plus the owning registry row.** The run is the only signal that ticks tasks or
+flips status; coverage never does either.
 
 This involves real judgment — driving the run, handling collisions, and interpreting the
 result. Use the **balanced** tier at **high** effort from
-[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). The final mechanical `tasks.md`/`index.md`
-checkbox and status edits may be delegated to the **fast** tier exactly as
-`todo-state` does. If the host cannot select a dispatch model, keep the work in
-the current session.
+[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). The `tasks.md` and registry
+edits are a few lines — make them inline; a dispatch costs more than it saves.
 
 ## The verification MCP (pluggable)
 
@@ -37,13 +36,17 @@ The tool names used below (`start_run`, `wait_for_result`, `get_result`, `get_co
 are placeholders for that contract — map them to your server's actual tools. If a project
 has no verification MCP, it simply omits the `## Verification` block in `plan.md` and this
 skill is a no-op for it; the `plan → do → revise` loop still runs without the check gate.
-See the README for how to point this at a concrete server.
+
+**Pointing it at a concrete server:** register the server with the host as an MCP server,
+list its tools, and pick the one that fills each contract verb above. Record the choice in
+the project's `## Verification` block (Step 2): `Feature` is the server's name for the
+target, `Run` names the start tool and its arguments (and how to rerun by id), and
+`Coverage source` names the coverage tool. That block is the whole binding.
 
 ## Hub location
 
 Resolve every hub path against `$TODO_HUB` — see
-[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location. Pass that
-root to the edit subagent so it writes there, not into the cwd.
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location.
 
 ## How the user invokes this
 
@@ -90,7 +93,7 @@ This is the binding to the verification MCP:
   (feature name + gate-covered tasks) before running /todo-verify." Do not guess a feature.
 - Note the **`Gate covers`** set — the *only* tasks you may ever auto-tick. Anything outside
   it is never ticked by this skill.
-- Note whether **`Coverage source`** is set (enables the coverage-gap → Revisions path).
+- Note whether **`Coverage source`** is set (enables the coverage-gap → advisory path).
 - Read the **`Task↔test map`** if present — it sharpens which task ticks on which passing
   spec and which task a failure backlinks to. Absent → map coarsely (see Step 5).
 
@@ -112,44 +115,52 @@ server has an auto-repair / "heal" mode, turn it off:
 **Degradation rule:** if the app can't boot — no creds, blocked deploy, health-check
 timeout — don't hard-fail. Set the run result to `blocked`, capture the
 blocker reason verbatim, and continue to Step 4 (coverage-only). Report the blocker
-prominently in Step 6.
+prominently in Step 7.
 
 ## Step 4 — Read coverage (if `Coverage source` is set)
 
 Call the coverage tool for the feature. Collect the gap list (e.g. `untested`,
 `unverified`, `shallow-verified`, `path-incomplete`) plus the grounded coverage %. These
-never flip status — they only become Revisions in Step 5.
+never tick a task or flip status — they only become `[advisory]` entries in Step 5.
 
 If `Coverage source` is not set, skip this step.
 
-## Step 5 — Reconcile and write back
+## Step 5 — Reconcile tasks and Revisions
 
-Apply these rules. Mechanical `tasks.md` / registry edits may be delegated to a
-fast-tier subagent (as `todo-state` does); the interpretation is yours.
+Edit `tasks.md` inline; the interpretation is yours. Resolve task IDs with the graph
+helper rather than by counting:
 
-Before any green result can flip the project to `done`, run the gate from
-[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § The status-flip gate.
-Passing tests still tick their covered tasks when the gate refuses — a blocked graph holds
-the *status* at `in-progress`, not the evidence.
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" <short-name>
+```
 
-| Verification result | tasks.md | owning registry status | Revisions |
-|---|---|---|---|
-| Run green, all gate-covered tasks pass | tick covered `[ ]`→`[x]` | → `done` **iff** every task in the project is `[x]`, else stays `in-progress` (a flip to `done` also stamps `completed` = today and `elapsed (days)` = `completed − started`, per `todo-state` § Date stamping — never overwrite an existing real `started`) | — |
-| Run fails | no tick | stays `in-progress` | one entry per failing area, backlinked `⟵ Task N` |
-| Coverage gap (even if run green) | no change | unchanged | one informational entry per gap (gap type named) |
-| Run blocked (boot/creds) | no tick | unchanged | report blocker; coverage path still runs |
-| No verification block | — | — | (handled in Step 2 — stop) |
+It prints `TASK\t<id>\t<open|done>\t<line>\t<text>` per real task, using the positional IDs
+from [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Task IDs and phases (`5.7`,
+`R3`). Anchor each tick on its printed line and backlink with its ID. Validate
+`<short-name>` first (§ Placeholder safety).
+
+| Verification result | tasks.md | Revisions |
+|---|---|---|
+| Run green, all gate-covered tasks pass | tick covered `[ ]`→`[x]` | close every `[fixed — awaiting verify]` entry: tick its `- [ ]`, tag `[done]`, archive it |
+| Run fails | no tick | one `[open]` entry per failing area, backlinked `⟵ Task <id>`; a `[fixed — awaiting verify]` entry for a failing area goes back to `[open]` with the new Actual |
+| Coverage gap (even if run green) | no change | one `[advisory]` entry per gap (gap type named), no checkbox |
+| Run blocked (boot/creds) | no tick | none — report the blocker; coverage path still runs |
+| No verification block | — | (handled in Step 2 — stop) |
 
 **Mapping tasks ↔ tests:**
 - With a `Task↔test map`: tick the mapped task only when its mapped spec/test passes;
-  backlink a failure to the mapped task.
+  backlink a failure to the mapped task. On a partial pass, close only the
+  `[fixed — awaiting verify]` entries whose mapped spec now passes.
 - Without a map (coarse fallback): an **all-green** run ticks the entire `Gate covers` set
-  at once; a **partial** pass ticks nothing (you can't tell which task each test proves) —
-  open a Revision noting which tests failed and that a `Task↔test map` would sharpen this.
+  at once; a **partial** pass ticks and closes nothing (you can't tell which task each test
+  proves) — open a Revision noting which tests failed and that a `Task↔test map` would
+  sharpen this.
 
 **Revisions format** — reuse the exact `## Revisions` schema `todo-revise` consumes, so the
 two skills interlock. Append to (or create) the `## Revisions` block at the bottom of
-`tasks.md`, numbering `R<n>` continuing from any existing entries (never reuse a number):
+`tasks.md`, numbering `R<n>` continuing from any existing entries (never reuse a number).
+A run failure is a full, fixable entry; a coverage gap is advisory — no checkbox, so it
+never counts as open work:
 
 ```markdown
 ### R7 ⟵ Task 5.7 — beta deploy + lifecycle smoke        [open]
@@ -159,48 +170,97 @@ two skills interlock. Append to (or create) the `## Revisions` block at the bott
 - Fix: (leave for /todo-revise unless the cause is obvious)
 - Source: verification run 7cvh / feature api-token-mgmt
 - [ ] implement + re-verify
+
+### R8 ⟵ Task 5.3 — rotate endpoint        [advisory]
+- Gap: untested — no spec exercises rotate with an expired token
+- Source: coverage get_coverage(api-token-mgmt), run 7cvh, 82% grounded
 ```
 
 **Invariants:**
-- Never tick a task outside `Gate covers`. Never edit code. Never run repair.
-- The **run** is the only signal that flips `index.md` status; **coverage** never flips
-  status, only emits Revisions.
+- Never tick a task outside `Gate covers` — the one exception is the checkbox of a
+  revision this run closes. Never edit code. Never run repair.
+- The **run** is the only signal that ticks tasks or flips status. **Coverage** writes
+  `[advisory]` entries only: no `[open]` tag and no checkbox, so task counts and the graph
+  ignore them and they can never hold back `done`. `/todo-revise <short-name> R<n>`
+  promotes one to `[open]` when the user decides to close that gap.
 - **Idempotent:** before appending a Revision, scan existing entries — if one already
-  covers the same failing area/test, update it rather than adding a duplicate. Scan by
-  extraction, not a full read: `grep -niA1 '^### R[0-9]\+[A-Za-z]*' tasks.md` gives every entry's
-  heading + Gap line; read a specific entry's body by line range only if you need it.
-  Likewise, find the `Gate covers` task lines to tick via `grep -n '\- \[ \]' tasks.md`
-  filtered to the covered phase — hand the edit subagent the exact line text as
-  its anchor, never the whole file.
-- Leave `plan.md`, `research/`, `artifacts/` untouched — this skill edits `tasks.md`
-  plus the owning registry row.
-- If a failure or coverage gap opens a Revision for an archived project, atomically move
-  its row back to the same section in `index.md`, set `in-progress`, and clear
-  `completed` / `elapsed (days)` per `todo-state`. A passing re-verification that
-  leaves an archived project `done` updates its `archive.md` row in place.
+  covers the same failing area/test or coverage gap, update it rather than adding a
+  duplicate. An `[advisory]` gap that a later coverage read no longer reports is tagged
+  `[done]`. Scan by extraction, not a full read:
+  `grep -niA1 '^### R[0-9]\+[A-Za-z]*' tasks.md` gives every entry's heading + Gap line;
+  read a specific entry's body by line range only if you need it.
+- **Closing a revision archives it** — apply `todo-archive` Step 2 to that entry at once
+  ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Archiving completed
+  revisions).
+- Leave `plan.md` and `research/` untouched — this skill edits `tasks.md`, the owning
+  registry row, and `artifacts/journal.md` only when it archives a closed revision.
 
-## Step 6 — Reconcile status honesty, then report
+## Step 6 — Set the project status
 
-**Status honesty** (mirror `todo-state` / `todo-revise`): open Revisions on a
-project marked `done` mean it isn't done. If archived, move the row back to `index.md`;
-set `in-progress` and clear `completed` / `elapsed (days)` (§ Date stamping). All tasks `[x]`
-and no case-insensitive open Revisions, with a clean project-graph gate → offer `done`,
-stamping `completed` = today and `elapsed (days)` when accepted.
+Decide status once, here, from `tasks.md` as Step 5 left it. `done` requires all four:
 
-**Report** status-first, terse:
+1. **Green run** — not failed, not blocked.
+2. **No open work** — every real task is `[x]` (count per
+   [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks;
+   Revisions checkboxes count) and no case-insensitive `[open]` Revision remains.
+   `[advisory]` entries have neither, so coverage never blocks.
+3. **Shipped** — the shipping check below passes.
+4. **Graph gate** — § The status-flip gate passes, run now rather than reused from earlier.
+
+All four hold → set `done` without asking; this run is the gate the other skills defer to.
+Stamp `completed` = today and `elapsed (days)` per `todo-state` § Date stamping, never
+overwriting a real `started`. An archived project that stays `done` keeps its `archive.md`
+row, updated in place. Any check fails → the project is not `done`; report which check held
+it. A refused gate holds the *status*, never the ticks Step 5 wrote.
+
+**Reopening:** a project recorded as `done` that now has open work (check 2 — a failed run
+lands there through its `[open]` entries) is not done. Hand the flip to `todo-state` set
+mode — `/todo-state <short-name> in-progress` — which runs the status-flip gate, moves an
+archived row back to `index.md`, and clears `completed` / `elapsed (days)` in one edit. If
+that gate refuses, leave the row and report both the open work and the blocker. A blocked
+run or an `[advisory]` entry never reopens a project.
+
+**Shipping check** — proof that the project's code reached `<base>`, as defined in
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Shipped work. A hub-only
+project (repo `-`, or execution skipped the worktree) passes. Otherwise run `todo-state`'s
+evidence helper once:
+
+```bash
+bash <todo-state-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" \
+  --fetch --hub "$TODO_HUB"
+```
+
+It validates both values, fetches once, and closes with one `SUMMARY` row. Shipped means
+`unshipped=0`, `uncommitted=0`, and `pr` is not `open`; merge, rebase, and squash merges
+all count, and an absent branch and worktree pass. Exit 2 (refused input), exit 3 (repo
+not on disk), or any `unknown` field (failed fetch, `gh` unauthenticated) makes shipping
+**unknown**, which holds `done` exactly like unshipped work — report it, never guess.
+
+## Step 7 — Report
+
+Status-first, terse:
 - ✅ / ❌ / ⚠️ run verdict (or ⚠️ blocked + the blocker reason).
-- Grounded coverage % and gap counts, if coverage ran.
-- Exactly what was written: which tasks ticked, status before → after (plus any
-  `started`/`completed`/`elapsed (days)` stamped or cleared), which `R<n>` Revisions opened.
-- If Revisions were opened: `/todo-revise <short-name>` to fix now, or
-  `/todo-refer <short-name> resume` for a later session — see
-  [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Session handoff.
+- Grounded coverage % and gap counts, if coverage ran — advisory, never a status input.
+- Exactly what was written: which tasks ticked, which `R<n>` opened, closed, or recorded as
+  advisory, status before → after (plus any `started`/`completed`/`elapsed (days)` stamped
+  or cleared).
+- What held `done`, if anything: open work, a refused gate, or unshipped/unknown shipping —
+  for unshipped work, `/todo-push` from `<repo>-wt/<short-name>`, then `/todo-verify` again
+  so the run attests the merged code rather than the branch.
+- `[open]` Revisions: `/todo-revise <short-name> R<n>` to fix now (the entry is fully
+  specified, so revise goes straight to the fix), or `/todo-refer <short-name> resume` for
+  a later session — see [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md)
+  § Session handoff.
 
 ## Notes
 - This is the producer half of the Revisions loop; `todo-revise` is the consumer. Keep the
-  schema identical so they interlock — same `### R<n> ⟵ Task N … [open]` + `- [ ]` shape.
+  schema identical so they interlock — same `### R<n> ⟵ Task <id> — … [open]` + `- [ ]`
+  shape. Tags: `[open]` → `[fixed — awaiting verify]` (revise, once the user accepts a fix)
+  → `[done]` (this skill, on a green run); `[advisory]` is coverage-only.
 - Reconciled state feeds the infographic: the Stop hook (`infographic-staleness.sh`)
-  regenerates `artifacts/infographic.html` after the tasks.md/index.md edits land.
+  applies count and status refreshes to `artifacts/infographic.html` itself and only
+  suggests `/todo-infographic <short-name>` when the page needs a structural rebuild. It
+  skips `done` projects.
 - If a run keeps blocking on the same missing prerequisite (e.g. a deploy that never
   happened), say so plainly — that's a project blocker for `/todo-revise` or the user, not
   something verify can clear.

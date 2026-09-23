@@ -7,16 +7,14 @@ description: Use when the user invokes /todo-add, says "add a new project", "cre
 
 You scaffold a new project in a hub repo and register it in `index.md`. This is the entry point that runs *before* `todo-plan`: it creates the project folder and the index row, leaving the plan content empty for `todo-plan` to fill in. Keep this skill focused on scaffolding — do not write plan content, edit tasks, or execute anything.
 
-This is light, mechanical work. Use the **fast** tier from
-[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md) when dispatching is available; otherwise
-run it inline.
+This is light, mechanical work — a few file writes. Do it inline on the current session;
+dispatching it to a subagent costs more than the work.
 
 ## Hub location
 
 Resolve every hub path against `$TODO_HUB` — including the new project folder under
-`projects/work/` or `projects/self-initiative/`. See
-[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location, and pass
-that absolute root to the scaffolding subagent so it writes there, not into the cwd.
+`projects/work/` or `projects/self-initiative/` — never the cwd. See
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Hub location.
 
 ## How the user invokes this
 
@@ -28,7 +26,7 @@ that absolute root to the scaffolding subagent so it writes there, not into the 
 
 The argument is a free-text feature/project description, not a short-name. You derive the short-name from it.
 
-## Step 1 — Derive a short-name
+## Step 1 — Derive a short-name and ask once
 
 Turn the feature description into a kebab-case slug suitable for a folder name and the `index.md` short-name column:
 
@@ -36,21 +34,19 @@ Turn the feature description into a kebab-case slug suitable for a folder name a
 - keep it concise but recognizable — drop filler words ("the", "a", "support for"), keep the distinguishing terms
 - prefix with a relevant subsystem if it clarifies (matching the existing naming style in `index.md`, e.g. `api-`, `web-`, `queue-`)
 
-Show the derived short-name to the user and let them override it:
+Then ask both open questions in **one** prompt — the short-name override and the
+classification, which is never reliably inferable:
 
-> "I'll call this project `rabbitmq-dlq-support`. Want a different short-name?"
+> "I'll call this project `rabbitmq-dlq-support` — want a different short-name? And is it
+> a **work** or **self-initiative** project?"
+
+Use the host's structured choice prompt for the classification when available. The answer
+decides whether the folder goes under `projects/work/` or `projects/self-initiative/`, and
+which table in `index.md` gets the new row (`## Work` or `## Self-initiative`).
 
 If the user gave no description at all, ask what the project is before deriving anything.
 
-## Step 2 — Ask work vs self-initiative
-
-Always ask — classification isn't reliably inferable:
-
-> "Is this a **work** or **self-initiative** project?"
-
-This decides whether the folder goes under `projects/work/` or `projects/self-initiative/`, and which table in `index.md` gets the new row (`## Work` or `## Self-initiative`).
-
-## Step 3 — Check for collisions
+## Step 2 — Check for collisions
 
 Read `$TODO_HUB/index.md`, then `$TODO_HUB/archive.md`. If the chosen short-name already
 exists in either registry or any section:
@@ -62,7 +58,7 @@ exists in either registry or any section:
 
 Also check that the target folder `projects/<work|self-initiative>/<short-name>/` doesn't already exist on disk — if it does, treat it as a collision the same way.
 
-## Step 4 — Scaffold the folder
+## Step 3 — Scaffold the folder
 
 Create `projects/<work|self-initiative>/<short-name>/` with:
 
@@ -88,13 +84,13 @@ Resolve X active-first, then archive; use the request's own clause as the reason
 infer an edge from naming similarity. If the wording is ambiguous, leave the table empty
 for `/todo-plan` discovery rather than guessing.
 
-## Step 5 — Register in index.md
+## Step 4 — Register in index.md
 
 Add a row to the correct section table (`## Work` or `## Self-initiative`) in `index.md`. The tables have **nine** columns — include them all:
 
 | short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |
 |---|---|---|---|---|---|---|---|---|
-| `<short-name>` | `projects/<work\|self-initiative>/<short-name>` | `-` | `planning` | `<today>` | `-` | `-` | `-` | `-` |
+| <short-name> | projects/<work\|self-initiative>/<short-name> | - | planning | <today> | - | - | - | - |
 
 - `path` is the project folder path relative to the hub root.
 - `repo` stays `-` — the local codebase path is confirmed later during `/todo-plan`.
@@ -106,9 +102,10 @@ Add a row to the correct section table (`## Work` or `## Self-initiative`) in `i
 - `related` stays `-` for new projects. It is a legacy context-only field retained for
   existing hubs; canonical typed relationships now live in `plan.md`.
 
-Append the row to the bottom of the appropriate table. Don't reorder or touch other rows.
+Append the row to the bottom of the appropriate table, with bare cells like the rows
+already there — no backticks. Don't reorder or touch other rows.
 
-If Step 4 seeded a relationship, validate the now-registered source with:
+If Step 3 seeded a relationship, validate the now-registered source with:
 
 ```bash
 python3 <todo-graph-skill-dir>/scripts/graph-report.py can-link \
@@ -124,10 +121,13 @@ failure, stop and report that value.
 relationship row, keep the new project registered as `planning`, and report why the edge
 was not retained. Never leave a new cycle or ambiguous target in the hub.
 
-## Step 6 — Confirm and hand off
+## Step 5 — Confirm and offer to plan
 
-Report plainly what was created: the folder path, the files scaffolded, and the new `index.md` row. Then hand off to planning:
+Report plainly what was created: the folder path, the files scaffolded, and the new `index.md` row. Then offer to continue straight into planning:
 
-> "Created `projects/work/rabbitmq-dlq-support/` and registered it in index.md as `planning`. Run `/todo-plan rabbitmq-dlq-support` to fill in the plan and tasks."
+> "Created `projects/work/rabbitmq-dlq-support/` and registered it in index.md as `planning`. Plan it now?"
 
-Stop there. Do not start planning or executing — those are separate skills (`todo-plan`, `todo-execute`).
+On a yes, run `todo-plan` for the new short-name in this session; its discovery asks only
+what this run didn't capture (the short-name, the classification, any seeded relationship).
+On a no, point at `/todo-plan rabbitmq-dlq-support` and stop. Never start executing — that
+is `todo-execute`.

@@ -21,22 +21,22 @@ waiting to disagree.
 
 | Skill | Purpose |
 |-------|---------|
-| `todo-list` | Show active projects at a glance; `archive` reads the cold completed registry and `sort` reorders active rows by task completion (fast tier) |
+| `todo-list` | Show every active project at a glance with a task-progress column (`14/20 · 1 rev`); `archive` reads the cold completed registry and `sort` reorders active rows by task completion (fast tier) |
 | `todo-triage` | Tabulate what's left across projects and recommend frontier/deep/balanced/fast tier · effort · skill pairing per item (read-only; fast-tier gathering, routing judgment inline) |
 | `todo-refer` | Load project context — cross-repo, read-only, three modes. Default: `plan.md`+`tasks.md` as grounding. `resume`: where the work stopped (open tasks, last journal entry, blockers, worktree/branch/PR state) plus the next command. `R<n>`: follows the direct journal anchor and reads only that historical revision |
 | `todo-add` | Scaffold a new project folder + register it in `index.md` (fast tier) |
 | `todo-plan` | Write `plan.md` and `tasks.md` for a project |
-| `todo-execute` | Work through `tasks.md`, write outputs to `artifacts/`; `parallel` mode fans file-disjoint tasks out to agents in git worktrees of the target repo (no model pin — both implement and review waves inherit the session model), then lands PRs via a serial merge queue |
-| `todo-graph` | Compile typed `plan.md` relationships into the ready frontier, blocker chains, impact, paths, integrity audits, validated edits, and stable exports |
+| `todo-execute` | Work through `tasks.md` (or only `tasks <ids>`), write outputs to `artifacts/`; `parallel` mode fans file-disjoint tasks out to agents in git worktrees of the target repo (no model pin — both implement and review waves inherit the session model), then lands PRs one at a time through `land.sh --merge-existing` |
+| `todo-graph` | Compile typed `plan.md` relationships into the ready frontier, blocker chains, impact, forward and reverse paths, integrity audits, validated edits, and stable exports; `tasks` lists one project's real tasks with canonical IDs. Queries run inline |
 | `todo-review` | Review a repo's diff against the project's plan — scope drift, violated constraints, ticked tasks with no evidence — then a correctness pass via the installed `code-review` skill (report-only) |
 | `todo-review-handoff` | Package a review for someone else to adjudicate: findings become numbered falsifiable claims with confidence grades, a script spec that prints plain-English evidence per claim, and a ruling sheet whose columns include *reviewer is wrong*. Hub-optional — accepted rows feed `todo-revise`, or a standalone second-agent brief (deep tier) |
-| `todo-state` | Own the recorded state, both directions. Default: mark tasks/projects done, move status. `audit`: cross-check the owning registry against `tasks.md` and target-repo git/PR evidence, report drift, fix only on confirmation. Also the hub's authority on `started`/`completed`/`elapsed` stamping (fast-tier edits and gathering; drift verdicts inline) |
-| `todo-verify` | The "check" gate: drive a record-only verification run, tick tasks / flip status on green, open Revisions entries on failures or coverage gaps (balanced tier, high effort) |
-| `todo-revise` | Gap-driven rework: review done items, capture feedback per item, plan + run fixes, verify |
-| `todo-archive` | Lossless housekeeping: move closed revision detail behind direct journal links and move completed rows from active `index.md` to cold `archive.md` (fast tier) |
+| `todo-state` | Own the recorded state, both directions. Default: tick, add, or edit tasks and move status by hand. `audit`: cross-check the owning registry against `tasks.md` and target-repo git/PR evidence from `repo-evidence.sh` (fetched once per repo), report drift; `audit fix` applies after one confirmation. Also the hub's authority on `started`/`completed`/`elapsed` stamping (fast-tier edits and gathering; drift verdicts inline) |
+| `todo-verify` | The "check" gate: drive a record-only verification run, tick tasks, open Revisions on run failures and record coverage gaps as `[advisory]` entries that never block `done`; sets `done` itself when the run is green, no work is open, and the code shipped (balanced tier, high effort) |
+| `todo-revise` | Gap-driven rework: review done items, capture feedback per item, fix in the project worktree, mark accepted fixes `[fixed — awaiting verify]`, and verify; `R<n>` goes straight to one fix |
+| `todo-archive` | Lossless housekeeping: move closed revision detail behind direct journal links and move completed rows from active `index.md` to cold `archive.md`; open work blocks retirement and registry conflicts are handed to `todo-state` (fast tier) |
 | `todo-learn` | Capture a correction as one shared repo skill under `.agents/skills/` and `.claude/skills/` (balanced tier, high effort) |
 | `todo-infographic` | Turn a plan into a one-page HTML infographic, fresh theme each time (+ staleness hook). Generation uses balanced tier, high effort |
-| `todo-push` | General-purpose git shipping workflow (any repo): branch off main, commit, push, PR, merge, land back on main (fast tier) |
+| `todo-push` | General-purpose git shipping workflow (any repo): branch off the current HEAD, commit, push, PR, merge with the repo's own strategy, land back on the base branch. Also lands an existing branch's PR (`land.sh --merge-existing`). Plan phase balanced tier, land phase fast tier |
 | `todo-style` | Install the bundled response-style pack into the *global* agent instruction file — `~/.claude/CLAUDE.md` for Claude Code, `~/.codex/AGENTS.md` for Codex — after backing the current file up into `$TODO_HUB/backups/agent-instructions/`. Opt-in, confirmation-gated, reversible via `restore` (fast tier) |
 | `todo-conventions` | The contract every skill shares: hub-relative path resolution, active-first project lookup, placeholder validation before a shell, real-task counting, the status-flip graph gate, session handoff, and pointers to the canonical owners of date stamping and revision archival. A reference, never invoked directly |
 | `todo-llm-routing` | Map frontier/deep/balanced/fast capability tiers to the available Claude Code or Codex model |
@@ -68,23 +68,30 @@ and hub bootstrapping are also required.
 
 ## Bundled hooks (auto-registered)
 
-The plugin ships five hooks in [`../hooks/`](../hooks/), registered automatically via
+The plugin ships six hooks in [`../hooks/`](../hooks/), registered automatically via
 `hooks/hooks.json` on install:
 
 - **`bootstrap-hub.sh`** (SessionStart) — creates the hub at `$TODO_HUB` (default `~/todo`)
-  from the plugin's `seed/` on first run; silent thereafter.
+  from the plugin's `seed/` on first run and never replaces an existing file; afterwards it
+  only backfills missing docs and templates, and reports customised hub docs once per
+  shipped-doc revision (tracked in the plugin-owned `$TODO_HUB/.todo-list/` directory).
 - **`migrate-index-dates.sh`** (SessionStart) — upgrades legacy registry tables to the
   dated nine-column format.
+- **`migrate-registry-preamble.sh`** (SessionStart) — removes prose preambles from the
+  active `index.md`, keeping pinned blockquotes (including multi-line ones) whole.
 - **`archive-candidates.sh`** (SessionStart) — emits one compact report when revision
   detail, legacy tombstone links, oversized task files, or completed active rows need a
   reviewed `/todo-archive` sweep; it never edits or blocks.
 - **`infographic-staleness.sh`** (Stop) — when a `ready`/`in-progress` project's
-  `plan.md` or `tasks.md` changed in the current session and its infographic is now
-  missing or stale, nudges the agent once per source revision to regenerate it via
-  `todo-infographic` before the turn ends. It resolves the hub from `$TODO_HUB` and
-  self-scopes by both session time and repo: a changed project is reported from a session
-  in the hub itself or inside that project's target repo (including its `<repo>-wt/*`
-  worktrees), so old or unrelated staleness stays quiet.
+  `plan.md` or `tasks.md` changed in the current session and its infographic is stale,
+  runs the `todo-infographic` helper once per source revision: it applies and verifies a
+  fast refresh silently, blocks only when a small inline prose patch is needed (naming just
+  those projects), and otherwise prints a non-blocking notice naming
+  `/todo-infographic <short-name>`; it never starts a full build or legacy migration. It
+  resolves the hub from `$TODO_HUB` and self-scopes by both session time and repo: a
+  changed project is reported from a session in the hub itself or inside that project's
+  target repo (including its `<repo>-wt/*` worktrees), so old or unrelated staleness stays
+  quiet.
 - **`superpowers-doc-sync.sh`** (Stop) — ensures superpowers plans/specs written into a
   target repo get a pointer row in the project's `research/superpowers-docs.md`.
 

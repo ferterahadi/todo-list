@@ -2,8 +2,19 @@
 """Compile the todo hub's Markdown projects into a deterministic work graph.
 
 The compiler is deliberately read-only. Human-facing modes emit bounded TSV; only
-``export`` is unbounded. Canonical edges come from ``plan.md`` Relationship tables.
-Legacy registry ``related`` values are context hints and never affect readiness.
+``export`` and the per-project ``tasks`` listing are unbounded. Canonical edges come
+from ``plan.md`` Relationship tables. Legacy registry ``related`` values are context
+hints and never affect readiness.
+
+``parse_tasks`` is the reference implementation of the hub's task-count and task-ID
+rules (todo-conventions § Counting tasks, § Task IDs and phases).
+
+Exit codes:
+  0  the answer is complete and carries no relevant ERROR row.
+  1  the output is still a valid answer to parse: it carries at least one relevant
+     ERROR row, or the answer is negative (NO_PATH, an unresolved project, a refused
+     can-link, a project whose tasks.md is missing).
+  2  usage error or unknown export format; nothing to parse.
 """
 
 from __future__ import annotations
@@ -24,19 +35,31 @@ FIELD_LIMIT = 240
 ALLOWED_RELATIONS = {"depends-on", "related-to", "supersedes"}
 ACTIVE_STATUSES = {"planning", "ready", "in-progress", "done"}
 SEVERITY_ORDER = {"ERROR": 0, "WARNING": 1}
+# Registry-wide failures block every project. Node-level problems such as an unknown
+# status are owned by that node: it is unusable itself and blocks only its dependents.
 GLOBAL_ERROR_CODES = {
     "DUPLICATE_IDENTITY",
     "MISSING_REGISTRY",
     "REGISTRY_SCHEMA",
-    "UNKNOWN_STATUS",
 }
 REVISION_RE = re.compile(
     r"^###\s+(R[0-9]+[A-Za-z]*)\b.*\[\s*open(?:\s+[^\]]*)?\s*\]\s*$",
     re.IGNORECASE,
 )
+REVISION_ID_RE = re.compile(r"^###\s+R([0-9]+)([A-Za-z]*)\b", re.IGNORECASE)
+PHASE_RE = re.compile(r"^phase\s+([0-9]+(?:\.[0-9]+)?)([A-Za-z])?\b", re.IGNORECASE)
 CHECKBOX_RE = re.compile(r"^\s*-\s+\[([ xX])\]\s+")
+EXCLUDED_TASK_SECTIONS = {"status", "notes", "context"}
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})")
+
+
+@dataclass(frozen=True)
+class Task:
+    task_id: str
+    done: bool
+    line: int
+    text: str
 
 
 @dataclass
@@ -511,39 +534,88 @@ def safe_project_file(
     return candidate
 
 
-def parse_task_stats(path: Path) -> TaskStats:
-    if not path.is_file():
-        return TaskStats(exists=False)
+def parse_tasks(path: Path) -> tuple[list[Task], int]:
+    """Return the real tasks of a tasks.md in file order, plus its open Revisions.
 
-    total = 0
-    done = 0
+    A real task is a visible ``- [ ]`` / ``- [x]`` / ``- [X]`` line under a level-2
+    section other than Status, Notes, or Context; lines before the first level-2
+    heading, HTML comments, and fenced code never count. Revisions checkboxes count.
+    IDs: ``<phase>.<n>`` inside a phase heading, ``R<n>`` inside Revisions (from the
+    ``### R<n>`` heading above; ``-`` when there is none), otherwise ``<n>``.
+    """
+    tasks: list[Task] = []
     open_revisions = 0
     section = ""
     count_checkboxes = False
-    excluded_sections = {"status", "notes", "context"}
+    phase_l2: str | None = None
+    phase_l3: str | None = None
+    revision_id: str | None = None
+    phase_counts: dict[str, int] = defaultdict(int)
+    loose_count = 0
 
-    for _, line in visible_lines(path):
+    for line_number, line in visible_lines(path):
         heading = HEADING_RE.match(line)
         if heading:
             level = len(heading.group(1))
             title = heading.group(2).strip()
             if level == 2:
                 section = title.casefold()
-                count_checkboxes = section not in excluded_sections
+                count_checkboxes = section not in EXCLUDED_TASK_SECTIONS
+                phase_l2 = phase_key(title)
+                phase_l3 = None
+                revision_id = None
+            elif level == 3:
+                phase_l3 = phase_key(title)
+                revision = REVISION_ID_RE.match(line)
+                revision_id = (
+                    f"R{revision.group(1)}{revision.group(2).lower()}"
+                    if revision
+                    else None
+                )
             if section == "revisions" and REVISION_RE.match(line):
                 open_revisions += 1
             continue
 
         checkbox = CHECKBOX_RE.match(line)
-        if checkbox and count_checkboxes:
-            total += 1
-            if checkbox.group(1).casefold() == "x":
-                done += 1
+        if not checkbox or not count_checkboxes:
+            continue
+        if section == "revisions":
+            task_id = revision_id or "-"
+        else:
+            # A level-3 heading inside a level-2 phase is a subsection of that phase.
+            phase = phase_l2 or phase_l3
+            if phase is not None:
+                phase_counts[phase] += 1
+                task_id = f"{phase}.{phase_counts[phase]}"
+            else:
+                loose_count += 1
+                task_id = str(loose_count)
+        tasks.append(
+            Task(
+                task_id=task_id,
+                done=checkbox.group(1).casefold() == "x",
+                line=line_number,
+                text=line[checkbox.end():].strip(),
+            )
+        )
+    return tasks, open_revisions
 
+
+def phase_key(title: str) -> str | None:
+    match = PHASE_RE.match(title)
+    if match is None:
+        return None
+    return f"{match.group(1)}{(match.group(2) or '').lower()}"
+
+
+def parse_task_stats(path: Path) -> TaskStats:
+    if not path.is_file():
+        return TaskStats(exists=False)
+    tasks, open_revisions = parse_tasks(path)
     return TaskStats(
         exists=True,
-        total=total,
-        done=done,
+        total=len(tasks),
+        done=sum(task.done for task in tasks),
         open_revisions=open_revisions,
     )
 
@@ -1136,6 +1208,14 @@ def mode_frontier(graph: Graph) -> int:
     relevant_names = {node.name for node in frontier_nodes}
     for node in frontier_nodes:
         relevant_names.update(graph.hard_out.get(node.name, set()))
+    # An active row with an unknown status never reaches a frontier bucket; surface its
+    # own error here without letting it block unrelated projects.
+    relevant_names.update(
+        node.name
+        for node in graph.nodes.values()
+        if node.registry == "active"
+        and node.status.casefold() not in ACTIVE_STATUSES
+    )
     issues = graph.owned_issues_for_names(relevant_names)
     print_summary(
         "frontier",
@@ -1451,7 +1531,13 @@ def mode_path(graph: Graph, source_name: str, target_name: str) -> int:
     if target is None:
         return 1
 
+    # Paths run prerequisite -> dependent. Users often name the dependent first, so try
+    # the swapped order before answering NO_PATH and say which order matched.
+    direction = "forward"
     path = shortest_reverse_dependency_path(graph, source.name, target.name)
+    if path is None:
+        direction = "reverse"
+        path = shortest_reverse_dependency_path(graph, target.name, source.name)
     if path is None:
         print(row("NO_PATH", source.name, target.name))
         print_summary("path", graph, paths=0)
@@ -1462,7 +1548,15 @@ def mode_path(graph: Graph, source_name: str, target_name: str) -> int:
         emit_bounded([issue_row(issue) for issue in issues], "issues", AUDIT_LIMIT)
         return 1
 
-    print(row("PATH", source.name, target.name, f"hops={len(path) - 1}"))
+    print(
+        row(
+            "PATH",
+            path[0],
+            path[-1],
+            f"hops={len(path) - 1}",
+            f"direction={direction}",
+        )
+    )
     steps = [
         row(
             "STEP",
@@ -1474,6 +1568,66 @@ def mode_path(graph: Graph, source_name: str, target_name: str) -> int:
     ]
     emit_bounded(steps, "path_steps")
     print_summary("path", graph, paths=1)
+    return 0
+
+
+def mode_tasks(graph: Graph, name: str, open_only: bool) -> int:
+    node = query_node(graph, name)
+    if node is None:
+        return 1
+    project_dir = safe_project_dir(graph, node)
+    tasks_path = (
+        safe_project_file(graph, node, project_dir, "tasks.md")
+        if project_dir is not None
+        else None
+    )
+    if tasks_path is None:
+        detail = next(
+            (
+                issue.detail
+                for issue in graph.sorted_issues()
+                if issue.code == "INVALID_PROJECT_PATH" and issue.source == node.name
+            ),
+            "unsafe project path",
+        )
+        print(row("ERROR", "INVALID_PROJECT_PATH", node.name, "-", node.location, detail))
+        return 1
+    if not tasks_path.is_file():
+        print(
+            row(
+                "ERROR",
+                "MISSING_TASKS",
+                node.name,
+                "-",
+                str(tasks_path.relative_to(graph.hub)),
+                "tasks.md does not exist",
+            )
+        )
+        return 1
+
+    tasks, open_revisions = parse_tasks(tasks_path)
+    for task in tasks:
+        if open_only and task.done:
+            continue
+        print(
+            export_row(
+                "TASK",
+                task.task_id,
+                "done" if task.done else "open",
+                task.line,
+                task.text,
+            )
+        )
+    print(
+        export_row(
+            "SUMMARY",
+            "tasks",
+            f"project={node.name}",
+            f"done={sum(task.done for task in tasks)}",
+            f"total={len(tasks)}",
+            f"open_revisions={open_revisions}",
+        )
+    )
     return 0
 
 
@@ -1710,7 +1864,7 @@ def mode_can_link(
 def usage() -> None:
     print(
         "usage: graph-report.py "
-        "{frontier|context|why|impact|path|audit|export|can-link} HUB [args]",
+        "{frontier|context|why|impact|path|audit|export|can-link|tasks} HUB [args]",
         file=sys.stderr,
     )
 
@@ -1739,6 +1893,10 @@ def main(argv: Sequence[str]) -> int:
         return mode_export(graph, argv[2] if len(argv) == 3 else "tsv")
     if mode == "can-link" and len(argv) == 5:
         return mode_can_link(graph, argv[2], argv[3], argv[4])
+    if mode == "tasks" and (
+        len(argv) == 3 or (len(argv) == 4 and argv[3] == "--open")
+    ):
+        return mode_tasks(graph, argv[2], len(argv) == 4)
 
     usage()
     return 2

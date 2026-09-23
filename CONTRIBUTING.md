@@ -131,23 +131,50 @@ the two packs keep identical `## ` sections (the Codex file is a harness port, n
 that an existing instruction file is byte-verified into `$TODO_HUB/backups/agent-instructions/`
 before it is overwritten, that an already-current install and a redundant restore both
 no-op without churning backups, that a user-edited file *is* backed up on restore, that
-backups are only ever added, and that a bad agent or mode fails closed. It sandboxes
-`CLAUDE_CONFIG_DIR` and `CODEX_HOME`, so it never touches the machine's real files.
+backups are only ever added, and that a bad agent or mode fails closed. It must also prove
+that a second restore after the user edits the installed pack is a no-op and saves the edit
+once, that a pack installed onto no file can be uninstalled, and that `pack-versions.tsv`
+lists both shipped packs and every pack in git history — add a row whenever you change a
+pack. It sandboxes `CLAUDE_CONFIG_DIR` and `CODEX_HOME`, so it never touches the machine's
+real files.
 
 Run `tests/infographic-hook-contract.sh` for staleness-hook changes. It must prove the
 hub resolves from `TODO_HUB`, old staleness from before the current session stays silent,
 current-session source edits fire once per revision, target-repo and `<repo>-wt/*`
 worktree sessions report only their own project, and unrelated sessions, stub plans,
-fresh infographics, and stop-hook continuations never fire.
+fresh infographics, and stop-hook continuations never fire; that a
+fast refresh is applied silently, a semantic refresh blocks the stop, and anything else
+prints a notice naming `/todo-infographic <short-name>`.
+
+Run `tests/infographic-refresh-contract.sh` and `tests/infographic-parser-contract.sh` for
+changes to `refresh-infographic.py`. The parser contract pins the canonical task and phase
+rule (level-3 and decimal phases, flat lists, Revisions checkboxes, commented and fenced
+checkboxes), stub detection, and legacy pages whose phase blocks don't match `tasks.md`.
 
 Run `tests/push-contract.sh` for changes to `/todo-push` or its helpers. It stubs `gh` on
 `PATH` and drives scratch repos with local bare remotes, so it never talks to GitHub. It must
 prove `preflight.sh` stages nothing and fails closed on a missing `origin`, an
-unauthenticated `gh`, and a clean tree; and that `land.sh` rejects ref names carrying shell
-metacharacters, commits only the files named with `--file`, adds no second commit or PR on a
-repeat run, reports a blocked merge as exit 10 without ever passing `--admin` or
-force-pushing, and inside a linked worktree neither checks out the base branch nor passes
-`--delete-branch`.
+unauthenticated `gh`, and a clean tree; that `land.sh` rejects ref names carrying shell
+metacharacters, commits only the files named with `--file` (reporting anything else
+already staged), ships commits the branch already carries, adds no second commit or PR on a
+repeat run, recovers from a rebase conflict with one JSON object and a lease push, reports
+a blocked merge as exit 10 without ever passing `--admin` or force-pushing, and inside a
+linked worktree neither checks out the base branch nor passes `--delete-branch`; and that
+`land.sh --merge-existing` merges an open PR without deleting or switching branches.
+
+Run `tests/state-contract.sh` for changes to `/todo-state`, `/todo-refer`, `/todo-list`,
+`/todo-triage`, or `repo-evidence.sh`. It drives the helper against local bare repos with a
+stubbed `gh`, and must prove inputs are validated before anything runs, the repo is fetched
+at most once, `unknown` stays distinct from `absent`, and merge, rebase, squash, and PR
+merges are all detected. It also pins those skills to the shared counting helpers.
+
+Run `tests/count-agreement-contract.sh` whenever a task counter changes. `graph-report.py`
+(`tasks` and `export`), `archive-report.sh`, the infographic helper, and the todo-conventions
+snippet must agree on every fixture, with the expected counts pinned.
+
+Run `tests/bootstrap-contract.sh` for `hooks/bootstrap-hub.sh` changes. It must prove the
+hook never replaces an existing file or symlink, backfills only missing docs and templates,
+and reports customised hub docs once per shipped-doc revision.
 
 ## Releasing
 

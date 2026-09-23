@@ -22,8 +22,7 @@ review skill; you own the conversion, the evidence spec, and the ruling surface.
 
 This is judgment work — grading your own confidence in someone else's findings is the
 hard part. Run it inline on the current session model; use at least the **deep** tier
-from [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md), **balanced** as a
-floor.
+from [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md).
 
 ## Hub location
 
@@ -34,7 +33,7 @@ resolved against.
 
 **The hub is optional here.** A review handoff is frequently about a pull request in a
 repo that has no hub project — another team's, another product's. Both paths are
-first-class; Step 2 decides which.
+first-class; Step 1 decides which.
 
 ## How the user invokes this
 
@@ -47,19 +46,47 @@ first-class; Step 2 decides which.
 Plain language counts: "package this review for the PM", "make my findings checkable",
 "let her agent verify this".
 
-If the user already has findings — from an earlier `/code-review` in this session, or
-pasted in — use those and skip Step 1. Do not re-review work that was just reviewed.
+If the user already has findings — from an earlier `/code-review` or `/todo-review` in
+this session, or pasted in — still run Step 1, then use those findings in Step 2. Do not
+re-review work that was just reviewed.
 
-## Step 1 — Get the findings (delegate, don't rebuild)
+## Step 1 — Establish the target, the project, and the recipient
 
 Establish what's under review first: a PR URL (fetch the diff and metadata via `gh`), a
 branch comparison, a patch, or the current repo's unlanded diff. State the target —
 branch, commit range, file count — before judging it.
 
-Then obtain findings, in this order of preference:
+**Hub project?** Resolve an explicit short-name per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project. With
+no name, match the target's repo against active
+`index.md` rows first, `archive.md` only on a miss. One match → use it and say which
+registry supplied it. Several or none → treat it as standalone; don't ask twice.
+
+| | Hub project resolved | Standalone |
+|---|---|---|
+| Document path | `$TODO_HUB/projects/<name>/artifacts/review-handoff.md` | `./review-handoff-<slug>.md` in cwd |
+| Fix step | Accepted rows go to `/todo-revise <name>`, which opens the `## Revisions` entries | Second-agent brief inside the document |
+| Linked from | A row in the project's `artifacts/README.md`, plus the Step 6 report | The Step 6 report |
+
+Never overwrite an earlier handoff — it may hold a returned ruling sheet. If the path
+exists, write `review-handoff-<slug>.md` beside it (a fresh slug on the standalone path).
+
+**Who is ruling?** Ask if it isn't obvious, because it changes the writing:
+
+- **A non-engineer** (product manager, founder, account lead) — the common case. Every
+  claim must be readable without opening the code, and the evidence spec must demand
+  plain-English decoding.
+- **An engineer on another team** — you can lean on `file:line` and skip some glossing,
+  but keep the claim/verdict/ruling separation intact.
+
+Never assume the recipient can read the diff.
+
+## Step 2 — Get the findings (delegate, don't rebuild)
+
+Obtain findings for the Step 1 target, in this order of preference:
 
 1. **Findings already in this session** — reuse them.
-2. **`todo-review`**, when the target maps to a hub project. It adds plan compliance
+2. **`todo-review`**, when Step 1 resolved a hub project. It adds plan compliance
    (scope drift, violated constraints, ticked tasks with no evidence) on top of the
    correctness pass, and those make excellent claims.
 3. **The installed `code-review` skill** on the diff.
@@ -71,30 +98,6 @@ Then obtain findings, in this order of preference:
 about the test suite: what has no coverage, what is pinned as intended that maybe
 shouldn't be, and tests that don't execute the code they claim to guard. A review that
 only reads source cannot produce those claims.
-
-## Step 2 — Resolve the target and the recipient
-
-**Hub project?** Resolve an explicit short-name per
-[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project. With
-no name, match the current repo against active
-`index.md` rows first, `archive.md` only on a miss. One match → use it and say which
-registry supplied it. Several or none → treat it as standalone; don't ask twice.
-
-| | Hub project resolved | Standalone |
-|---|---|---|
-| Document path | `$TODO_HUB/projects/<name>/artifacts/review-handoff.md` | `./review-handoff-<slug>.md` in cwd |
-| Fix step | Accepted rows become `## Revisions` entries for `todo-revise` | Second-agent brief inside the document |
-| Registry | Link the artifact in the owning `index.md` / `archive.md` row | — |
-
-**Who is ruling?** Ask if it isn't obvious, because it changes the writing:
-
-- **A non-engineer** (product manager, founder, account lead) — the common case. Every
-  claim must be readable without opening the code, and the evidence spec must demand
-  plain-English decoding.
-- **An engineer on another team** — you can lean on `file:line` and skip some glossing,
-  but keep the claim/verdict/ruling separation intact.
-
-Never assume the recipient can read the diff.
 
 ## Step 3 — Convert each finding into a claim
 
@@ -234,9 +237,9 @@ fixes only rows marked *fix now* or *fix later*, and:
   it skipped with the reason, does not implement blind.
 - Records `Fixed` / `Not fixed — reason` per row in the same file.
 
-On the hub path, replace this section with a pointer: accepted rows become
-`## Revisions` entries and `todo-revise` owns the fix loop. Keep the ignore-the-rejected
-and stop-on-refuted rules either way.
+On the hub path, replace this section with a pointer: accepted rows go to
+`/todo-revise <name>`, which opens the `## Revisions` entries and owns the fix loop. Keep
+the ignore-the-rejected and stop-on-refuted rules either way.
 
 ### 4.5 Appendix — what's strong
 
@@ -257,9 +260,10 @@ Keep it short enough to read in an inbox skim — it competes with everything el
 
 ## Step 6 — Register and report
 
-On the hub path: link the artifact in the owning `index.md` / `archive.md` row, and add a
-`tasks.md` pointer if the project tracks the handoff as work. Never edit `plan.md` —
-findings are not a plan change until the recipient rules.
+On the hub path: add a row for the document to the project's `artifacts/README.md`
+(create it from `$TODO_HUB/templates/artifacts-README.md` if missing). Never edit
+`plan.md`, `tasks.md`, or either registry — findings are not a plan change until the
+recipient rules, and tasks change only through `/todo-revise`.
 
 Report to the user: where the document is, the claim count by confidence grade
 (`observed` / `corroborated` / `inferred`), which claims are product decisions, which
@@ -269,8 +273,9 @@ need a live environment, and the covering note ready to paste.
 
 The recipient returns the same file with verdicts and rulings filled in. Then:
 
-- **Hub project** → open one `## Revisions` entry per accepted row, expected-vs-actual
-  captured from the claim, and hand to `todo-revise`.
+- **Hub project** → hand the accepted rows to `/todo-revise <name>`, one gap per row with
+  expected-vs-actual taken from the claim. It opens the `## Revisions` entries and runs
+  the fix loop; don't write them yourself.
 - **Standalone** → the document's own second-agent section is the brief; run it or pass
   it on.
 - **Refuted claims** → say so plainly and move on. No re-litigating a claim the
@@ -288,6 +293,6 @@ The recipient returns the same file with verdicts and rulings filled in. Then:
 - **The recipient can always rule that the reviewer was wrong.**
 - **Product decisions are labelled**, never smuggled in as defects.
 - **`inferred` claims say how they could be wrong** and what would settle them.
-- **Report-only on the hub**: no `plan.md`, `tasks.md`, or registry-status edits beyond
-  linking the artifact.
+- **Report-only on the hub**: no `plan.md`, `tasks.md`, or registry edits. The only hub
+  writes are the handoff document and its `artifacts/README.md` row.
 - **One file carries the whole chain** — claimed, verified, decided, done.

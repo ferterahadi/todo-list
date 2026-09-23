@@ -31,9 +31,14 @@ are always edited in the hub, never in a target-repo worktree.
 ```
 /todo-execute queue-migration
 /todo-execute projects/work/queue-migration   ← full path also works
+/todo-execute queue-migration tasks 2.1,2.3   ← only these tasks, sequentially
 /todo-execute queue-migration parallel        ← parallel mode
-/todo-execute queue-migration parallel tasks 3,5,7   ← parallel, explicit task subset
+/todo-execute queue-migration parallel tasks 2.1,3.4,5.2   ← parallel, explicit task subset
 ```
+
+Task IDs are positional — [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md)
+§ Task IDs and phases: `2.3` is the third task under Phase 2, `4` the fourth task outside any phase,
+`R2` a Revisions checkbox. Resolve them with the graph helper (Step 5), never by counting.
 
 ## Step 1 — Resolve the project path
 
@@ -44,8 +49,8 @@ recording the `path`, owning registry, and section.
 Then check the project status:
 - `ready` or `in-progress` → proceed
 - `planning` → warn the user that plan.md/tasks.md may be empty, ask if they want to continue anyway
-- archived `done` → invocation is intent to resume execution; say that you will reopen it,
-  then apply Step 3 atomically before doing work
+- `done`, active or archived → invocation is intent to resume execution; say that you will
+  reopen it, then reopen it in Step 3 before doing work
 
 ## Step 1.5 — Enforce the project-graph gate
 
@@ -60,13 +65,15 @@ stops the run too.
 Read these files in order:
 1. `plan.md` — goal, context, constraints, scope, and the repo path
 2. `tasks.md` — full scope of work before touching anything
-3. `research/findings.md` if it exists — prior research already done
+3. `research/findings.md` if it exists — it grows every run, so never ingest it whole:
+   list its headings (`grep -n '^#' research/findings.md`) and read only the sections the
+   tasks you are about to run point at (`— see research/findings.md § X`)
 4. `research/superpowers-docs.md` if it exists, then `<repo>/docs/superpowers/plans/` and
    `<repo>/docs/superpowers/specs/` in the target repo — superpowers skills (brainstorming,
    writing-plans) drop design docs there during target-repo sessions. List them; read the
    ones relevant to this project's tasks. Any relevant doc not yet listed in
-   `research/superpowers-docs.md` → add a pointer bullet now (absolute path + one-line
-   summary).
+   `research/superpowers-docs.md` → add a row to its table now (doc path · source ·
+   one-line summary).
 
 If `plan.md` is missing critical info (goal unclear, no repo path, no context), state exactly what's missing and stop — suggest running `/todo-plan <name>` first.
 
@@ -74,13 +81,14 @@ If `plan.md` is missing critical info (goal unclear, no repo path, no context), 
 
 ## Step 3 — Activate the project and update status
 
-If the row came from `archive.md`, move it verbatim back to the same section in
-`index.md`. Set status to `in-progress` there and apply `todo-state` § Date stamping in
-the same atomic edit: clear `completed` / `elapsed (days)`, preserve the original
-`started`, and never leave a non-done row in `archive.md`.
+A `done` row, active or archived, reopens through `todo-state` set mode —
+`/todo-state <short-name> in-progress`. It runs the status-flip gate, moves an archived row
+back to its `index.md` section, preserves `started`, and clears `completed` /
+`elapsed (days)` in one edit. If it refuses, stop and report the blocker.
 
-For an already-active row, set status to `in-progress`. If the prior status was `ready`
-or `planning`, stamp/overwrite `started` = today; otherwise preserve it.
+For an active `planning`, `ready`, or `in-progress` row, set status to `in-progress`. If the
+prior status was `ready` or `planning`, stamp/overwrite `started` = today; otherwise
+preserve it.
 
 ## Step 4 — Isolate target-repo work in a worktree
 
@@ -106,13 +114,35 @@ overwrite your working tree — the usual cause of "my changes vanished."
   `<base>` is the repo's default branch (usually main, occasionally master — confirm with
   `git -C <repo> symbolic-ref refs/remotes/origin/HEAD`). All target-repo code, builds,
   tests, and preview for this run happen inside `<repo>-wt/<short-name>`.
-- Resumed run: if that worktree/branch already exists, reuse it — don't recreate.
+- Resumed run: if that worktree/branch already exists, reuse it — don't recreate. One
+  exception: a branch that already shipped would replay its squash-merged commits into
+  the next PR. Check once with
+  `bash <todo-state-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" --fetch --hub "$TODO_HUB"`;
+  when its `SUMMARY` shows `branch=merged`, `pr` not `open`, `unshipped=0`, and
+  `uncommitted=0`, restart the branch at the base inside the same worktree:
+  `git -C <repo>-wt/<short-name> switch -C todo/<short-name> origin/<base>`. Any
+  `unknown` field → reuse the branch as is and say so.
 - Do not push or merge here — shipping is a separate `/todo-push` the user runs when
   ready (see Step 7).
 
 ## Step 5 — Execute tasks top to bottom
 
-Work through `tasks.md` one task at a time, running this loop for every task:
+With a `tasks <ids>` subset, resolve the IDs before touching anything:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" <short-name> --open
+```
+
+Validate `<short-name>` first (`todo-conventions` § Placeholder safety). It prints
+`TASK\t<id>\topen\t<line>\t<text>` per open task. Work only the requested lines, in file
+order; name any ID that is missing or already done, and skip it. Without a subset, work
+every open task outside `## Revisions` top to bottom.
+
+An `R<n>` ID is a Revisions checkbox, and its tag lifecycle belongs to `todo-revise`: hand
+an `[open]` entry to `/todo-revise <short-name> R<n>` (a fully specified entry goes straight
+to the fix), and skip a `[fixed — awaiting verify]` entry — it waits on `/todo-verify`.
+
+Work through the tasks one at a time, running this loop for every task:
 
 1. **Define done first**: read the task line + the plan.md section it belongs to, and
    state in one line what evidence will prove this task is done (a passing test, a file
@@ -143,7 +173,7 @@ Never batch steps 2–4 across multiple tasks. Rules of the road:
   scripts) go to `artifacts/`
 - **Follow the artifact conventions** (hub AGENTS.md → "Artifact conventions"): name a
   dated output `YYYY-MM-DD-<kind>-<slug>.md` (`kind` ∈ analysis/finding/handoff/session/design),
-  open it with the backlink header blockquote (`> **Kind:** … · **Source:** tasks.md#R7 · **Date:** … · **Index:** [README.md](README.md)`),
+  open it with the backlink header blockquote (`> **Kind:** … · **Source:** tasks.md revision R7 · **Date:** … · **Index:** [README.md](README.md)`),
   and add a row to `artifacts/README.md` — create that manifest from
   `$TODO_HUB/templates/artifacts-README.md` if it doesn't exist yet. Living docs
   (`journal.md`, `blockers.md`) keep their stable names.
@@ -185,12 +215,21 @@ Re-run the Step 1.5 graph context immediately before any status flip to `done`.
 Dependencies can regress during a long execution session; a newly unsatisfied hard edge
 keeps the project `in-progress` and is reported as at risk.
 
-Update the active `index.md` row:
+Update the active `index.md` row. Shipping is checked first, whether or not `plan.md` has a
+`## Verification` block:
 
 - Blockers remain or tasks are open → stay `in-progress`.
-- All tasks complete and `plan.md` has a `## Verification` block → stay `in-progress` and point the user at `/todo-verify <short-name>` — the verification run is the gate that flips `done`, not your own assessment. Code-complete + unit tests ≠ done.
-- All tasks complete, no `## Verification` block, **but the Step 4 worktree has unmerged changes** → stay `in-progress`; the work isn't landed until it's shipped. Point the user at `/todo-push` (run from `<repo>-wt/<short-name>`).
-- All tasks complete, no `## Verification` block, and nothing to ship (hub-only project) → set `done`, and stamp `completed` = today plus `elapsed (days)` = `completed − started` (`todo-state` § Date stamping).
+- All tasks complete, **but the Step 4 worktree is unshipped** — uncommitted changes, or
+  commits on `todo/<short-name>` that no merged PR carries → stay `in-progress`; the work
+  isn't landed until it's shipped. Point the user at `/todo-push` (run from
+  `<repo>-wt/<short-name>`), then the command from the next two bullets.
+- All tasks complete, shipped or hub-only, and `plan.md` has a `## Verification` block →
+  stay `in-progress` and point at `/todo-verify <short-name>` — the verification run is the
+  gate that flips `done`, and it refuses while work is unmerged. Code-complete + unit
+  tests ≠ done.
+- All tasks complete, shipped or hub-only, no `## Verification` block → set `done`, and
+  stamp `completed` = today plus `elapsed (days)` = `completed − started` (`todo-state`
+  § Date stamping). After a `/todo-push`, the same flip is `/todo-state <short-name> done`.
 
 Summarize:
 - What was completed
@@ -215,18 +254,19 @@ only you touch hub files.
 
 Entry: steps 1–2 above (resolve + orient), plus: `plan.md` must name the target repo
 path; verify it exists locally and `gh auth status` succeeds there — stop and report if
-not. Set the active row's status to `in-progress`, applying the same Step 3 date rule
-above.
+not. Activate the row exactly as Step 3 does.
 
 ## Step P1 — Partition tasks into features
 
-Group the unchecked tasks into **file-disjoint features**: tasks that touch the same
-files, or depend on each other's output, go in the same feature (they run sequentially
-inside one agent). Judge overlap from plan.md scope notes and a quick read of the repo.
+Group the unchecked tasks (outside `## Revisions` — `R<n>` IDs route as in Step 5) into
+**file-disjoint features**: tasks that touch the same files, or depend on each other's
+output, go in the same feature (they run sequentially inside one agent). Judge overlap
+from plan.md scope notes and a quick read of the repo.
 
 - 1 feature after grouping → parallelism buys nothing; say so and run the sequential
   mode (steps 3–7) instead.
-- State the grouping (feature → task lines) before spawning so it's on record.
+- State the grouping (feature → task IDs and lines, from `graph-report.py tasks` as in
+  Step 5) before spawning so it's on record.
 
 **Gate A — before spawning, all three:**
 
@@ -241,8 +281,8 @@ inside one agent). Judge overlap from plan.md scope notes and a quick read of th
 ## Step P2 — Inherit the session model
 
 Parallel mode does not override models for either wave. Implement and review agents run
-on the inherited session model. The `todo-push` sub-step uses its own **fast**-tier
-routing; do not override it.
+on the inherited session model. The `todo-push` sub-step keeps its own routing (plan on
+the balanced tier, land on the fast tier); do not override it.
 
 ## Step P3 — Implement wave (one agent per feature, all in one message, in parallel)
 
@@ -284,7 +324,7 @@ Every prompt contains these slots:
      "status": "implemented | blocked",
      "branch": "feat/<name>",
      "worktree": "<absolute path>",
-     "tasks_covered": ["<task ids this feature closed>"],
+     "tasks_covered": ["<positional task IDs this feature closed, e.g. 2.1>"],
      "files": [{"path": "<repo-relative>", "change": "added | modified | removed | renamed"}],
      "tests": {"command": "<what was run>", "result": "passed | failed | not-run"},
      "blockers": [{"what": "<blocker>", "needs": "<what would clear it>"}]
@@ -311,10 +351,11 @@ slots:
 2. **Workspace** — `cd <repo>-wt/<feat>` (the existing worktree; create nothing).
 3. **Review** — invoke the `code-review` skill at **high** effort on the worktree
    diff, with the intent restated. Apply the fixes.
-4. **Coverage gate** — for every file the diff ADDS: find all its call sites
-   (grep the repo for imports/usages of its exported symbols), then run the repo's
-   coverage tooling scoped to the added files and those call-site files. Require 100%
-   line coverage on all of them; write unit tests and re-run until green.
+4. **Test gate** — meet the target repo's own bar, nothing wider: run its test suite, plus
+   its coverage check when the repo enforces one (a threshold in its CI config or build
+   files). Every behaviour the diff adds or changes needs a test that exercises it — write
+   the missing ones and re-run until green. Files the diff didn't touch stay out of scope,
+   callers included. A red suite or an untested new behaviour is `blocked`, not a PR.
 5. **Ship to PR only** — invoke the `todo-push` skill with the instruction: "You are in a
    linked worktree. Stop at the PR — do not merge; the orchestrator owns the merge
    queue." (todo-push's worktree mode handles the rest.)
@@ -330,61 +371,71 @@ slots:
      "branch": "feat/<name>",
      "worktree": "<absolute path>",
      "review_findings": [{"finding": "<one line>", "where": "<file:line>", "applied": true}],
-     "coverage": {
+     "tests": {
        "command": "<what was run>",
-       "line_pct": 100,
-       "files": ["<the added files and their call sites>"],
-       "result": "passed | failed | not-run"
+       "result": "passed | failed | not-run",
+       "coverage_policy": "<the repo's enforced threshold and its result, or none>",
+       "new_behaviour_tested": true
      },
      "blockers": [{"what": "<blocker>", "needs": "<what would clear it>"}]
    }
    ```
 
-   `coverage.line_pct` is a number the agent read out of a real run — that field is the
-   gate, so an agent that cannot fill it returns `result: "not-run"` rather than a claim.
-   Review agents never edit hub files and never merge.
+   `tests` comes from a run the agent saw — an agent that could not run the suite returns
+   `result: "not-run"` rather than a claim. `pr-open` requires `result: "passed"` and
+   `new_behaviour_tested: true`. Review agents never edit hub files and never merge.
 
 ## Step P5 — Serial merge queue
 
 Parallel until PR; **serial at merge**. Queue only the returns whose `status` is
 `pr-open`; a `blocked` return has no PR and goes to Step P7 as a blocker, not to the
-queue. Merge the rest one at a time, reading `pr_url` and `worktree` from each return:
+queue. Land the rest one at a time with todo-push's helper, from each return's `worktree`
+(validate `feat/<name>` and `<base>` first — `todo-conventions` § Placeholder safety):
 
 ```
-git -C <repo>-wt/<feat> fetch origin
-git -C <repo>-wt/<feat> rebase origin/<base>      ← replay on latest main
-git -C <repo>-wt/<feat> push --force-with-lease
-gh pr merge <url> --merge                          ← never --delete-branch here
+cd <repo>-wt/<feat>
+bash <todo-push-skill-dir>/scripts/land.sh --merge-existing --branch feat/<name> --base <base>
 ```
 
-- Rebase conflict → resolve it in that worktree if the resolution is mechanical;
-  otherwise skip the PR, finish the queue, and open a Revisions entry in tasks.md.
-- Never merge two PRs concurrently, and never merge before its rebase + push.
+It fetches, rebases onto `origin/<base>`, force-with-lease pushes only its own branch,
+merges with the strategy the repo uses, and never deletes the branch. Read its JSON and
+exit code; never hand-roll the rebase, push, or merge:
 
-**Gate B — before each merge, re-run per PR:**
+- exit 0 → merged; the next PR may go.
+- exit 10 → merge blocked (protection, required review, required checks) → skip it,
+  finish the queue, and record the blocker from the JSON.
+- exit 11 → rebase conflict, already aborted → skip it, finish the queue, and open a
+  Revisions entry in tasks.md naming the conflicting files.
+- any other exit → stop the queue and report; nothing after it lands.
 
-- [ ] The previous PR in the queue is confirmed merged (`gh pr view <prev> --json state`
-  shows `MERGED` — output seen).
-- [ ] This PR's branch was rebased onto latest `origin/<base>` in this queue round —
-  a rebase from before the previous merge doesn't count; redo it.
-- [ ] Tests/CI are green on the post-rebase commit, with the run output in hand. No
-  output → run them now; red → this PR skips the queue and gets a Revisions entry.
+**Gate B — before each land, per PR:**
+
+- [ ] The previous PR's `land.sh` returned exit 0 in this queue round (JSON seen).
+- [ ] This PR's checks are green on its current head (`gh pr checks <pr_url>`, output
+  seen). Red → it skips the queue and gets a Revisions entry.
+- [ ] `land.sh` runs now, after the previous merge, so its rebase is this round's. Checks
+  on the rebased head are the repo's required checks, which `land.sh` reports as exit 10;
+  Gate A's disjoint file sets are what make the rebase itself safe.
 
 ## Step P6 — Cleanup
 
-From the PRIMARY repo copy (first path in `git worktree list`), for each feature:
+From the PRIMARY repo copy (first path in `git worktree list`), for each feature that
+`land.sh` merged (exit 0):
 
 ```
 git -C <repo> worktree remove <repo>-wt/<feat>
-git -C <repo> branch -d feat/<name>
+git -C <repo> branch -D feat/<name>   ← -D: a squash merge leaves it unmerged by ancestry
 git -C <repo> worktree prune
 git -C <repo> pull --ff-only        ← once, if primary sits on <base> and is clean
 ```
 
+Skipped features keep their worktree and branch for the follow-up.
+
 ## Step P7 — Reconcile hub state and report
 
 Only now, and only you: tick the task lines named in each merged feature's
-`tasks_covered`, write every return's `blockers` into `artifacts/blockers.md`, and set the
+`tasks_covered` — resolve every ID to its line with `graph-report.py tasks` (Step 5) before
+the first edit — write every return's `blockers` into `artifacts/blockers.md`, and set the
 active registry status per sequential Step 7 (a `## Verification` block in plan.md means
 stay `in-progress` and point at `/todo-verify` — merged PRs + unit tests ≠ done).
 
@@ -392,7 +443,7 @@ Tick from `tasks_covered`, not from your own reading of the diff — the impleme
 declared which tasks it closed, and re-deriving that is how a task nobody built gets
 ticked.
 
-Report per feature: `pr_url`, merge result, `coverage.line_pct`, blockers. Keep it short.
+Report per feature: `pr_url`, `land.sh` result, `tests.result`, blockers. Keep it short.
 Step 7's session-handoff rule applies here too.
 
 ## Parallel-mode rules

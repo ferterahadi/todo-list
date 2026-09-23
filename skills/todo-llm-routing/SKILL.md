@@ -13,9 +13,9 @@ keep using the four tiers.
 | Tier | Claude Code | Codex | Use for |
 |---|---|---|---|
 | `frontier` | `Fable 5.1`, high effort | `gpt-6-astra`, high effort | Security, payments, data integrity, concurrency, multi-repo architecture |
-| `deep` | `Opus 5`, high effort | `gpt-5.6-sol`, high effort | Ambiguous design, unknown-cause debugging, cross-file refactors |
-| `balanced` | `Sonnet 5`, medium effort | `gpt-5.6-terra`, medium effort | Well-scoped implementation, verification, visual generation |
-| `fast` | `Haiku 4.5`, default settings (no effort parameter) | `gpt-5.6-luna`, low effort | Mechanical edits, formatting, state updates, routine Git operations |
+| `deep` | `Opus 5.5`, high effort | `gpt-6-sol`, high effort | Ambiguous design, unknown-cause debugging, cross-file refactors |
+| `balanced` | `Sonnet 5`, medium effort | `gpt-6-sol`, medium effort | Well-scoped implementation, verification, visual generation |
+| `fast` | `Haiku 4.5`, default settings (no effort parameter) | `gpt-6-luna`, low effort | Mechanical edits, formatting, state updates, routine Git operations |
 
 These are workload defaults, not cross-provider accuracy equivalences. Use `balanced`
 for ordinary implementation and `fast` only when the result is easy to check. Start
@@ -37,28 +37,29 @@ at `deep` or `frontier` when ambiguity or the cost of a wrong result warrants it
 
 ### Price reference
 
-Reviewed 2026-09-06. USD per million uncached input / output tokens, standard direct API
+Reviewed 2026-09-23. USD per million uncached input / output tokens, standard direct API
 processing; OpenAI figures below use short-context rates. These are price references,
 not Codex or Claude Code subscription-quota multipliers.
 
 | Tier | Claude input / output | OpenAI input / output |
 |---|---|---|
 | `frontier` | $10 / $50 | $10 / $50 |
-| `deep` | $5 / $25 | $4 / $20 |
-| `balanced` | $2 / $10 | $2 / $12 |
-| `fast` | $1 / $5 | $0.20 / $1.20 |
+| `deep` | $4 / $20 | $2 / $10 |
+| `balanced` | $2 / $10 | $2 / $10 |
+| `fast` | $1 / $5 | $0.10 / $0.50 |
 
-At equal uncached token counts, Terra costs 50% less for input and 40% less for output
-than Sol; Sonnet costs 60% less than Opus for both. Actual task savings and accuracy
-on this repository are **unmeasured**. Token counts, reasoning, cache reuse, long-context
-rates, retries, and plan-specific limits can change the economics. For subscription
-users, use observed quota consumption and completion quality instead of converting
-these API prices into assumed message allowances.
+At equal uncached token counts, Sonnet costs 50% less than Opus for both input and
+output. On OpenAI, `deep` and `balanced` share `gpt-6-sol`, so effort is the only cost
+lever between them there. Actual task savings and accuracy on this repository are
+**unmeasured**. Token counts, reasoning, cache reuse, long-context rates, retries, and
+plan-specific limits can change the economics. For subscription users, use observed quota
+consumption and completion quality instead of converting these API prices into assumed
+message allowances.
 
 Price sources: [OpenAI pricing](https://developers.openai.com/api/docs/pricing) and
 [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing).
-Sol's listed price is promotional through at least 2026-11-21; Anthropic now lists
-Sonnet 5's $2 / $10 rate as standard, replacing its previously scheduled price increase.
+Anthropic lists Sonnet 5's $2 / $10 rate as standard, replacing its previously scheduled
+price increase.
 
 ## When dispatching
 

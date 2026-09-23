@@ -328,6 +328,19 @@ if python3 "$GRAPH" frontier "$UNKNOWN" > "$TMP/unknown-frontier.tsv"; then
   fail "frontier accepted an active row with an unknown status"
 fi
 assert_contains "$TMP/unknown-frontier.tsv" $'ERROR\tUNKNOWN_STATUS\tapi\t'
+# An unknown status is owned by its row: it blocks that project's dependents only, and
+# an unrelated project stays ready and runnable.
+assert_contains "$TMP/unknown-frontier.tsv" $'READY\tapi-v2\t'
+assert_contains "$TMP/unknown-frontier.tsv" $'BLOCKED\tconsumer\t'
+assert_contains "$TMP/unknown-frontier.tsv" "api(queued;open=1;revisions=0;errors=UNKNOWN_STATUS)"
+python3 "$GRAPH" why "$UNKNOWN" api-v2 > "$TMP/unknown-why-unrelated.tsv" ||
+  fail "why failed an unrelated project over another row's unknown status"
+assert_contains "$TMP/unknown-why-unrelated.tsv" $'RUNNABLE\tapi-v2\t'
+assert_not_contains "$TMP/unknown-why-unrelated.tsv" "UNKNOWN_STATUS"
+if python3 "$GRAPH" why "$UNKNOWN" consumer > "$TMP/unknown-why-dependent.tsv"; then
+  fail "why accepted a dependent of an unknown-status project"
+fi
+assert_contains "$TMP/unknown-why-dependent.tsv" $'ERROR\tUNKNOWN_STATUS\tapi\t'
 
 # An invalid context edge blocks its source, not its otherwise clean target.
 CONTEXT_BAD="$TMP/context-bad"
@@ -423,11 +436,93 @@ awk -F '\t' '
 
 # Paths run from prerequisite to dependent over the derived blocks direction.
 python3 "$GRAPH" path "$CLEAN" api consumer > "$TMP/path.tsv"
-assert_contains "$TMP/path.tsv" $'PATH\tapi\tconsumer\thops=1'
+assert_contains "$TMP/path.tsv" $'PATH\tapi\tconsumer\thops=1\tdirection=forward'
+# Naming the dependent first still finds the route, prerequisite first, and says so.
+python3 "$GRAPH" path "$CLEAN" consumer api > "$TMP/reverse-path.tsv" ||
+  fail "path refused a route given dependent-first"
+assert_contains "$TMP/reverse-path.tsv" $'PATH\tapi\tconsumer\thops=1\tdirection=reverse'
+assert_not_contains "$TMP/reverse-path.tsv" "NO_PATH"
+# Exit 1 is still a complete, parseable answer.
 if python3 "$GRAPH" path "$CLEAN" api-v2 consumer > "$TMP/no-path.tsv"; then
   fail "api-v2 unexpectedly has a dependency path to consumer"
 fi
 assert_contains "$TMP/no-path.tsv" $'NO_PATH\tapi-v2\tconsumer'
+assert_contains "$TMP/no-path.tsv" $'SUMMARY\tpath\t'
+
+# The task listing: canonical counting, phase/loose/Revision IDs, and --open filtering.
+TASKS_HUB="$TMP/tasks-hub"
+cp -R "$CLEAN" "$TASKS_HUB"
+cat > "$TASKS_HUB/projects/work/api/tasks.md" <<'TASKS'
+# Tasks
+- [ ] before any section
+
+## Status
+- [x] Not a task
+
+## Tasks
+- [x] Loose first
+- [link](not-a-task.md)
+
+### Phase 6a — Cutover
+- [X] Cut over
+<!-- - [ ] commented -->
+- [ ] Verify cutover
+
+```markdown
+- [ ] fenced example
+```
+
+### Follow-ups
+- [ ] Loose after the level-3 phase ends
+
+## Phase 2 — Cleanup
+- [ ] Remove shim
+
+### Cleanup details
+- [ ] Still inside the level-2 phase
+
+## Revisions
+### R3 ⟵ Task 2.1 — shim leaks   [open]
+- [ ] Patch the leak
+TASKS
+python3 "$GRAPH" tasks "$TASKS_HUB" api > "$TMP/tasks.tsv" ||
+  fail "tasks failed on a valid project"
+expected_tasks="$(printf '%s\n' \
+  $'TASK\t1\tdone\t8\tLoose first' \
+  $'TASK\t6a.1\tdone\t12\tCut over' \
+  $'TASK\t6a.2\topen\t14\tVerify cutover' \
+  $'TASK\t2\topen\t21\tLoose after the level-3 phase ends' \
+  $'TASK\t2.1\topen\t24\tRemove shim' \
+  $'TASK\t2.2\topen\t27\tStill inside the level-2 phase' \
+  $'TASK\tR3\topen\t31\tPatch the leak' \
+  $'SUMMARY\ttasks\tproject=api\tdone=2\ttotal=7\topen_revisions=1')"
+[ "$(cat "$TMP/tasks.tsv")" = "$expected_tasks" ] ||
+  fail "tasks listing drifted: $(cat "$TMP/tasks.tsv")"
+python3 "$GRAPH" tasks "$TASKS_HUB" api --open > "$TMP/tasks-open.tsv"
+assert_not_contains "$TMP/tasks-open.tsv" $'\tdone\t'
+assert_contains "$TMP/tasks-open.tsv" $'TASK\t6a.2\topen\t14\t'
+assert_contains "$TMP/tasks-open.tsv" $'SUMMARY\ttasks\tproject=api\tdone=2\ttotal=7\topen_revisions=1'
+python3 "$GRAPH" export "$TASKS_HUB" tsv > "$TMP/tasks-export.tsv"
+grep -E $'^NODE\tapi\t' "$TMP/tasks-export.tsv" | grep -F 'tasks=2/7' >/dev/null ||
+  fail "export NODE counts disagree with the task listing"
+python3 "$GRAPH" tasks "$TASKS_HUB" foundation > "$TMP/tasks-archived.tsv" ||
+  fail "tasks did not fall back to the archive"
+assert_contains "$TMP/tasks-archived.tsv" $'SUMMARY\ttasks\tproject=foundation\tdone=1\ttotal=1\t'
+if python3 "$GRAPH" tasks "$TASKS_HUB" no-such-project > "$TMP/tasks-missing.tsv"; then
+  fail "tasks accepted an unknown project"
+fi
+assert_contains "$TMP/tasks-missing.tsv" "ERROR"
+rm "$TASKS_HUB/projects/work/consumer/tasks.md"
+if python3 "$GRAPH" tasks "$TASKS_HUB" consumer > "$TMP/tasks-no-file.tsv"; then
+  fail "tasks accepted a project without tasks.md"
+fi
+assert_contains "$TMP/tasks-no-file.tsv" $'ERROR\tMISSING_TASKS\tconsumer\t'
+set +e
+python3 "$GRAPH" tasks "$TASKS_HUB" api --all > /dev/null 2>&1
+bad_flag_status=$?
+set -e
+[ "$bad_flag_status" -eq 2 ] ||
+  fail "tasks with an unknown flag exited $bad_flag_status instead of 2"
 
 # Why reports the shortest unsettled chain; impact walks the derived reverse direction
 # with immediate dependents before transitive ones.

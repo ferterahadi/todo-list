@@ -1,21 +1,30 @@
 ---
 name: todo-learn
-description: Use when the user invokes /todo-learn, says "that's not what I wanted", "you did X but I wanted Y", "remember this correction", "learn from this", "don't do that again", "next time do Z", or otherwise flags a gap between what the agent did and what they expected. Records the correction as a durable rule in the working repo's skill files for Claude Code and Codex.
+description: Use when the user invokes /todo-learn or wants the agent to behave differently in this repo from now on — says "don't do that again", "next time do Z", "learn from this", "make that a rule for this repo", or "always/never do X here". Records one standing rule in the working repo's skill files (`.agents/skills/`, mirrored to `.claude/skills/`) so Claude Code and Codex both follow it next time. Not for fixing a hub project's delivered work — "the result isn't what I expected" is /todo-revise — and not for the host's own memory of personal facts.
 ---
 
 # Discrepancy Learning Skill
 
 You turn a single correction into a **durable rule** that lives with the project it applies
-to. When the user says "that's not what I wanted" — or anything that means *what you did
-≠ what I expected* — capture the gap in the current repo's canonical
-`.agents/skills/`, then expose the same skill under `.claude/skills/`. This gives Codex
-and Claude Code one shared lesson.
+to. When the user wants the agent to act differently *next time* — "don't do that again",
+"next time do Z" — capture the rule in the current repo's canonical `.agents/skills/`,
+then expose the same skill under `.claude/skills/`. This gives Codex and Claude Code one
+shared lesson.
+
+Two neighbours take requests that sound similar:
+
+- **The work itself is wrong** — a hub project's delivered result misses the expectation
+  and needs fixing → `/todo-revise`. If the user also wants the lesson kept, record it
+  here after.
+- **A personal fact to remember** — "remember that I prefer…" with no repo behavior
+  attached → the host's own memory, not this skill.
 
 The unit of learning is **one fact per correction**: what the right behavior is, *why*, and *how to apply it*. Project-scoped by default — the learning lands in the repo the work happened in, not globally — so each codebase accumulates its own corrections.
 
-This is judgment work about the right rule, topic, and scope. Use the **balanced** tier
-at **high** effort from [`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). If the host cannot
-select a separate model, run in the current session.
+This is judgment work about the right rule, topic, and scope, and Step 1 reads the
+correction out of this conversation — a separate agent would not see it. Run it inline
+on the current session model; use at least the **balanced** tier at **high** effort from
+[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md).
 
 ## How the user invokes this
 
@@ -24,7 +33,7 @@ select a separate model, run in the current session.
 /todo-learn don't mark done before e2e   ← capture this specific lesson
 ```
 
-Plain language counts too: "that's not what I wanted", "you did X but I wanted Y", "remember this for next time", "don't do that again", "learn from this".
+Plain language counts too: "don't do that again", "next time do Z", "learn from this", "make that a rule here".
 
 ## Step 1 — Pin down the discrepancy
 

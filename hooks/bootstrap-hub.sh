@@ -3,8 +3,9 @@
 #
 # Creates the hub at $TODO_HUB (default ~/todo) from the plugin's bundled seed/
 # content — index.md, archive.md, templates/, an example project, and shared agent
-# instructions — if it doesn't exist yet. Existing hubs receive a missing archive.md
-# once; otherwise the hook is silent.
+# instructions — if it doesn't exist yet. It never replaces a file that is already there.
+# On an existing hub it backfills each missing doc or template once, and reports hub docs
+# that differ from the shipped ones once per shipped-doc revision. Otherwise it is silent.
 set -euo pipefail
 
 # Resolve the hub root, expanding a leading ~ if the user set one.
@@ -14,6 +15,9 @@ case "$HUB" in "~"*) HUB="${HOME}${HUB#\~}" ;; esac
 PLUGIN="${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}"
 SEED="$PLUGIN/seed"
 [ -d "$SEED" ] || exit 0   # nothing to seed from — bail quietly
+
+# Remembers which shipped-doc revision the drift notice last fired for.
+DRIFT_MARKER="$HUB/.todo-list/doc-drift-notice"
 
 # Existing hub: converge it on the shipped seed without ever destroying content.
 #
@@ -27,7 +31,7 @@ if [ -f "$HUB/index.md" ]; then
   add_if_missing() {
     local rel="$1" note="$2"
     [ -f "$SEED/$rel" ] || return 0
-    [ -f "$HUB/$rel" ] && return 0
+    { [ -e "$HUB/$rel" ] || [ -L "$HUB/$rel" ]; } && return 0
     mkdir -p "$(dirname "$HUB/$rel")"
     cp "$SEED/$rel" "$HUB/$rel"
     printf 'todo-list: added %s/%s%s\n' "$HUB" "$rel" "$note"
@@ -45,21 +49,45 @@ if [ -f "$HUB/index.md" ]; then
 
   # Report doc drift; never resolve it by overwriting. A hub's own additions to AGENTS.md
   # or REGISTRY.md are the user's, and the seed has no way to tell an extension from a
-  # stale copy.
+  # stale copy. Say so once per shipped-doc revision, not every session: the marker holds
+  # a checksum of the shipped docs, so the notice returns only when those docs change.
   drifted=""
   for doc in AGENTS.md CLAUDE.md REGISTRY.md; do
     [ -f "$SEED/$doc" ] && [ -f "$HUB/$doc" ] || continue
     cmp -s "$SEED/$doc" "$HUB/$doc" || drifted="$drifted $doc"
   done
   if [ -n "$drifted" ]; then
-    printf 'todo-list: hub docs differ from the shipped versions:%s. Yours are kept as-is — diff them against the plugin seed if you want the newer wording.\n' "$drifted"
+    shipped="$(
+      for doc in AGENTS.md CLAUDE.md REGISTRY.md; do
+        if [ -f "$SEED/$doc" ]; then
+          printf '%s ' "$doc"
+          cksum < "$SEED/$doc"
+        fi
+      done
+    )"
+    notified=""
+    [ -f "$DRIFT_MARKER" ] && notified="$(cat "$DRIFT_MARKER" 2>/dev/null || true)"
+    if [ "$shipped" != "$notified" ]; then
+      printf 'todo-list: hub docs differ from the shipped versions:%s. Yours are kept as-is — diff them against the plugin seed if you want the newer wording. This notice repeats only when the shipped docs change.\n' "$drifted"
+      { mkdir -p "$(dirname "$DRIFT_MARKER")" &&
+        printf '%s\n' "$shipped" > "$DRIFT_MARKER"; } 2>/dev/null || true
+    fi
   fi
   exit 0
 fi
 
 mkdir -p "$HUB"
-# Copy seed contents (including dotfiles) without clobbering anything present.
-cp -Rn "$SEED"/. "$HUB"/ 2>/dev/null || cp -R "$SEED"/. "$HUB"/
+# Copy every seed file (including dotfiles) the hub lacks. No `cp` flag is trusted here:
+# BSD/macOS `cp -Rn` exits 1 when a destination exists, and GNU treats -n differently, so
+# each file is checked and copied on its own and an existing path is never replaced.
+(cd "$SEED" && find . -type f -print) | while IFS= read -r rel; do
+  rel="${rel#./}"
+  if [ -e "$HUB/$rel" ] || [ -L "$HUB/$rel" ]; then
+    continue
+  fi
+  mkdir -p "$(dirname "$HUB/$rel")"
+  cp "$SEED/$rel" "$HUB/$rel"
+done
 
 # One-time notice, surfaced as session context.
 printf 'todo-list: created your project hub at %s (index.md, archive.md, templates, and an example project). It is the default location — set the TODO_HUB env var to move it.\n' "$HUB"
