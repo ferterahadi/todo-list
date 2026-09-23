@@ -1,6 +1,6 @@
 ---
 name: todo-graph
-description: Use when the user asks what work is ready or blocked, why a project is blocked, what a project unlocks, how tracked projects depend on each other, requests a dependency path or graph audit/export, or wants to add/remove a typed project relationship. Builds a deterministic project graph over the existing todo loop; never guesses dependencies from prose.
+description: Use when the user invokes /todo-graph, asks "what can I start?", "what's blocked and why?", "what does finishing X unlock?", how tracked projects depend on each other, requests a dependency path or graph audit/export, or wants to add/remove a typed project relationship. Also lists one project's real tasks with their IDs for other skills. Answers from a deterministic project graph and never guesses dependencies from prose. For "what's left and which model should do it", use todo-triage instead.
 ---
 
 # Todo Graph
@@ -9,10 +9,10 @@ Treat every tracked project as one execution loop and the hub as a graph of thos
 Use the bundled compiler for graph truth; do not load every plan or infer scheduling from
 names, prose, or legacy `related` cells.
 
-This is coordination work. Read-only queries use the **fast** tier from
-[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md) when dispatching is
-available. Relationship edits require judgment about intent, so run them inline on at
-least the **balanced** tier.
+Run every query inline: the compiler answers in about 50 ms, so dispatching a subagent
+costs more than the query. Relationship edits require judgment about intent, so make them
+on at least the **balanced** tier from
+[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md).
 
 ## Hub and compiler
 
@@ -25,7 +25,8 @@ python3 <todo-graph-skill-dir>/scripts/graph-report.py <mode> "$TODO_HUB" [args]
 ```
 
 The compiler scans Markdown outside model context and emits bounded Tab-Separated Values
-(TSV). Only explicit `export` is unbounded. If Python 3 or the helper is unavailable,
+(TSV). Only explicit `export` and one project's `tasks` listing are unbounded. If Python 3
+or the helper is unavailable,
 report that blocker; never approximate a ready frontier by interpreting prose.
 
 ## Relationship contract
@@ -66,6 +67,7 @@ or use it to determine readiness.
 /todo-graph path auth-foundation service-release
 /todo-graph audit
 /todo-graph export
+/todo-graph tasks service-release
 /todo-graph link service-release depends-on auth-foundation "needs token contract"
 /todo-graph unlink service-release depends-on auth-foundation
 ```
@@ -77,6 +79,7 @@ or use it to determine readiness.
 - “Show the route from X to Y” → `path`.
 - “Find cycles/broken links” → `audit`.
 - “Export the graph” → `export`.
+- “List X's tasks” / “which task is 6a.3?” → `tasks`.
 - “Make X depend on Y” / “remove that relationship” → `link` / `unlink`.
 
 ## Read-only queries
@@ -90,6 +93,7 @@ python3 <skill-dir>/scripts/graph-report.py why "$TODO_HUB" "<project>"
 python3 <skill-dir>/scripts/graph-report.py impact "$TODO_HUB" "<project>"
 python3 <skill-dir>/scripts/graph-report.py path "$TODO_HUB" "<from>" "<to>"
 python3 <skill-dir>/scripts/graph-report.py audit "$TODO_HUB"
+python3 <skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" "<project>" [--open]
 ```
 
 **Validate before running any of these** —
@@ -109,9 +113,18 @@ Render the result compactly:
 - `why` — shortest blocking chains first.
 - `impact` — projects immediately unlocked first, then transitively affected projects.
   `ALREADY_SETTLED` means describe current dependents without claiming a future unlock.
-- `path` — one shortest prerequisite-to-dependent path; say when none exists.
+- `path` — one shortest prerequisite-to-dependent path; say when none exists. The helper
+  tries both argument orders. `PATH` names the prerequisite first; `direction=reverse`
+  means the user named the dependent first, so say the route runs the other way.
 - `audit` — group errors by code and cite the source plan/line. An empty audit is one
   confirmed line, not a raw TSV dump.
+- `tasks` — see Task listing below.
+
+**Exit codes.** `0` means a complete answer with no relevant `ERROR` row. `1` still carries a
+valid answer to parse: it has at least one relevant `ERROR` row, or the answer is negative
+(`NO_PATH`, an unresolved project, a refused `can-link`, a missing `tasks.md`). `2` is a
+usage error or unknown export format with nothing to parse. Never treat exit 1 as an empty
+result.
 
 When `SUMMARY legacy_edges` is nonzero, state once that those registry hints are
 non-blocking and have not been classified as dependencies. Offer explicit `link`
@@ -119,6 +132,21 @@ commands for any edge the user confirms; never migrate them automatically.
 
 Never call a longest dependency chain a “critical path”: without duration estimates it
 does not predict elapsed time.
+
+## Task listing
+
+`tasks` lists one project's real tasks in file order, resolving the name active-first and
+then archived. Counting and IDs follow
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks and
+§ Task IDs and phases. Output is TSV and unbounded for that one project:
+
+```text
+TASK	<id>	<open|done>	<tasks.md line>	<task text after the checkbox>
+SUMMARY	tasks	project=<short-name>	done=<d>	total=<t>	open_revisions=<n>
+```
+
+`--open` prints only open tasks; `SUMMARY` still carries the full counts. An unresolved
+name, an unsafe project path, or a missing `tasks.md` prints one `ERROR` row and exits 1.
 
 ## Add a relationship
 
@@ -192,6 +220,9 @@ otherwise return the requested slice in chat.
   and dishonest completion state fail closed.
 - Valid context and lineage edges never influence readiness. A malformed canonical row
   fails its source project without contaminating the target.
+- An unknown status makes only that project unusable; it blocks the projects that depend
+  on it and no others. A missing or malformed registry table and a duplicated identity
+  are registry-wide and block every project.
 - Read-only modes never edit. Link validation happens before the single plan-row edit.
 - Do not auto-change status when a dependency regresses. Report an in-progress dependent
   as at risk and let `todo-state audit` reconcile state deliberately.

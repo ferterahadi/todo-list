@@ -35,6 +35,15 @@ expect_contains() {
   grep -Fq "$2" <<< "$1" || fail "$3"
 }
 
+expect_backed_up() {
+  local label="$1" dir="$2" file="$3" candidate
+  for candidate in "$dir"/*-*.md; do
+    [ -e "$candidate" ] || continue
+    cmp -s "$candidate" "$file" && return 0
+  done
+  fail "$label"
+}
+
 backup_count() {
   local dir="$1" pattern="$2" file count=0
   for file in "$dir"/$pattern; do
@@ -234,8 +243,173 @@ output="$(run_style status)"
 expect_contains "$output" "$hub" "status must name the hub it resolved"
 expect_contains "$output" "$claude_target" "status must name the Claude target"
 expect_contains "$output" "$codex_target" "status must name the Codex target"
-expect_contains "$output" 'current (already the shipped style pack)' \
+expect_contains "$output" 'current (already the shipped style pack' \
   "status must recognize an installed pack"
+
+# --- known pack versions ----------------------------------------------------
+# pack-versions.tsv lets status name the pack a file holds. It must list both shipped
+# packs under the right harness, and every pack this repo's history ever shipped.
+versions_file="$skill_dir/pack-versions.tsv"
+[ -f "$versions_file" ] || fail "the known pack versions file is missing"
+
+hash_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | cut -c1-64
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | cut -c1-64
+  else
+    openssl dgst -sha256 | awk '{ print $NF }'
+  fi
+}
+
+pack_row() {
+  awk -F '\t' -v sum="$1" '$1 == sum { print $2 " " $3; exit }' "$versions_file"
+}
+
+bad_rows="$(grep -v '^#' "$versions_file" |
+  awk -F '\t' 'NF != 4 || $1 !~ /^[0-9a-f]{64}$/ || ($2 != "claude" && $2 != "codex")')"
+[ -z "$bad_rows" ] || fail "pack-versions.tsv has malformed rows: $bad_rows"
+
+claude_row="$(pack_row "$(hash_of < "$claude_asset")")"
+codex_row="$(pack_row "$(hash_of < "$codex_asset")")"
+[ "${claude_row%% *}" = claude ] ||
+  fail "the shipped Claude Code pack has no claude row in pack-versions.tsv — add one"
+[ "${codex_row%% *}" = codex ] ||
+  fail "the shipped Codex pack has no codex row in pack-versions.tsv — add one"
+expect_contains "$output" "(v${claude_row#* })" \
+  "status must name the pack version it compared against"
+
+if git -C "$repo_root" rev-parse --git-dir >/dev/null 2>&1; then
+  for commit in $(git -C "$repo_root" log --format=%h -- \
+      skills/todo-style/assets/CLAUDE.md skills/todo-style/assets/AGENTS.md); do
+    for pair in claude:CLAUDE.md codex:AGENTS.md; do
+      sum="$(git -C "$repo_root" show "$commit:skills/todo-style/assets/${pair#*:}" | hash_of)"
+      [ "$(pack_row "$sum" | cut -d' ' -f1)" = "${pair%%:*}" ] ||
+        fail "pack-versions.tsv is missing the ${pair#*:} pack from commit $commit"
+    done
+  done
+fi
+
+# --- status tells the packs apart --------------------------------------------
+cp "$codex_asset" "$claude_target"
+expect_contains "$(run_style status)" 'holds the Codex pack' \
+  "status must notice the Claude Code file holds the Codex pack"
+{ cat "$claude_asset"; printf '%s\n' 'a local tweak'; } > "$claude_target"
+expect_contains "$(run_style status)" 'a todo-list pack edited by hand' \
+  "status must tell an edited pack from the shipped one"
+printf '%s\n' '# my own rules' > "$claude_target"
+expect_contains "$(run_style status)" 'your own file (not a todo-list pack)' \
+  "status must tell a hand-written file from a pack"
+
+# An older release is recognised by hash. Run a copy of the skill whose version list
+# carries one extra, made-up release, so the check needs no real historical file.
+skill_copy="$fixture_root/skill-copy"
+cp -R "$skill_dir" "$skill_copy"
+old_pack="$fixture_root/old-pack.md"
+{ printf '%s\n' '## AUDIENCE' 'an old release' '## BEHAVIOR'; } > "$old_pack"
+printf '%s\tclaude\t0.0.1\tdeadbee\n' "$(hash_of < "$old_pack")" >> "$skill_copy/pack-versions.tsv"
+run_copy() {
+  TODO_HUB="$hub" CLAUDE_CONFIG_DIR="$claude_home" CODEX_HOME="$codex_home" \
+    bash "$skill_copy/scripts/agent-style.sh" "$@"
+}
+cp "$old_pack" "$claude_target"
+expect_contains "$(run_copy status)" 'an older todo-list pack (v0.0.1)' \
+  "status must name an older shipped pack by version"
+
+# --- restore is idempotent after the user edits the installed pack ----------
+# Separate sandbox: install over the user's file, edit the installed pack, then restore
+# twice. The first restore saves the edit once and puts the original back; every later
+# restore changes nothing.
+idem_hub="$fixture_root/idem-hub"
+idem_claude="$fixture_root/idem-dot-claude"
+idem_backups="$idem_hub/backups/agent-instructions"
+mkdir -p "$idem_claude"
+cp "$original" "$idem_claude/CLAUDE.md"
+run_idem() {
+  TODO_HUB="$idem_hub" CLAUDE_CONFIG_DIR="$idem_claude" CODEX_HOME="$fixture_root/idem-dot-codex" \
+    bash "$script" "$@"
+}
+run_idem install claude >/dev/null
+printf '%s\n' 'my tweak to the pack' >> "$idem_claude/CLAUDE.md"
+edited="$fixture_root/edited-pack.md"
+cp "$idem_claude/CLAUDE.md" "$edited"
+
+run_idem restore claude >/dev/null
+expect_same_file "restore must bring the pre-install file back" "$idem_claude/CLAUDE.md" "$original"
+expect_equal "restore must back up the edited pack exactly once" \
+  "2" "$(backup_count "$idem_backups" 'claude-CLAUDE-*.md')"
+expect_backed_up "the edited pack must survive in the backups" "$idem_backups" "$edited"
+
+for attempt in second third; do
+  output="$(run_idem restore claude)"
+  expect_contains "$output" 'already matches' "a $attempt restore must be a no-op, not a toggle"
+  expect_same_file "a $attempt restore must leave the original in place" \
+    "$idem_claude/CLAUDE.md" "$original"
+  expect_equal "a $attempt restore must not add a backup" \
+    "2" "$(backup_count "$idem_backups" 'claude-CLAUDE-*.md')"
+done
+
+# Re-installing the same original must not duplicate its backup.
+run_idem install claude >/dev/null
+expect_equal "backing up content already in the hub must not copy it again" \
+  "2" "$(backup_count "$idem_backups" 'claude-CLAUDE-*.md')"
+
+# Upgrading from an older pack keeps the restore point on the user's own file.
+cp "$old_pack" "$idem_claude/CLAUDE.md"
+TODO_HUB="$idem_hub" CLAUDE_CONFIG_DIR="$idem_claude" CODEX_HOME="$fixture_root/idem-dot-codex" \
+  bash "$skill_copy/scripts/agent-style.sh" install claude >/dev/null
+run_idem restore claude >/dev/null
+expect_same_file "restore after a pack upgrade must return to the user's file, not the old pack" \
+  "$idem_claude/CLAUDE.md" "$original"
+
+# Installs made before restore points existed have no record: restore infers one from the
+# newest backup that is not a pack, then pins it so the next restore is a no-op.
+run_idem install claude >/dev/null
+rm "$idem_backups/claude-CLAUDE.restore-point"
+run_idem restore claude >/dev/null
+expect_same_file "a restore with no install record must use the newest own-content backup" \
+  "$idem_claude/CLAUDE.md" "$original"
+[ -f "$idem_backups/claude-CLAUDE.restore-point" ] ||
+  fail "a restore with no install record must pin the restore point it used"
+expect_contains "$(run_idem restore claude)" 'already matches' \
+  "a restore after an inferred one must be a no-op"
+
+# --- uninstall: a pack installed onto no file can be undone ------------------
+bare_hub="$fixture_root/bare-hub"
+bare_claude="$fixture_root/bare-dot-claude"
+bare_backups="$bare_hub/backups/agent-instructions"
+run_bare() {
+  TODO_HUB="$bare_hub" CLAUDE_CONFIG_DIR="$bare_claude" CODEX_HOME="$fixture_root/bare-dot-codex" \
+    bash "$script" "$@"
+}
+run_bare install claude >/dev/null
+expect_equal "an install onto no file must record that there was none" \
+  "absent" "$(cat "$bare_backups/claude-CLAUDE.restore-point")"
+output="$(run_bare uninstall claude)"
+expect_contains "$output" 'no file before the style pack' "uninstall must say why it removed the file"
+[ ! -e "$bare_claude/CLAUDE.md" ] || fail "uninstall must remove a pack installed onto no file"
+expect_equal "removing the untouched pack must not create a backup" \
+  "0" "$(backup_count "$bare_backups" 'claude-CLAUDE-*.md')"
+expect_contains "$(run_bare restore claude)" 'no change' "a second uninstall must be a no-op"
+
+run_bare install claude >/dev/null
+printf '%s\n' 'my tweak to the pack' >> "$bare_claude/CLAUDE.md"
+cp "$bare_claude/CLAUDE.md" "$edited"
+output="$(run_bare restore claude)"
+[ ! -e "$bare_claude/CLAUDE.md" ] || fail "restore to no file must remove an edited pack"
+expect_contains "$output" 'backed up to' "removing an edited pack must report its backup"
+expect_equal "removing an edited pack must back it up once" \
+  "1" "$(backup_count "$bare_backups" 'claude-CLAUDE-*.md')"
+expect_backed_up "the removed edit must be kept" "$bare_backups" "$edited"
+run_bare restore claude >/dev/null
+expect_equal "a second restore to no file must not add a backup" \
+  "1" "$(backup_count "$bare_backups" 'claude-CLAUDE-*.md')"
+
+# --- backups is the documented name; list-backups stays an alias -------------
+backups_output="$(run_style backups)"
+expect_contains "$backups_output" "$backup_file" "backups must list the hub's backups"
+expect_equal "list-backups must stay an alias of backups" \
+  "$backups_output" "$(run_style list-backups)"
 
 # --- bad input fails closed --------------------------------------------------
 run_style install nonsense >/dev/null 2>&1 &&

@@ -1,6 +1,6 @@
 ---
 name: todo-review
-description: Use when the user invokes /todo-review, says "review this against the plan", "does the diff match the plan", "check this work before verify", "review what the agent built for X", or has changes in a repo that belong to a hub project and wants them reviewed. Reviews a diff against the project's plan.md — scope, constraints, claimed-done tasks — plus a correctness pass.
+description: Use when the user invokes /todo-review, says "review this against the plan", "does the diff match the plan", "check this work before verify", "review what the agent built for X", "review what the parallel wave merged", or has changes in a repo that belong to a hub project and wants them reviewed. Reviews a diff against the project's plan.md — scope, constraints, claimed-done tasks — plus a correctness pass.
 ---
 
 # Project Review Skill
@@ -32,8 +32,10 @@ resolved against.
 ## How the user invokes this
 
 ```
-/todo-review queue-migration        ← review current repo's diff against that plan
-/todo-review                        ← infer the active project from the current repo
+/todo-review queue-migration                 ← current repo's unlanded diff vs that plan
+/todo-review queue-migration #1062           ← one PR, open or merged
+/todo-review queue-migration a1b2c3d..origin/main  ← a landed range, e.g. after a parallel wave
+/todo-review                                 ← infer the active project from the current repo
 ```
 
 Plain language counts too: "review this against the plan", "did the parallel agents build what the plan said".
@@ -47,12 +49,15 @@ search `archive.md` only when no active row matches. One match → use it and sa
 registry supplied it; several or none → ask.
 
 Load the grounding the way `todo-refer` does: `plan.md` in full (Goal, Scope,
-Constraints, Key Decisions), `tasks.md` by extraction — open tasks, plus the `[x]` tasks
-**ticked recently** (they're the claims this diff should evidence).
+Constraints, Key Decisions); every task with its state and ID
+(`python3 <todo-graph-skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" <short-name>`,
+or extract `tasks.md` directly when that helper isn't installed); and the newest dated
+section of `artifacts/journal.md` plus the newest `artifacts/*-handoff-*.md`, if any —
+the latest recorded stretch of work. Step 3 builds the claimed-done set from these.
 
 ## Step 2 — Establish the diff
 
-Review the changes that haven't landed on the base branch, wherever they live:
+Review the changes the user means, wherever they live:
 
 ```bash
 git -C <repo> symbolic-ref refs/remotes/origin/HEAD    # find <base>
@@ -60,10 +65,22 @@ git status --short                                      # uncommitted work count
 git diff origin/<base>...HEAD --stat                    # committed-but-unlanded
 ```
 
+First match wins:
+
+- **A PR or range was named** → that, landed or not: `gh pr diff <pr>` for a PR,
+  `git diff <range>` for a range. `<pr>` is digits only; each side of `<range>` matches
+  `^[A-Za-z0-9._/~^-]+$`. Anything else fails closed per
+  [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Placeholder safety.
 - In a `todo/<short-name>` or `feat/*` worktree → the whole branch diff vs `origin/<base>`.
 - On the base branch with local changes → the working-tree diff.
-- Nothing in either → say there's nothing to review and stop; suggest `/todo-refer
-  <name> resume` if the user expected work to be here.
+- **On the base branch, clean** — the usual state after `/todo-execute parallel` merged its
+  PRs → review what landed instead of stopping. List the recent landings
+  (`git log --first-parent --format='%h %s' -15 origin/<base>`, or
+  `gh pr list --state merged --base <base> --limit 15`), say which look like this
+  project's, and ask the user to confirm the oldest and newest. Then review
+  `<oldest>^..<newest>` — the pre-wave base to the last merge.
+- None of these finds changes → say there's nothing to review and stop; suggest
+  `/todo-refer <name> resume` if the user expected work to be here.
 
 State what you're reviewing (branch, commit range, file count) before judging it.
 
@@ -78,9 +95,13 @@ file:line references:
 2. **Constraints** — anything in `## Constraints` / `## Key Decisions` the diff
    contradicts (wrong library, forbidden pattern, decision silently reversed). Quote the
    plan line next to the violating hunk.
-3. **Claimed-done evidence** — for each recently ticked task, point at the diff hunks
-   (or artifacts) that evidence it. A `[x]` with no corresponding change is a finding —
-   the checkbox is a claim, and this is the audit.
+3. **Claimed-done evidence** — `tasks.md` has no timestamps and the hub isn't a git
+   repo, so "ticked recently" can't be read off a checkbox. The **claimed-done set** is
+   every `[x]` task that either the latest journal section or handoff records as done, or
+   whose phase or named files the diff touches. For each, point at the diff hunks (or
+   artifacts) that evidence it, and say which source put it in the set. A `[x]` in the set
+   with no corresponding change is a finding — the checkbox is a claim, and this is the
+   audit. A `[x]` in neither source is outside this diff's reach; don't audit it here.
 
 Where the plan is silent, that's a plan gap, not a violation — note it separately and
 point at `/todo-plan` rather than inventing a rule to enforce.
@@ -104,12 +125,16 @@ Plan compliance:
 | # | finding | where | plan says |
 |---|---|---|---|
 | P1 | ⚠️ retry logic added to producer — outside plan scope | src/producer.ts:88 | scope: consumers only |
-| P2 | ❌ task 4.1 ticked, but no dead-letter exchange in diff | tasks.md 4.1 | Phase 4 |
+| P2 | ❌ task 4.1 ticked (journal 2026-07-08), but no dead-letter exchange in diff | tasks.md 4.1 | Phase 4 |
 
-Correctness (via code-review): 2 findings — see above table rows C1–C2.
+Correctness (via code-review):
+| # | finding | where |
+|---|---|---|
+| C1 | ❌ ack sent before the handler commits — a crash drops the message | src/consumer.ts:41 |
+| C2 | ⚠️ retry count never reset between messages | src/consumer.ts:97 |
 
-Verdict: not ready for /todo-verify — P2 is a claimed-done gap.
-▶ Next: /todo-revise queue-migration (capture P2 as a gap) · fix P1 or amend the plan
+Verdict: not ready for /todo-verify — P2 is a claimed-done gap, C1 loses messages.
+▶ Next: /todo-revise queue-migration (capture P2 as a gap) · fix C1 · fix P1 or amend the plan
 ```
 
 The verdict line answers one question: **is this ready for `/todo-verify` / `/todo-push`,
@@ -119,10 +144,15 @@ command is an act-now pointer; a later session gets `/todo-refer <short-name> re
 instead — see [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Session
 handoff.
 
+When someone other than the user must rule on the findings — a product manager, another
+team, a reviewer who won't read the diff — end with one line offering
+`/todo-review-handoff <short-name>`, which turns this board into checkable claims and a
+ruling sheet. It reuses these findings; it doesn't review again.
+
 ## Notes
 - Hub-read-only; repo-read-only. This skill changes nothing — it produces findings.
 - Reviewing mid-execution is fine (uncommitted diff); reviewing after
   `/todo-execute parallel` merges is the other common moment — then the diff is the
-  merged PRs vs the pre-wave base.
+  merged PRs vs the pre-wave base (Step 2's landed-range branch).
 - `/todo-verify` checks *behavior* via the verification MCP; this skill checks *intent*
   via the plan. They complement, not replace, each other.

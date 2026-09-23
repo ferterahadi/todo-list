@@ -1,6 +1,6 @@
 ---
 name: todo-conventions
-description: Use when a todo-* skill needs the hub's shared contract — resolving paths against $TODO_HUB, looking a project up active-first then archived, validating a value before it reaches a shell, counting real task checkboxes, gating a status flip on the project graph, or choosing between an act-now command and a next-session handoff. A reference, not a workflow; nothing here is invoked directly by the user.
+description: Use when a todo-* skill needs the hub's shared contract — resolving paths against $TODO_HUB, looking a project up active-first then archived, validating a value before it reaches a shell, counting real task checkboxes, naming a task by its ID, reading a revision tag, deciding whether code work is shipped, gating a status flip on the project graph, or choosing between an act-now command and a next-session handoff. A reference, not a workflow; nothing here is invoked directly by the user.
 ---
 
 # Hub conventions
@@ -50,6 +50,7 @@ command line. Validate before running:
 |---|---|
 | `<short-name>`, `<source>`, `<target>`, `<project>` | `^[a-z0-9][a-z0-9-]*$` |
 | `<project-path>` | those segments joined by `/`, no leading `/`, no `..` |
+| `<feat>`, `<name>` (parallel-mode worktree folder and `feat/<name>` branch) | `^[a-z0-9][a-z0-9-]*$` — derive it from the feature label, never from raw user prose |
 | `<repo>`, `<owner>`, `<base>` | no `;` `\|` `&` `$` `` ` `` `"` `'` `\` `(` `)` `<` `>` and no newline |
 | `<relation>` | exactly `depends-on`, `supersedes`, or `related-to` |
 
@@ -90,18 +91,83 @@ linking here — a subagent starting with zero history cannot follow a link.
 
 ## Counting tasks
 
-Real progress is checked task boxes over real task boxes. Four things in a `tasks.md` look
-like tasks and are not: the template's `## Status` legend, `## Notes` / `## Context`
-sections, checkbox lines inside HTML comments (the `## Revisions` template ships a
-commented-out example), and anything in a fenced code block.
+Real progress is checked real tasks over real tasks. A **real task** is a line matching
+`^\s*-\s+\[([ xX])\]\s+` followed by text, under a level-2 section; it is done when the box
+holds `x` or `X`. These look like tasks and are not:
 
-The deterministic helpers — `graph-report.py`, `archive-report.sh` — apply exactly these
-exclusions, so counts agree everywhere. The shared shell equivalent:
+- anything before the first level-2 heading;
+- the `## Status`, `## Notes`, and `## Context` sections (whole heading text, any case);
+- checkbox lines inside HTML comments (the `## Revisions` template ships a commented-out
+  example), even when the comment opens mid-line;
+- anything in a fenced code block — a run of three or more backticks or tildes, closed only
+  by a run of the same character at least as long.
+
+A plain bullet such as `- [link](x)` is not a checkbox. Checkboxes inside `## Revisions`
+**are** real tasks. Open revisions are counted separately: a `### R<n> … [open…]` heading
+under `## Revisions`, matched case-insensitively on its terminal tag (§ Revision tags).
+
+`graph-report.py` is the reference implementation. `archive-report.sh context`,
+`skills/todo-infographic/scripts/refresh-infographic.py`, and the snippet below apply the
+same rule, so counts agree everywhere. Prefer the helper when a registry row exists — it also
+lists each task with its ID:
 
 ```bash
-# completed/total real tasks — skips ## Status/Notes/Context, HTML comments, and fences
-awk '/<!--/{c=1} c{if(/-->/)c=0; next} /^[[:space:]]*(```|~~~)/{f=!f; next} f{next} /^## /{p=($0!~/^## (Status|Notes|Context)([[:space:]]|$)/)} p&&/^[[:space:]]*- \[/{t++} p&&/^[[:space:]]*- \[x\]/{d++} END{print d+0"/"t+0}' tasks.md
+python3 <todo-graph-skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" "<short-name>" [--open]
 ```
+
+The shell equivalent for a bare `tasks.md` path:
+
+```bash
+# done/total real tasks — the canonical rule above
+awk '
+  function vis(s,  o, p) { o = ""; while (s != "") { if (inc) { p = index(s, "-->"); if (!p) return o; s = substr(s, p + 3); inc = 0 } else { p = index(s, "<!--"); if (!p) return o s; o = o substr(s, 1, p - 1); s = substr(s, p + 4); inc = 1 } } return o }
+  function run(s, ch,  n) { n = 0; while (substr(s, n + 1, 1) == ch) n++; return n }
+  { s = $0; sub(/^[[:space:]]+/, "", s) }
+  fc != "" { n = run(s, fc); if (n >= fl && substr(s, n + 1) ~ /^[[:space:]]*$/) fc = ""; next }
+  { l = vis($0); s = l; sub(/^[[:space:]]+/, "", s); ch = substr(s, 1, 1) }
+  (ch == "`" || ch == "~") && run(s, ch) >= 3 { fc = ch; fl = run(s, ch); next }
+  l ~ /^##[[:space:]]+[^[:space:]]/ { t = tolower(l); sub(/^##[[:space:]]+/, "", t); sub(/[[:space:]]+$/, "", t); on = (t != "status" && t != "notes" && t != "context"); next }
+  on && l ~ /^[[:space:]]*-[[:space:]]+\[[ xX]\][[:space:]]+[^[:space:]]/ { total++; if (l ~ /^[[:space:]]*-[[:space:]]+\[[xX]\]/) done++ }
+  END { print done + 0 "/" total + 0 }
+' tasks.md
+```
+
+## Task IDs and phases
+
+A **phase heading** is a level-2 or level-3 heading whose text starts with `Phase <number>`,
+where the number may carry one decimal part, plus an optional single letter
+(case-insensitive): `## Phase 1 — Foundation`, `## Phase 4.5 — Degradation`, or
+`### Phase 6a — Cutover` under `## Tasks`. A level-3 phase ends at the next level-2 or
+level-3 heading; a level-2 phase ends at the next level-2 heading, so any level-3 heading
+inside it, `### Phase …` included, is a subsection. `## Phase A` is not a phase heading.
+
+Every real task has a positional ID, re-derived from the current file on each read:
+
+| Where the task sits | ID |
+|---|---|
+| Inside a phase | `<phase>.<n>` — the n-th real task of that phase, letter lower-cased (`6a.3`, `4.5.2`); a repeated phase heading continues its count, though the infographic refuses one because it draws one block per phase |
+| Inside `## Revisions` | `R<n>` from the `### R<n>` heading above it; `-` when there is none |
+| Anywhere else | `<n>` — 1-based, file order, counting only these tasks |
+
+IDs are positions, not names: inserting a task renumbers the ones after it. Resolve an ID
+against a fresh `graph-report.py tasks` listing immediately before acting on it, and
+confirm the task text matches.
+
+## Revision tags
+
+A `### R<n>` heading under `## Revisions` ends in one lowercase tag; readers accept
+historical case variants.
+
+| Tag | Meaning |
+|---|---|
+| `[open]` | The gap stands; its `- [ ] implement + re-verify` checkbox is open work |
+| `[fixed — awaiting verify]` | The fix was accepted on a project with a `## Verification` block; the checkbox stays unticked until a green `/todo-verify` run ticks it and tags `[done]` |
+| `[done]` | Closed; `todo-archive` collapses it to a tombstone |
+| `[advisory]` | A coverage gap from `/todo-verify`: no checkbox, never blocks `done`; `/todo-revise <short-name> R<n>` promotes it to `[open]` |
+
+Only `[open…]` counts as an open revision. An awaiting-verify entry is still unfinished:
+its unticked checkbox is an open real task, so its project is neither settled nor
+retirable.
 
 ## The status-flip gate
 
@@ -113,7 +179,8 @@ python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
   "$TODO_HUB" "<short-name>"
 ```
 
-An unsatisfied `depends-on` edge, or a graph identity or cycle issue incident to this
+Read the rows, not the exit status: exit 1 still carries a complete answer. An
+unsatisfied `depends-on` edge, or a graph identity, status, or cycle issue incident to this
 project, refuses the flip. Name the exact blocker and point at `/todo-graph why
 <short-name>` or `/todo-graph audit`. `related-to`, `supersedes`, and the registry's legacy
 `related` cell are context and never gate anything.
@@ -124,6 +191,21 @@ from prose or from the legacy `related` cell.
 
 Long-running work re-runs the gate immediately before the flip, not once at the start;
 dependencies regress during a session.
+
+## Shipped work
+
+Code work is shipped when all of these hold:
+
+- the `<repo>-wt/<short-name>` worktree, if any, is clean;
+- no OPEN PR exists for `todo/<short-name>`;
+- the `todo/<short-name>` branch, if any, is merged into `origin/<base>`: no commits
+  beyond it, every commit patch-equivalent to one on base (`git cherry`, covers rebase
+  merges), or its tip equals a MERGED PR's `headRefOid` (covers squash merges).
+
+`skills/todo-state/scripts/repo-evidence.sh` implements this check; skills call it rather
+than re-deriving it. A check that cannot run means unknown, and unknown holds `done`: it
+never reopens a `done` project on its own. Reopening a `done` project, active or
+archived, always goes through `/todo-state <short-name> in-progress`.
 
 ## Session handoff
 
@@ -180,6 +262,8 @@ the same edit as the status change — read them there rather than restating the
 ## Archiving completed revisions
 
 `todo-archive` owns the journal-anchor and tombstone procedure, the legacy-link repair, and
-the conflict rules. Any skill that closes a revision applies that procedure by reference.
-Never archive an `[open]` entry, and match `[done` case-insensitively so `[DONE 2026-07-13]`
-cannot escape.
+the interrupted-run conflict rule. Any skill that closes a revision applies that procedure by
+reference. Archive only `[done…]` entries, never `[open]`, `[fixed — awaiting verify]`, or
+`[advisory]` ones, and match `[done` case-insensitively so `[DONE 2026-07-13]` cannot
+escape. Registry state conflicts the archive audit finds go to `todo-state`, which owns
+every status flip.

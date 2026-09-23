@@ -1,6 +1,6 @@
 ---
 name: todo-plan
-description: Use when the user invokes /todo-plan, says "plan this project", or names a project and wants a plan created. Runs discovery, verifies the target repo exists locally, then writes plan.md and tasks.md.
+description: Use when the user invokes /todo-plan, says "plan this project", "replan X", "update the plan", "break X into tasks", or names a hub project and wants its plan created or revised. Runs discovery, verifies the target repo exists locally, then writes the hub project's plan.md and tasks.md — not a writer for generic implementation plans outside the hub.
 ---
 
 # Project Planning Skill
@@ -45,22 +45,33 @@ column points at the target codebase elsewhere and is not resolved against the h
 /todo-plan projects/work/queue-migration   ← full path also works
 ```
 
+Running it on a project that already has a plan is a replan — same steps, asking only what
+should change.
+
 ## Step 1 — Resolve the project path
 
 Resolve the project per
 [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
 recording the `path`, `repo`, owning registry, and section.
 
-## Step 2 — Ask questions first
+A short-name in neither registry is not a dead end here: offer to scaffold it with
+`todo-add` now — its single prompt covers short-name and work vs self-initiative — then
+continue planning the new row in the same run.
 
-Before reading or writing anything, gather answers to all seven discovery questions.
+## Step 2 — Ask only what's missing
+
+Before researching or writing, settle the seven discovery questions below — but skip each
+one the hub already answers: a row `repo` that exists on disk, a filled `plan.md` section
+(not template text), a `## Relationships` row `todo-add` seeded, or what this session's
+`todo-add` prompt captured. On a replan, show what the current plan says and ask only what
+should change. Ask everything still open in one turn.
 Use the host's structured choice prompt for enumerable questions when available —
 clickable options beat walls of prompt text for a visual reader — and plain text for
-open-ended questions, all in the same turn:
+open-ended questions:
 
 Via structured choices (include a free-text path when the host supports it):
-- **Repo path** — offer the owning row's `repo` value as the first option
-  ("Confirmed: `~/code/…`") plus "Different path" (if the row shows `-`, skip the
+- **Repo path** — only when the row's `repo` is `-` or not on disk: offer the row's value
+  as the first option ("Confirmed: `~/code/…`") plus "Different path" (for `-`, skip the
   widget and just ask).
 - **Verification layer** — "Does this project have a verification MCP layer?" with
   options like "Yes — I'll name the feature/target" / "No — drop the Verification block".
@@ -79,7 +90,7 @@ Wait for the answers before continuing.
 
 ## Step 3 — Verify the repo
 
-Once the user confirms the repo path:
+Once the repo path is settled — confirmed by the user, or a row `repo` Step 2 skipped:
 
 - Check the path exists on disk
 - If it's a git repo, note the current branch
@@ -95,8 +106,8 @@ If the user references a local repo, doc, or path:
 Regardless of references, check the confirmed repo for existing superpowers docs —
 `<repo>/docs/superpowers/plans/` and `<repo>/docs/superpowers/specs/` (written by the
 brainstorming / writing-plans skills in earlier target-repo sessions). Read any that touch
-this project, list them as rows in `research/superpowers-docs.md` (a table: doc path +
-source + one-line summary), and fold their decisions into the plan instead of re-deciding.
+this project, list them as rows in `research/superpowers-docs.md` (a table: doc path ·
+source · one-line summary), and fold their decisions into the plan instead of re-deciding.
 
 If no external reference is given and the repo has no superpowers docs, skip this step.
 
@@ -118,7 +129,7 @@ Fill in the project's `plan.md`:
   legacy registry `related` hint into a dependency, or infer an edge from name similarity.
   Keep the three-column table empty when there are no relationships. If an older plan has
   no section, insert the canonical table before `## Verification` or `## References`.
-- **Verification**: the "check" gate binding for `/todo-verify`. If the project has a verification MCP layer, ask for the feature/target name and fill the `## Verification` block — `Feature`, `Gate covers` (which tasks/phases a green run may tick), and optionally `Coverage source` + a `Task↔test map`. If there's no verification layer, delete the section.
+- **Verification**: the "check" gate binding for `/todo-verify`. If the project has a verification MCP layer, ask for the feature/target name and fill the `## Verification` block — `Feature`, `Run` (the start tool and its arguments, and how to rerun by id), `Gate covers` (which tasks/phases a green run may tick), and optionally `Coverage source` + a `Task↔test map`. If there's no verification layer, delete the section.
 - **Repo**: absolute path to the local codebase (confirmed in Step 3)
 - **References**: paths or links to relevant resources
 
@@ -131,7 +142,13 @@ Break the work into a concrete checklist:
 - Each task must be specific and actionable — "implement X" not "think about X"
 - A future agent session should be able to execute each task without asking questions
 - Order by dependency (prerequisites first)
-- Group under headers if the project has distinct phases
+- When the project has distinct phases, write each as `### Phase N — title` under
+  `## Tasks` (`N` is a number with an optional letter, e.g. `6a`); a single-phase project
+  lists its tasks straight under `## Tasks`. Task IDs are positional — `2.3` is the third
+  task under Phase 2 ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md)
+  § Task IDs and phases) — so never hand-number task lines. On a replan, add tasks at the end of their
+  phase or in a new phase when order allows: inserting mid-phase renumbers every later task
+  in it, and existing `⟵ Task <id>` backlinks would point at the wrong work.
 - **One line per task (~150 chars max).** Supporting detail, mechanics, and rationale go
   to `research/findings.md` with a pointer (`— see research/findings.md § Token exchange`),
   never inline in the task line. `tasks.md` is read whole by several skills; it must stay a
@@ -153,29 +170,22 @@ shown:
   endpoint), and fits on one line. "Think about X" / "handle Y properly" fail.
 - [ ] **Dependency walk**: read tasks.md top to bottom once; if any task needs an output
   produced by a later task, reorder now.
-- [ ] **Project-graph test**: run `todo-graph`'s bundled
-  `graph-report.py audit "$TODO_HUB"` after writing Relationships. Missing targets,
-  ambiguous identities, unknown types, self-edges, duplicate edges, or dependency cycles
-  fail the plan. Fix the table before continuing; do not reinterpret a broken edge. If
-  the helper is unavailable and the table contains a `depends-on` row, stop instead of
-  publishing an unvalidated hard dependency.
+- [ ] **Project-graph test**: after writing Relationships, check this project only —
+  `python3 <todo-graph-skill-dir>/scripts/graph-report.py context "$TODO_HUB" <short-name>`
+  (validate `<short-name>` first; `todo-conventions` § Placeholder safety). An `ERROR` line
+  about this project's edges fails the plan: a missing or ambiguous target, an unknown
+  relation, a self-edge, a duplicate edge, a malformed table, or a cycle through this
+  project. Fix the table before continuing; do not reinterpret a broken edge. Expected, and
+  not failures: a `BLOCKERS` line for an unsettled prerequisite (it gates execution, not
+  planning), `DONE_OPEN_WORK` on a `done` project you are replanning (Step 8 reopens it),
+  and any issue elsewhere in the hub. If the helper is unavailable and the table contains a
+  `depends-on` row, stop instead of publishing an unvalidated hard dependency.
 - [ ] **Cold-session test**: for each task ask "would a fresh session need to ask the
   user anything to do this?" If yes, the answer belongs in plan.md Context — add it.
 - [ ] **Repo check**: the Repo path in plan.md was verified on disk this session (you
   saw the `ls`/git output in Step 3, not remembered it).
 
-## Step 7 — Update the active registry
-
-- If the row came from `archive.md`, move it verbatim back to the same section in
-  `index.md` before changing it. Replanning makes the project active again.
-- Set `status` to `ready`
-- Set `repo` to the confirmed absolute local path
-- Set `started` to today's date **only if the prior status was `planning`**, overwriting the
-  creation stamp `/todo-add` left. Re-planning a project that already reached `in-progress`
-  or `done` leaves `started` alone — it holds the real start date and a replan must never
-  clobber it. See `todo-state` § Date stamping.
-
-## Step 8 — Confirm with a plan-at-a-glance render
+## Step 7 — Confirm with a plan-at-a-glance render
 
 Render the plan as a compact block rather than pasting plan.md/tasks.md — the user is a
 visual reader — and offer the full files on request:
@@ -211,10 +221,24 @@ Rules for the render:
 Then ask via the host's structured choice prompt when available: "Does this plan look
 right?" with options
 "Looks right — lock it in" / "Adjust something" / "Show me the full plan.md".
-Apply changes. Once confirmed:
+Apply changes and re-run the Step 6.5 gate on any file you edited. Nothing touches the
+registry until the user confirms.
+
+## Step 8 — Update the registry, once confirmed
+
+- Set `repo` to the confirmed absolute local path.
+- `planning` → set `ready` and stamp `started` = today, overwriting the creation stamp
+  `/todo-add` left (`todo-state` § Date stamping).
+- `ready` or `in-progress` → leave `status` and `started` alone; a replan never demotes
+  work that has begun, and never clobbers a real start date.
+- `done`, active or archived → a replan that leaves open tasks reopens it: hand the flip to
+  `todo-state` set mode — `/todo-state <short-name> in-progress` — which runs the
+  status-flip gate, moves an archived row back to `index.md`, and clears `completed` /
+  `elapsed (days)` in one edit. A replan that adds no open task leaves it `done`.
+
+Then close with one line:
 
 > "Plan is set. Run `/todo-execute <short-name>` to start execution."
 
-**Offer the visual next.** The plan is fresh — offer to run `/todo-infographic
-<short-name>` now so the one-pager exists from day one instead of waiting for the
-staleness hook.
+No separate infographic offer — the Stop hook suggests `/todo-infographic <short-name>`
+when the one-pager needs building.

@@ -49,8 +49,8 @@ The same helper powers the plugin's SessionStart report. Its compact output iden
 - tombstones needing a direct-link or stable-anchor repair;
 - broken tombstones whose journal target is missing or ambiguous;
 - duplicate short-names across active and archived registries;
-- state conflicts such as archived non-`done` / open-revision rows or active `done`
-  rows with an open revision;
+- state conflicts such as archived non-`done` / unfinished-revision rows or active
+  `done` rows with open work;
 - registry rows whose project `tasks.md` is missing;
 - `tasks.md` files over 20,480 bytes;
 - active `done` rows eligible to move to `archive.md`.
@@ -117,8 +117,8 @@ for that entry. Never guess or create a link to a nearby aggregate section.
 ## Step 3 — Retire completed projects
 
 Ensure `$TODO_HUB/archive.md` exists with the same section tables and nine-column schema
-as `index.md`. For each active row whose status is `done` and whose `tasks.md` has no
-case-insensitive `[open]` revision:
+as `index.md`. For each active row the audit marks `retire` — status `done`, no open real
+task, and no `[open…]` or `[fixed — awaiting verify]` revision:
 
 Move the row verbatim to the same section in `archive.md`, creating that section with
 the same table header when necessary. Apply the destination insert and source removal
@@ -130,13 +130,15 @@ Preserve custom section names. Before moving, search both registries for the sho
 duplicates are corruption, so stop instead of choosing one. Do not move or rename the
 project folder.
 
-Repair registry conflicts before retirement:
+Never retire a row the audit flags as a conflict. Report it and hand it off:
 
-- Archived status other than `done`, or a case-insensitive terminal `[open…]`
-  revision → move the row back to its original `index.md` section, set
-  `in-progress`, and clear `completed` / `elapsed (days)` atomically.
-- Active `done` row with an open revision → keep it active, set `in-progress`, and
-  clear the completion fields.
+- Archived status other than `done`, or a terminal `[open…]` or
+  `[fixed — awaiting verify]` revision in any case (`registry_action=reactivate`) →
+  report the row and hand off `/todo-state <short-name> in-progress`. `todo-state` owns
+  the reverse move, the graph gate, and the date rules; do not edit the row here.
+- Active `done` row with open work — an open revision or any open real task, an unticked
+  awaiting-verify checkbox included (`registry_action=reopen-status`) → keep it active
+  and hand off the same `/todo-state <short-name> in-progress`.
 - Missing `tasks.md` or duplicate registry names → stop for that project; do not move
   the row or infer its state.
 
@@ -149,8 +151,8 @@ For a legacy `## Archive` table still inside `index.md`, infer `Work` only from 
 Move unknown paths under `## Other` and flag them for confirmation before any later
 reopen.
 
-This skill may repair a stale archived row reported by the audit. For a user-requested
-status change away from `done`, `todo-state` owns the same atomic reverse move.
+This skill moves only `done` rows forward into `archive.md`. Every move back to
+`index.md` and every status change belongs to `todo-state`.
 
 ## Step 4 — Verify and report
 
@@ -165,6 +167,6 @@ api-token-rotation  96KB → 11KB     12                    2       -
 queue-migration     -                -                     -       index → archive
 ```
 
-Include total bytes removed from `tasks.md`. `archive.md` is a cold file: default list,
-triage, sync, and execution scans read only `index.md`; exact historical lookup falls back
-to `archive.md`.
+Include total bytes removed from `tasks.md`, and list each conflict handed to `todo-state`.
+`archive.md` is a cold file: default list, triage, `todo-state audit`, and execution scans
+read only `index.md`; exact historical lookup falls back to `archive.md`.

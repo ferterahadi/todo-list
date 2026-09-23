@@ -51,7 +51,7 @@ Keep `artifacts/` navigable — a cold session should reach any output from one 
 - **Revision anchors.** Archived revision `R4` starts with `<a id="revision-r4"></a>` in `journal.md`; its `tasks.md` tombstone links directly to `artifacts/journal.md#revision-r4`.
 - **Header.** Every artifact opens with a one-line blockquote that names its origin: `> **Kind:** … · **Source:** tasks.md revision R7 (or a Phase) · **Date:** YYYY-MM-DD · **Index:** [README.md](README.md)`.
 - **Manifest.** `artifacts/README.md` is the backtrack hub — a table of every artifact (`date · file · kind · source · one-line`) plus a living-docs table. Add a row whenever you create an artifact. Template: `templates/artifacts-README.md`.
-- **Superpowers pointers.** `research/superpowers-docs.md` is a table (`doc · source · one-line`) of design docs that live in the target repo under `docs/superpowers/`; it satisfies the `superpowers-doc-sync` hook.
+- **Superpowers pointers.** `research/superpowers-docs.md` is a table (`doc path · source · one-line summary`) of design docs that live in the target repo under `docs/superpowers/`; a row naming the doc satisfies the `superpowers-doc-sync` hook.
 
 ## Skills drive the work
 
@@ -64,7 +64,7 @@ session's skill listing and never invent a skill that isn't there.
 
 Prefer the `/todo-*` skills over hand edits:
 - `/todo-add` scaffold a project + index row · `/todo-plan` write plan.md/tasks.md
-- `/todo-execute` work the checklist (add `parallel` to fan independent tasks to worktree agents · serial merge queue lands PRs)
+- `/todo-execute` work the checklist (`tasks <ids>` for a subset · add `parallel` to fan independent tasks to worktree agents · serial merge queue lands PRs)
 - `/todo-state` flip status/checkboxes · `/todo-list` overview (`sort` reorders by completion)
 - `/todo-verify` reconcile the verification result · `/todo-revise` fix gaps
 - `/todo-review` review a diff against the plan · `/todo-refer <name> resume` pick up where a project left off

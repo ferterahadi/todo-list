@@ -219,6 +219,58 @@ bash "$report" audit "$candidate_hub" beta > "$filtered_output_file"
 expect_contains "$filtered_output_file" 'duplicate_names=0'
 printf 'ok - registry-only and filtered audits stay scoped\n'
 
+# Open work blocks retirement: an unticked `[fixed — awaiting verify]` checkbox or any
+# other open real task keeps a done row active as a conflict. `[advisory]` has no
+# checkbox and never blocks; Status-section boxes are not tasks.
+tags_hub="$fixture_root/revision-tags"
+registry_header='| short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |'
+write_lines "$tags_hub/index.md" \
+  '# Project Index' '' '## Work' '' "$registry_header" '|---|---|---|---|---|---|---|---|---|' \
+  '| awaiting | projects/work/awaiting | - | done | - | - | - | - | - |' \
+  '| advisory | projects/work/advisory | - | done | - | - | - | - | - |' \
+  '| stray | projects/work/stray | - | done | - | - | - | - | - |' \
+  '| status-box | projects/work/status-box | - | done | - | - | - | - | - |'
+write_lines "$tags_hub/archive.md" \
+  '# Project Archive' '' '## Work' '' "$registry_header" '|---|---|---|---|---|---|---|---|---|' \
+  '| cold-awaiting | projects/work/cold-awaiting | - | done | - | - | - | - | - |' \
+  '| cold-stray | projects/work/cold-stray | - | done | - | - | - | - | - |'
+write_lines "$tags_hub/projects/work/awaiting/tasks.md" \
+  '# Tasks' '' '## Tasks' '- [x] complete' '' '## Revisions' '' \
+  '### R1 — rotate skips audit log   [fixed — awaiting verify]' \
+  '- Gap: rotate skips audit log' \
+  '- [ ] implement + re-verify'
+write_lines "$tags_hub/projects/work/advisory/tasks.md" \
+  '# Tasks' '' '## Tasks' '- [x] complete' '' '## Revisions' '' \
+  '### R2 — no test covers the retry path   [advisory]' \
+  '- Gap: coverage only'
+write_lines "$tags_hub/projects/work/stray/tasks.md" \
+  '# Tasks' '' '## Tasks' '- [x] complete' '- [ ] forgotten'
+write_lines "$tags_hub/projects/work/status-box/tasks.md" \
+  '# Tasks' '' '## Status' '- [ ] Not started' '' '## Tasks' '- [x] complete'
+write_lines "$tags_hub/projects/work/cold-awaiting/tasks.md" \
+  '# Tasks' '' '## Tasks' '- [x] complete' '' '## Revisions' '' \
+  '### R3 — archived fix   [FIXED — AWAITING VERIFY]' \
+  '- [ ] implement + re-verify'
+write_lines "$tags_hub/projects/work/cold-stray/tasks.md" \
+  '# Tasks' '' '## Tasks' '- [x] complete' '- [ ] historical follow-up'
+tags_audit="$fixture_root/revision-tags.tsv"
+bash "$report" audit "$tags_hub" > "$tags_audit"
+registry_action_of() {
+  awk -F '\t' -v name="$1" '$1 == name { print $9 }' "$tags_audit"
+}
+expect_equal "awaiting verify blocks retirement" "reopen-status" "$(registry_action_of awaiting)"
+expect_equal "an open task blocks retirement" "reopen-status" "$(registry_action_of stray)"
+expect_equal "advisory never blocks retirement" "retire" "$(registry_action_of advisory)"
+expect_equal "Status boxes never block retirement" "retire" "$(registry_action_of status-box)"
+expect_equal "archived awaiting verify is a conflict" "reactivate" "$(registry_action_of cold-awaiting)"
+expect_equal "an archived historical box is not a registry conflict" "" "$(registry_action_of cold-stray)"
+tags_hook_output="$(PLUGIN_ROOT="$repo_root" TODO_HUB="$tags_hub" bash "$hook")"
+case "$tags_hook_output" in
+  *'done_index_rows=2; state_conflicts=3;'*) ;;
+  *) fail "revision tags summary drifted: $tags_hook_output" ;;
+esac
+printf 'ok - open work and awaiting-verify revisions block retirement\n'
+
 preview_hub="$fixture_root/preview"
 write_lines "$preview_hub/index.md" \
   '# Project Index' \
@@ -457,10 +509,7 @@ expect_contains \
   'revision-only question'
 expect_contains \
   "$repo_root/skills/todo-refer/SKILL.md" \
-  'bounded context helper'
-expect_contains \
-  "$repo_root/skills/todo-refer/SKILL.md" \
-  'archive-report.sh context'
+  'graph-report.py tasks'
 expect_contains \
   "$repo_root/skills/todo-archive/SKILL.md" \
   'duplicate short-names'
@@ -537,6 +586,48 @@ expect_equal "a clean registry is left alone" "" "$clean_output"
 if [ -f "$clean_hub/index.md.pre-preamble.bak" ]; then
   fail "a clean registry must not get a backup"
 fi
+
+# A pinned pointer that spans several lines — including an empty `>` line and a lazy
+# continuation — stays one blockquote; a second, separate quote stays separate.
+quote_hub="$fixture_root/preamble-quote"
+write_lines "$quote_hub/index.md" \
+  '# Project Index' \
+  '' \
+  '> **Start here:** alpha is mid cutover.' \
+  '>' \
+  '> Resume with the handoff note,' \
+  'then re-run the verify step.' \
+  '' \
+  'Prose that must go.' \
+  '' \
+  '> Second pinned note.' \
+  '## Work' \
+  '' \
+  '| short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |' \
+  '|---|---|---|---|---|---|---|---|---|' \
+  '| alpha | projects/work/alpha | - | in-progress | - | - | - | - | - |'
+TODO_HUB="$quote_hub" bash "$repo_root/hooks/migrate-registry-preamble.sh" > /dev/null
+expect_equal "a multi-line pinned blockquote stays whole" \
+  "$(printf '%s\n' \
+    '# Project Index' \
+    '' \
+    '> **Start here:** alpha is mid cutover.' \
+    '>' \
+    '> Resume with the handoff note,' \
+    'then re-run the verify step.' \
+    '' \
+    '> Second pinned note.' \
+    '' \
+    '## Work' \
+    '' \
+    '| short-name | path | repo | status | started | completed | elapsed (days) | infographic | related |' \
+    '|---|---|---|---|---|---|---|---|---|' \
+    '| alpha | projects/work/alpha | - | in-progress | - | - | - | - | - |')" \
+  "$(cat "$quote_hub/index.md")"
+quote_second_output="$(
+  TODO_HUB="$quote_hub" bash "$repo_root/hooks/migrate-registry-preamble.sh"
+)"
+expect_equal "blockquote preamble migration is idempotent" "" "$quote_second_output"
 printf 'ok - registry preamble migration\n'
 
 fresh_hub="$fixture_root/fresh"

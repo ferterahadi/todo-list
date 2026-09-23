@@ -91,7 +91,7 @@ done < "$repos_file"
 [ -s "$untracked_file" ] || exit 0
 untracked="$(paste -sd ' ' "$untracked_file")"
 
-reason="Superpowers plan/spec doc(s) exist in target repos but are referenced nowhere in the hub (${HUB}): ${untracked}. Before ending the turn, record each one in its hub project's research/superpowers-docs.md (create the file if missing) as a bullet: absolute path + one-line summary of what it covers. Resolve which project owns each doc via the repo column in index.md or archive.md; if ownership is ambiguous, pick the active project on that repo and note the uncertainty. Then stop."
+reason="Superpowers plan/spec doc(s) exist in target repos but are referenced nowhere in the hub (${HUB}): ${untracked}. Before ending the turn, record each one in its hub project's research/superpowers-docs.md as a table row: doc path | source | one-line summary of what it covers (create the file with that table header if missing). Resolve which project owns each doc via the repo column in index.md or archive.md; if ownership is ambiguous, pick the active project on that repo and note the uncertainty. Then stop."
 
 printf '{"decision":"block","reason":"%s"}\n' "$(json_escape "$reason")"
 exit 0

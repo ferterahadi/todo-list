@@ -8,6 +8,72 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.14.0] — 2026-09-23
+
+### Added
+- **`graph-report.py tasks <hub> <short-name> [--open]` lists one project's tasks with canonical
+  IDs.** todo-conventions gains § Task IDs and phases, § Revision tags, and § Shipped work.
+- **`repo-evidence.sh` reports one project's branches, worktrees, and PRs.** `todo-state`,
+  `todo-refer`, `todo-verify`, and `todo-execute` use it; merge, rebase, and squash merges all count.
+- **`land.sh --merge-existing` merges an already-open PR for a merge queue.** It rebases,
+  lease-pushes its own branch, and merges; it never deletes or switches branches.
+- **`/todo-state` adds `add` and `edit` task modes, and `/todo-style` adds `uninstall` and `backups`.**
+- **`/todo-list` shows a progress column** (`14/20 · 1 rev`) from the same export as the graph.
+
+### Changed
+- **`todo-llm-routing` moves to Opus 5.5 and the gpt-6 family.** `deep` and `balanced` share
+  `gpt-6-sol` on Codex at high and medium effort; `fast` uses `gpt-6-luna`.
+- **`/todo-verify` sets `done` itself** on a green run with no open work and shipped code;
+  coverage gaps become `[advisory]` entries that never block.
+- **`/todo-revise` fixes in the project worktree** and marks accepted fixes
+  `[fixed — awaiting verify]`; `R<n>` goes straight to one fix.
+- **`/todo-execute` accepts `tasks <ids>`, follows the repo's own coverage policy,** and restarts
+  an already-shipped branch at the base instead of replaying squash-merged commits.
+- **`/todo-plan` writes `### Phase N` layouts and asks only what's missing;** `/todo-add` asks
+  once and offers to plan straight away.
+- **Reopening a done project always goes through `/todo-state <short-name> in-progress`.**
+- **`/todo-push` plans on the balanced tier and lands on the fast tier.** Preflight makes two
+  `gh` calls instead of four and hands `land.sh` the merge strategy.
+- **`/todo-graph` runs queries inline,** and `path` finds reverse routes with `direction=`.
+- **`/todo-review` reviews what already landed** — a PR, a range, or recent merges — and
+  offers `/todo-review-handoff` when someone else must rule.
+- **`/todo-learn` fires only on future-behaviour requests** and runs inline.
+- **The archive SessionStart hook is about 60× faster** with byte-identical output.
+- **The infographic Stop hook refreshes instead of nagging.** It applies checkbox-only
+  refreshes itself, blocks only for a small prose patch, and otherwise names `/todo-infographic`.
+- **`todo-infographic` inspects before gathering a footprint** and writes semantic patches
+  inline; `apply --exact-patch` fixes prose that has no content leaf.
+
+### Fixed
+- **Task counts agree everywhere.** graph-report, archive-report, the infographic, and the
+  conventions snippet count `[X]` as done and include `## Revisions` checkboxes.
+- **`todo-list`, `todo-triage`, `todo-refer`, and `todo-state` count through `graph-report.py`,**
+  so there are no phantom tasks and one Done number per project.
+- **`/todo-state` refuses `done` over open or awaiting-verify revisions** and keeps the real
+  `started` date; archived rows reopen atomically.
+- **`/todo-triage` emits runnable commands** with full short-names, `R<n>` handles, valid effort
+  values, and awaiting-verify work routed to `/todo-verify`.
+- **Open work and `[fixed — awaiting verify]` revisions block archive retirement;** registry
+  conflicts are handed to `todo-state`.
+- **`todo-infographic` counts by the canonical task rule.** Level-3 and decimal phases
+  (`Phase 4.5`), flat lists, and Revisions checkboxes count; commented and fenced ones do not.
+- **Legacy infographic migration refuses pages whose phases don't match `tasks.md`,** so no
+  more wrong totals, and more legacy pages now migrate safely.
+- **An unknown status blocks only its own project and its dependents.**
+- **Bootstrap never overwrites a hub file or symlink,** and the drift notice fires once per
+  shipped-doc revision via `$TODO_HUB/.todo-list/doc-drift-notice`.
+- **The preamble migration keeps multi-line pinned blockquotes whole.**
+- **`/todo-push` commits only the files it names and ships commits the branch already
+  carries.** Earlier staging is reported in `staged_not_named`, never swept in.
+- **`/todo-push` recovers cleanly from a rebase and reports every exit,** including a failed
+  `gh pr create` (exit 13) and a mid-run failure (exit 14) with the steps already done.
+- **`/todo-push` accepts a test command only when a build file corroborates it** and runs every
+  `tests/*.sh` script.
+- **`/todo-style restore` is idempotent,** and `status` names the pack version by hash from
+  `pack-versions.tsv`, telling an older, swapped, or hand-edited pack apart.
+- **`/todo-review-handoff` never edits `tasks.md`,** has one deep-tier floor, and never
+  overwrites an earlier handoff.
+
 ## [1.13.0] — 2026-09-18
 
 ### Changed

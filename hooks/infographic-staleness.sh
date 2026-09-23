@@ -1,19 +1,28 @@
 #!/usr/bin/env bash
-# Stop hook: nudge the agent to (re)generate one-pager infographics that are missing
-# or stale. A project's artifacts/infographic.html is "stale" when plan.md or
-# tasks.md is newer than it. Only projects with status ready / in-progress and a
-# real (non-stub) plan.md are considered — done projects are left alone. To avoid
+# Stop hook: keep one-pager infographics current without starting design work.
+# A project's artifacts/infographic.html is "stale" when plan.md or tasks.md is
+# newer than it. Only projects with status ready / in-progress and a real
+# (non-stub) plan.md are considered — done projects are left alone. To avoid
 # nagging about unrelated old work, the stale source must also have changed during
-# this Claude session. Each unchanged source revision is reported at most once.
+# this session. Each unchanged source revision is handled at most once.
 #
 # Hub resolution matches every other hook: $TODO_HUB (default ~/todo), never the
 # current working directory. To stay quiet in unrelated repos, a stale project is
-# reported only when the session's working directory is the hub itself or sits
+# handled only when the session's working directory is the hub itself or sits
 # inside that project's target repo (the `repo` column), including the
 # <repo>-wt/* worktrees that /todo-execute creates.
 #
-# Output contract (Stop hook): emit {"decision":"block","reason":"..."} to keep the
-# turn going so the agent regenerates; emit nothing (exit 0) to allow the stop.
+# Each stale project goes through the todo-infographic refresh helper's `inspect`:
+#   fresh / stub      -> nothing.
+#   fast-refresh      -> the hook runs `apply` + `verify` itself; silent on success.
+#   semantic-refresh  -> block, naming only those projects: a small inline prose patch.
+#   legacy-migration, full-build, or any helper error -> a non-blocking notice that
+#                        names `/todo-infographic <short-name>`; the hook never starts
+#                        a full build or legacy migration.
+#
+# Output contract (Stop hook, valid for Claude Code and Codex): print nothing to
+# allow the stop; {"systemMessage":"..."} for a notice; {"decision":"block",
+# "reason":"..."} (plus "systemMessage" when notices exist) to continue the turn.
 set -euo pipefail
 
 HUB="${TODO_HUB:-$HOME/todo}"
@@ -68,16 +77,22 @@ esac
 # Portable mtime (BSD/macOS then GNU/Linux).
 mtime() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || echo 0; }
 
-stale=""
+# Trim a registry cell and drop Markdown code backticks.
+cell() {
+  local value="${1//\`/}"
+  value="${value#"${value%%[![:space:]]*}"}"
+  printf '%s' "${value%"${value##*[![:space:]]}"}"
+}
+
+stale=()
 # Pull "path|repo|status" for every project row in index.md (skips header/separator rows).
 while IFS='|' read -r _ shortname path repo status _rest; do
-  shortname="$(echo "$shortname" | xargs)"
-  case "$shortname" in *[!A-Za-z0-9._-]*|'') continue ;; esac
-  path="$(echo "$path" | xargs)"
-  path="${path//\`/}"
-  repo="$(echo "$repo" | xargs)"
-  repo="${repo//\`/}"
-  status="$(echo "$status" | xargs)"
+  shortname="$(cell "$shortname")"
+  case "$shortname" in *[!A-Za-z0-9._-]*|''|.|..) continue ;; esac
+  path="$(cell "$path")"
+  case "$path" in /*|*[!A-Za-z0-9._/-]*|''|..|../*|*/../*|*/..) continue ;; esac
+  repo="$(cell "$repo")"
+  status="$(cell "$status")"
   case "$status" in
     ready|in-progress) ;;
     *) continue ;;
@@ -124,19 +139,81 @@ while IFS='|' read -r _ shortname path repo status _rest; do
   fi
   [ "$source_revision" -gt "$reported_revision" ] || continue
 
-  stale="$stale $shortname"
+  stale+=("$shortname|$path|$status")
   mkdir -p "$session_state"
   printf '%s\n' "$source_revision" > "$marker"
 done < <(grep -E '^\|' "$INDEX" | grep -Ev '^\| *short-name' | grep -Ev '^\|[ :|-]+\|?[ ]*$')
 
-stale="$(echo "$stale" | xargs)"
-[ -z "$stale" ] && exit 0
+[ "${#stale[@]}" -gt 0 ] || exit 0
 
-reason="One-pager infographic(s) became stale from plan.md or tasks.md changes in \
-this session for: ${stale}. Invoke the todo-infographic skill only for the listed \
-project(s). It must inspect first and use the cheapest safe refresh mode; an automatic \
-Stop-hook continuation must not start a foreground full design build."
+hook_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+helper="$hook_dir/../skills/todo-infographic/scripts/refresh-infographic.py"
+python="${TODO_INFOGRAPHIC_PYTHON:-python3}"
+today="$(date +%F)"
+# hooks.json allows 15s; leave headroom for the scan and the JSON output.
+budget="${TODO_INFOGRAPHIC_HOOK_BUDGET_SECONDS:-10}"
 
-# Emit the block decision as JSON (printf keeps it valid without jq).
-printf '{"decision":"block","reason":"%s"}\n' "$reason"
+# Helper output becomes one short printable line; JSON strings escape \ and ".
+one_line() {
+  printf '%s\n' "$1" | head -n 1 | sed "s/ERROR$(printf '\t')//" | tr '\t' ' ' |
+    LC_ALL=C tr -cd '[:print:]' | cut -c1-160
+}
+json_text() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+
+semantic=()
+message=""
+notice() {
+  message="${message:+$message; }$1 ($(one_line "$2")): run /todo-infographic $1"
+}
+
+for entry in "${stale[@]}"; do
+  IFS='|' read -r shortname path status <<< "$entry"
+  if [ "$SECONDS" -ge "$budget" ]; then
+    notice "$shortname" "not checked before the Stop-hook time limit"
+    continue
+  fi
+  if [ ! -f "$helper" ] || ! command -v "$python" >/dev/null 2>&1; then
+    notice "$shortname" "refresh helper unavailable"
+    continue
+  fi
+  project="$HUB/$path"
+  info="$project/artifacts/infographic.html"
+  if ! manifest="$("$python" "$helper" inspect "$project" --html "$info" \
+      --date "$today" --status "$status" 2>&1 </dev/null)"; then
+    notice "$shortname" "helper error: $manifest"
+    continue
+  fi
+  mode="$(printf '%s\n' "$manifest" |
+    sed -n 's/^  "mode": "\([a-z-]*\)",\{0,1\}$/\1/p' | head -n 1)"
+  case "$mode" in
+    fresh|stub) ;;
+    fast-refresh)
+      if ! result="$("$python" "$helper" apply "$project" --html "$info" \
+          --date "$today" --status "$status" 2>&1 </dev/null)" ||
+         ! result="$("$python" "$helper" verify "$project" --html "$info" 2>&1 </dev/null)"; then
+        notice "$shortname" "fast refresh failed: $result"
+      fi
+      ;;
+    semantic-refresh) semantic+=("$shortname") ;;
+    legacy-migration|full-build) notice "$shortname" "$mode needed" ;;
+    *) notice "$shortname" "helper error: unknown mode '${mode:-none}'" ;;
+  esac
+done
+
+[ -z "$message" ] || message="$(json_text "Infographic not refreshed automatically: $message.")"
+
+if [ "${#semantic[@]}" -gt 0 ]; then
+  names="$(json_text "${semantic[*]}")"
+  reason="Infographic prose is stale after this session's plan.md or tasks.md edits for: \
+${names}. For each listed project only, follow the todo-infographic semantic-refresh \
+path: inspect, write the small inline prose patch for the changed content leaves \
+yourself, apply it, and verify. Do not start a full build or legacy migration."
+  if [ -n "$message" ]; then
+    printf '{"decision":"block","reason":"%s","systemMessage":"%s"}\n' "$reason" "$message"
+  else
+    printf '{"decision":"block","reason":"%s"}\n' "$reason"
+  fi
+elif [ -n "$message" ]; then
+  printf '{"systemMessage":"%s"}\n' "$message"
+fi
 exit 0

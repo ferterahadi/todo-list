@@ -20,15 +20,88 @@ projects active-first and record the owning registry row.
   explicitly requests `all`.
 - With no inferable project, ask; never turn a staleness list into bulk scope.
 
-The orchestrator reads `plan.md` and `tasks.md` for resolution, stub checks, and
-classification. If `plan.md` contains `What success looks like in one sentence.`
-or lacks real Goal/Scope content, report the stub and stop. Semantic agents receive
-only the compact manifest; a full-build agent may read the source files.
+**Hook-triggered runs.** The Stop hook applies fast refreshes itself and blocks only
+for `semantic-refresh`, naming those projects. A hook-triggered run handles only the
+named projects, never starts a full build or legacy migration, and instead reports
+the explicit command `/todo-infographic <short-name>` for any project that needs one.
 
-## Gather the file footprint
+## 1. Inspect first
 
-The orchestrator gathers execution-time truth from the target repo before
-classification:
+Finish every in-scope `plan.md` and `tasks.md` edit first. Run `inspect` inline,
+**without** a footprint; `<skill-dir>` is this skill's directory and `--html`
+defaults to `<project-dir>/artifacts/infographic.html`:
+
+```bash
+python3 <skill-dir>/scripts/refresh-infographic.py inspect <project-dir> \
+  --date <YYYY-MM-DD> --status <registry-status> --output <tmp>/manifest.json
+```
+
+The manifest freezes both source hashes. If either source changes afterward, discard
+any patch and inspect again. Route on its `mode`:
+
+| Mode | Next step |
+|---|---|
+| `stub` | Report the unfilled Goal/Scope (`reasons`) and stop; write nothing |
+| `fresh` | Nothing to do |
+| `fast-refresh` | Step 2 |
+| `semantic-refresh` | Step 3 |
+| `legacy-migration` | Step 4 (explicit invocation only) |
+| `full-build` | Step 5 (explicit invocation only) |
+
+## 2. Fast refresh (inline, no model)
+
+Checkbox state, status, date, or an unrendered plan section (Relationships,
+References, Repo, Verification) changed. Run both commands inline; read no
+reference and start no subagent:
+
+```bash
+python3 <skill-dir>/scripts/refresh-infographic.py apply <project-dir> \
+  --date <YYYY-MM-DD> --status <registry-status>
+python3 <skill-dir>/scripts/refresh-infographic.py verify <project-dir>
+```
+
+## 3. Semantic refresh (inline patch, no subagent)
+
+Rendered prose may be stale. Read the semantic section of
+[references/refresh-contract.md](references/refresh-contract.md), then write the
+patch yourself from the manifest's `changed` sections and `bindings.content`. Do not
+read the full HTML, unchanged sections, or design skills.
+
+1. Changed prose that fits an existing content leaf: write plain text for those keys
+   as `{"content": {...}}` and run `apply --content-patch`.
+2. Changed prose with no leaf: extract the smallest matching block with `fragment`,
+   write a bounded exact patch, and run `apply --exact-patch`.
+3. A change that affects no visible prose: run `apply --confirm-no-content-change`.
+4. Run `verify`.
+
+A new card, section, list row, diagram node, rich markup, or absent binding is a
+`full-build`, not a patch.
+
+## 4. Legacy migration
+
+Read [references/refresh-contract.md](references/refresh-contract.md). The helper
+recognizes unambiguous task totals, phase meters, generated date, and decision cards,
+then inserts markers without serializing the page. It preserves every `<style>` byte
+and refuses ambiguous structure; a refusal already routed `inspect` to `full-build`.
+
+Legacy HTML has no source baseline, so absence of a structural mismatch does not prove
+its prose is current. After a bounded review finds no stale content, run `migrate
+--confirm-content-current`. When stale content must change, write the fix inline:
+
+1. Extract only the changed source block and the smallest matching HTML fragment with
+   `fragment`. Never load the full HTML, unchanged phases, or design skills.
+2. Write the exact-patch JSON from the refresh contract: at most eight exact fragments
+   and 64 KiB total, never a rewritten page.
+3. Run `migrate --exact-patch`, then `verify`. Migration rejects a stale inspection
+   manifest, a non-unique replacement, a source edit made after inspection, CSS drift,
+   missing bindings, or stale decision structure.
+
+Never weaken the helper's proof checks or guess selectors.
+
+## 5. Full design path
+
+**Gather the file footprint** only here, or when the user explicitly asks to refresh
+it. From the target repo:
 
 - Feature branch: diff merge-base with the default branch, then add uncommitted and
   untracked files.
@@ -36,65 +109,9 @@ classification:
   range/PR from project evidence.
 - Missing repo or no attributable changes: no footprint.
 
-Write the flat status/path/optional-task-reason list to a temporary JSON file. Do
-not put a large footprint directly in a subagent prompt. Reasons must come from a
-clear task match; never invent them.
-
-## Classify before designing
-
-Read [references/refresh-contract.md](references/refresh-contract.md), then run its
-`inspect` command with the project, registry status, today's date, current HTML,
-and footprint JSON when one exists.
-
-| Mode | Execution |
-|---|---|
-| `fresh` | No write and no model call |
-| `fast-refresh` | Run deterministic `apply` inline; no subagent |
-| `semantic-refresh` | Give one balanced-tier, medium-effort build agent only the compact manifest; apply its plain-text patch |
-| `legacy-migration` | Insert refresh markers deterministically; use one bounded exact patch only when stale prose or cards must change |
-| `full-build` | Use the full design path below |
-
-The semantic agent does **not** receive the full HTML, unchanged plan sections,
-unchanged task phases, or design skills. It returns only the content-patch JSON
-defined by the refresh contract. If it needs a new card, section, list row,
-diagram node, rich markup, or an absent binding, escalate to `full-build`.
-
-Finish every in-scope `plan.md` and `tasks.md` edit before `inspect`. The manifest
-freezes both source hashes; never dispatch a content agent and then change either
-source. If a source changes, discard the patch, inspect again, and redispatch.
-
-For a Stop-hook auto-trigger, run `fresh`, `fast-refresh`, and `semantic-refresh`.
-`legacy-migration` always needs an explicit semantic review decision, so do not start
-it—or a foreground full build—merely to let the parent turn stop: report the exact
-explicit command still needed.
-An explicit user invocation authorizes a bounded legacy content patch or full build;
-dispatch it in the background when the host supports that while the orchestrator
-remains responsive.
-
-## Legacy migration
-
-Read [references/refresh-contract.md](references/refresh-contract.md). The helper
-recognizes unambiguous task totals, phase meters, generated date, and decision cards,
-then inserts markers without serializing the page. It preserves every `<style>` byte
-and refuses ambiguous structure.
-
-Legacy HTML has no source baseline, so absence of a structural mismatch does not prove
-its prose is current. After a bounded review finds no stale content, run `migrate
---confirm-content-current`; no model reads the full HTML. When stale content must change:
-
-1. Extract only the changed source block and the smallest matching HTML fragment with
-   `fragment`. Never give the agent the full HTML, unchanged phases, or design skills.
-2. Use the balanced tier at medium effort. Ask for only the exact-patch JSON from the
-   refresh contract. The bounded patch may replace at most eight exact fragments and
-   64 KiB total; it is not a rewritten page.
-3. Run `migrate --exact-patch`, then `verify`. Migration rejects a stale inspection
-   manifest, a non-unique replacement, a source edit made after inspection, CSS drift,
-   missing bindings, or stale decision structure.
-
-If the helper reports `legacy-migration-ambiguous`, use `full-build`; do not weaken its
-proof checks or guess selectors.
-
-## Full design path
+Write the flat status/path/optional-task-reason list to a temporary JSON file and
+rerun `inspect --footprint-json <file>`. Reasons must come from a clear task match;
+never invent them. Never paste a large footprint into a subagent prompt.
 
 Use the balanced tier with **exactly high** reasoning effort. High is the ceiling as
 well as the floor: never request or inherit `xhigh` or `max`. If the host cannot select
@@ -109,9 +126,9 @@ build into an inherited higher effort. Read
 - the design specification and refresh-marker contract.
 
 Only full builds load `artifact-design`, `dataviz`, and at most one installed
-design-critique/frontend-design pass. A content-only refresh never loads them.
-Spawn one agent per project and parallelize only when the user explicitly asked
-for several projects.
+design-critique/frontend-design pass. Spawn one agent per project and parallelize
+only when the user explicitly asked for several projects. Dispatch in the background
+when the host supports it, so the orchestrator stays responsive.
 
 Monitor a background build by agent events, not a shell loop that polls for a marker.
 If three minutes pass without a tool call or file write, stop it once and redispatch
@@ -121,9 +138,7 @@ failed build to report, not another retry.
 The agent writes marked HTML, then the orchestrator runs `apply --initialize` and
 `verify` from the refresh contract. For an existing page, pass the pre-build CSS
 hash from the inspection manifest so initialization proves the theme stayed
-unchanged. A legacy unmarked page therefore pays for one final content-preserving
-rebuild only when deterministic migration refused it; later routine updates use the
-cheap paths.
+unchanged.
 
 The full-build agent returns exactly:
 
@@ -151,5 +166,5 @@ row's `infographic` cell to:
 ```
 
 Do not create a separate infographic table. Report the generated/refreshed files,
-the mode used, and any stubs or deferred full builds. Link the HTML; do not paste
-it.
+the mode used, and any stubs or deferred full builds with their explicit command.
+Link the HTML; do not paste it.

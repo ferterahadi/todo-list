@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import tempfile
+import weakref
 from dataclasses import asdict, dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
@@ -29,8 +30,19 @@ REQUIRED_TASK_BINDING_SETS = ({"task-summary"}, {"task-done", "task-total"})
 CHECKBOX_RE = re.compile(r"^(\s*-\s+\[)([ xX])(\]\s+)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})")
-PHASE_RE = re.compile(r"^Phase\s+([0-9]+[A-Za-z]?)\b", re.IGNORECASE)
-DECISION_RE = re.compile(r"^\s*\d+\.\s+\*\*(D[0-9]+[A-Za-z]?)\b", re.IGNORECASE)
+PHASE_RE = re.compile(r"^Phase\s+([0-9]+(?:\.[0-9]+)?[A-Za-z]?)\b", re.IGNORECASE)
+DECISION_RE = re.compile(
+    r"^\s*(?:\d+\.|[-*+])\s+(?:~~)?\*\*(?:~~)?(D[0-9]+[A-Za-z]?)\b", re.IGNORECASE
+)
+# Canonical task count: these level-2 sections never hold real tasks.
+EXCLUDED_TASK_SECTIONS = {"status", "notes", "context"}
+# Plan sections the page never renders; edits there are not a prose change.
+INVISIBLE_PLAN_SECTION_RE = re.compile(
+    r"^(?:relationships|references|repos?|verification)\b", re.IGNORECASE
+)
+STUB_GOAL_SENTENCE = "What success looks like in one sentence."
+EXACT_PATCH_MAX_REPLACEMENTS = 8
+EXACT_PATCH_MAX_BYTES = 65536
 STYLE_RE = re.compile(r"<style\b[^>]*>(.*?)</style\s*>", re.IGNORECASE | re.DOTALL)
 STATE_RE = re.compile(
     rf"<script\b(?=[^>]*\bid\s*=\s*['\"]{re.escape(STATE_ID)}['\"])[^>]*>"
@@ -156,13 +168,22 @@ def is_descendant(candidate: HtmlNode, ancestor: HtmlNode) -> bool:
     return False
 
 
+_TEXT_CACHE: "weakref.WeakKeyDictionary[HtmlNode, str]" = weakref.WeakKeyDictionary()
+
+
 def normalized_text(document: str, node: HtmlNode) -> str:
+    # Each node belongs to exactly one parsed document, so its text is cacheable.
+    cached = _TEXT_CACHE.get(node)
+    if cached is not None:
+        return cached
     if node.end_tag_start is None:
         return ""
     body = document[node.start_tag_end : node.end_tag_start]
     body = re.sub(r"<(?:script|style)\b[^>]*>.*?</(?:script|style)\s*>", " ", body, flags=re.I | re.S)
     body = re.sub(r"<[^>]+>", " ", body)
-    return " ".join(html_lib.unescape(body).split())
+    value = " ".join(html_lib.unescape(body).split())
+    _TEXT_CACHE[node] = value
+    return value
 
 
 def raw_start_tag(document: str, node: HtmlNode) -> str:
@@ -258,95 +279,181 @@ def phase_key(title: str) -> str:
 
 
 def _visible_markdown_lines(markdown: str) -> list[str]:
+    """Drop HTML comments and fenced blocks exactly as graph-report.py does.
+
+    Blank lines are kept so phase structure hashes stay stable across versions.
+    """
     visible: list[str] = []
     in_comment = False
-    fence: str | None = None
-    for original in markdown.splitlines():
-        line = original
-        if in_comment:
-            if "-->" in line:
-                line = line.split("-->", 1)[1]
-                in_comment = False
-            else:
-                continue
-        while "<!--" in line:
-            before, after = line.split("<!--", 1)
-            line = before
-            if "-->" in after:
-                line += after.split("-->", 1)[1]
-            else:
-                in_comment = True
-                break
-        fence_match = FENCE_RE.match(line)
-        if fence_match:
-            marker = fence_match.group(1)[0]
-            if fence is None:
-                fence = marker
-            elif fence == marker:
-                fence = None
+    fence_char = ""
+    fence_len = 0
+    for raw in markdown.splitlines():
+        if fence_char:
+            if re.match(rf"^{re.escape(fence_char)}{{{fence_len},}}\s*$", raw.lstrip()):
+                fence_char = ""
+                fence_len = 0
             continue
-        if fence is None:
-            visible.append(line)
+        output: list[str] = []
+        position = 0
+        while position < len(raw):
+            if in_comment:
+                ending = raw.find("-->", position)
+                if ending < 0:
+                    position = len(raw)
+                    break
+                in_comment = False
+                position = ending + 3
+                continue
+            opening = raw.find("<!--", position)
+            if opening < 0:
+                output.append(raw[position:])
+                break
+            output.append(raw[position:opening])
+            in_comment = True
+            position = opening + 4
+        line = "".join(output)
+        fence = FENCE_RE.match(line)
+        if fence:
+            fence_char = fence.group(1)[0]
+            fence_len = len(fence.group(1))
+            continue
+        visible.append(line)
     return visible
 
 
-def parse_phases(tasks: str) -> list[Phase]:
+@dataclass(frozen=True)
+class TaskModel:
+    done: int
+    total: int
+    phases: list[Phase]
+    unphased_sha256: str | None
+    unphased_content: str
+
+
+def _blank_checkbox(line: str) -> str:
+    return CHECKBOX_RE.sub(r"\1 \3", line, count=1).rstrip()
+
+
+def parse_tasks(tasks: str) -> TaskModel:
+    """Count real tasks and split them into phases.
+
+    A real task is a checkbox under any level-2 section except Status, Notes, and
+    Context, outside comments and fences. A phase is a level-2 `Phase <n>` heading,
+    or a level-3 one under a counted, non-phase, non-Revisions level-2 section; a
+    level-3 heading inside a level-2 phase is a subsection of it.
+    """
     phases: list[Phase] = []
-    current_title: str | None = None
-    current_lines: list[str] = []
+    total = 0
+    done = 0
+    section: str | None = None
+    counting = False
+    section_is_phase = False
+    current: dict[str, Any] | None = None
+    unphased: list[str] = []
 
     def finish() -> None:
-        nonlocal current_title, current_lines
-        if current_title is None:
+        nonlocal current
+        if current is None:
             return
-        done = 0
-        total = 0
-        normalized: list[str] = []
-        for line in current_lines:
+        phase_done = 0
+        phase_total = 0
+        for line in current["lines"]:
             checkbox = CHECKBOX_RE.match(line)
             if checkbox:
-                total += 1
+                phase_total += 1
                 if checkbox.group(2).casefold() == "x":
-                    done += 1
-                line = CHECKBOX_RE.sub(r"\1 \3", line, count=1)
-            normalized.append(line.rstrip())
-        key = phase_key(current_title)
+                    phase_done += 1
+        normalized = [_blank_checkbox(line) for line in current["lines"]]
         phases.append(
             Phase(
-                key=key,
-                title=current_title,
-                done=done,
-                total=total,
-                percent=round(done / total * 100) if total else 0,
+                key=phase_key(current["title"]),
+                title=current["title"],
+                done=phase_done,
+                total=phase_total,
+                percent=round(phase_done / phase_total * 100) if phase_total else 0,
                 structure_sha256=sha256_text("\n".join(normalized).strip()),
-                content="\n".join(current_lines).strip(),
+                content="\n".join(current["lines"]).strip(),
             )
         )
-        current_title = None
-        current_lines = []
+        current = None
 
     for line in _visible_markdown_lines(tasks):
         heading = HEADING_RE.match(line)
-        if heading and len(heading.group(1)) == 2:
-            finish()
+        if heading:
+            level = len(heading.group(1))
             title = heading.group(2).strip()
-            if PHASE_RE.match(title):
-                current_title = title
+            if level == 2:
+                finish()
+                section = title.casefold()
+                counting = section not in EXCLUDED_TASK_SECTIONS
+                section_is_phase = PHASE_RE.match(title) is not None
+                if section_is_phase:
+                    current = {"title": title, "lines": []}
+                continue
+            if level == 3 and not section_is_phase:
+                finish()
+                if counting and section != "revisions" and PHASE_RE.match(title):
+                    current = {"title": title, "lines": []}
+                continue
+            if current is not None:
+                current["lines"].append(line)
             continue
-        if current_title is not None:
-            current_lines.append(line)
+        checkbox = CHECKBOX_RE.match(line)
+        if checkbox and counting:
+            total += 1
+            if checkbox.group(2).casefold() == "x":
+                done += 1
+            if current is None and section != "revisions":
+                unphased.append(_blank_checkbox(line))
+        if current is not None:
+            current["lines"].append(line)
     finish()
 
     keys = [phase.key for phase in phases]
-    if len(keys) != len(set(keys)):
-        raise RefreshError(f"duplicate phase keys after normalization: {keys}")
-    return phases
+    duplicates = sorted({key for key in keys if keys.count(key) > 1})
+    if duplicates:
+        titles = [phase.title for phase in phases if phase.key in duplicates]
+        raise RefreshError(
+            "tasks.md has phase headings that share a phase number "
+            f"({', '.join(duplicates)}): {titles}; give each phase a unique number"
+        )
+    return TaskModel(
+        done=done,
+        total=total,
+        phases=phases,
+        unphased_sha256=sha256_text("\n".join(unphased)) if unphased else None,
+        unphased_content="\n".join(unphased),
+    )
+
+
+def parse_phases(tasks: str) -> list[Phase]:
+    return parse_tasks(tasks).phases
+
+
+def section_named(sections: dict[str, str], pattern: str) -> str | None:
+    for name, content in sections.items():
+        if name != "__preamble__" and re.match(pattern, name, re.IGNORECASE):
+            return content
+    return None
+
+
+def stub_reasons(plan: str, sections: dict[str, str]) -> list[str]:
+    reasons: list[str] = []
+    if STUB_GOAL_SENTENCE in plan:
+        reasons.append("stub-template-goal")
+    goal = section_named(sections, r"goal\b")
+    if goal is None or not "".join(_visible_markdown_lines(goal)).strip():
+        reasons.append("stub-missing-goal")
+    scope = section_named(sections, r"scope\b")
+    if scope is not None and "what's included" in scope and "what's excluded" in scope:
+        reasons.append("stub-template-scope")
+    return reasons
 
 
 def decision_ids(plan_sections: dict[str, str]) -> list[str]:
-    section = plan_sections.get("Key Decisions", "")
+    section = section_named(plan_sections, r"key decisions\b") or ""
     result: list[str] = []
-    for line in section.splitlines():
+    for line in _visible_markdown_lines(section):
         match = DECISION_RE.match(line)
         if match:
             value = match.group(1).upper()
@@ -433,40 +540,157 @@ def visible_decision_cards(document: str, parser: SourceTreeParser) -> dict[str,
     return result
 
 
-def phase_label_node(
-    document: str,
-    parser: SourceTreeParser,
-    phase: dict[str, Any],
-) -> HtmlNode | None:
-    number = phase["key"].removeprefix("phase-")
-    pattern = re.compile(rf"^Phase\s+{re.escape(number)}(?:\b|\s*[-—:])", re.I)
-    matches = [
-        node for node in leaf_nodes(parser)
-        if pattern.search(normalized_text(document, node))
+# Legacy recognition. Every rule accepts one reading of the page or refuses; a
+# refusal routes the page to a content-preserving full build.
+RATIO_RE = re.compile(r"\b[0-9][0-9,]*\s*/\s*[0-9][0-9,]*\b")
+PERCENT_RE = re.compile(r"\b[0-9]+(?:\.[0-9]+)?\s*%")
+# Numbers that restate task or phase progress. An unbound one would go stale on
+# the next fast refresh while verify still passed, so migration refuses them.
+DERIVED_NUMBER_RE = re.compile(
+    r"[0-9]\s*/\s*[0-9]"
+    r"|[0-9]\s*%"
+    r"|\b[0-9][0-9,]*\s+(?:of\s+[0-9][0-9,]*\s+)?"
+    r"(?:tasks?|phases?|stages?|blocks?|done|open|remaining|left|closed|shipped"
+    r"|complete|completed|checked|ticked|pending)\b"
+    r"|\b(?:done|open|remaining|left|closed|shipped|pending)\s*[:=]?\s*[0-9]",
+    re.IGNORECASE,
+)
+PHASE_STAT_LABEL_RE = re.compile(
+    r"(?:(?:execution|delivery|ordered|planned|build|work)\s+)?phases?"
+    r"(?:\s+(?:done|complete|completed|closed|shipped|finished|planned|in\s+plan|total))?",
+    re.IGNORECASE,
+)
+TASK_STAT_LABEL_RE = re.compile(
+    r"(?:(?:total|all)\s+)?tasks?"
+    r"(?:\s+(?:done|complete|completed|closed|shipped|finished|checked(?:\s+off)?|ticked|progress))?"
+    r"|task\s+progress",
+    re.IGNORECASE,
+)
+OPEN_STAT_LABEL_RE = re.compile(
+    r"open\s+tasks?|tasks?\s+(?:open|remaining|left)|remaining\s+tasks?", re.IGNORECASE
+)
+PHASE_STAT_VALUE_RE = re.compile(r"[0-9]+(?:\s*/\s*[0-9]+)?")
+TASK_STAT_VALUE_RE = re.compile(
+    r"[0-9][0-9,]*\s*/\s*[0-9][0-9,]*(?:\s+(?:done|complete|completed|closed))?", re.IGNORECASE
+)
+OPEN_STAT_VALUE_RE = re.compile(r"[0-9][0-9,]*")
+LABEL_SPLIT_RE = re.compile(r"^(.*?)(?:\s*(?:[·—–:(|,;]|\s-\s)\s*(.*))?$", re.DOTALL)
+PAGE_PHASE_LABEL_RE = re.compile(r"^Phase\s+([0-9]+(?:\.[0-9]+)?[A-Za-z]?)(?![0-9A-Za-z]|\.[0-9])", re.IGNORECASE)
+WIDTH_RE = re.compile(r"\bwidth\s*:\s*[0-9]+(?:\.[0-9]+)?%", re.IGNORECASE)
+CHECK_GLYPHS = {"✓", "✔", "☑", "☐", "✅", "⬜", "✗", "✘", "❌", "□", "■"}
+STAT_MAX_LEVELS = 3
+
+
+def innermost(nodes: list[HtmlNode]) -> list[HtmlNode]:
+    return [
+        node for node in nodes
+        if not any(other is not node and is_descendant(other, node) for other in nodes)
     ]
-    return matches[0] if len(matches) == 1 else None
 
 
-def phase_container_for(
+def split_label(text: str) -> tuple[str, str]:
+    match = LABEL_SPLIT_RE.match(text)
+    key = (match.group(1) if match else text).strip().rstrip(".")
+    caption = (match.group(2) or "") if match else ""
+    return key, caption
+
+
+def stat_labels(document: str, parser: SourceTreeParser, label_re: re.Pattern[str]) -> list[HtmlNode]:
+    matches: list[HtmlNode] = []
+    for node in parser.nodes:
+        if node.end_tag_start is None or node.tag in {"script", "style", "title", "head"}:
+            continue
+        text = normalized_text(document, node)
+        if not text or len(text) > 600:
+            continue
+        key, _caption = split_label(text)
+        if label_re.fullmatch(key):
+            matches.append(node)
+    return innermost(matches)
+
+
+def remove_once(text: str, part: str) -> str:
+    index = text.find(part)
+    return text if index < 0 or not part else text[:index] + " " + text[index + len(part):]
+
+
+def stat_card(
+    document: str,
+    label: HtmlNode,
+    value_re: re.Pattern[str],
+) -> tuple[HtmlNode, HtmlNode] | None:
+    """Return (card, value) for the first ancestor holding exactly one value."""
+    current = label.parent
+    for _level in range(STAT_MAX_LEVELS):
+        if current is None:
+            return None
+        values = innermost([
+            node for node in descendants(current)
+            if node is not label
+            and not is_descendant(node, label)
+            and not is_descendant(label, node)
+            and value_re.fullmatch(normalized_text(document, node))
+        ])
+        if values:
+            return (current, values[0]) if len(values) == 1 else None
+        current = current.parent
+    return None
+
+
+def resolve_stat(
     document: str,
     parser: SourceTreeParser,
-    phase: dict[str, Any],
-) -> HtmlNode | None:
-    label = phase_label_node(document, parser, phase)
-    if label is None:
+    label_re: re.Pattern[str],
+    value_re: re.Pattern[str],
+    name: str,
+    *,
+    required: bool,
+) -> tuple[HtmlNode, HtmlNode] | None:
+    cards = []
+    for label in stat_labels(document, parser, label_re):
+        found = stat_card(document, label, value_re)
+        if found is not None:
+            cards.append((label, found))
+    if not cards:
+        if required:
+            raise RefreshError(f"legacy page has no unambiguous {name} stat label")
         return None
+    if len(cards) != 1:
+        raise RefreshError(f"legacy page has {len(cards)} candidate {name} stats")
+    label, (card, value) = cards[0]
+    remainder = remove_once(
+        remove_once(normalized_text(document, card), normalized_text(document, value)),
+        split_label(normalized_text(document, label))[0],
+    )
+    if DERIVED_NUMBER_RE.search(remainder):
+        raise RefreshError(
+            f"legacy {name} stat carries an unbound progress number: {remainder.strip()[:80]!r}"
+        )
+    return card, value
 
-    def qualifies(candidate: HtmlNode) -> bool:
-        text = normalized_text(document, candidate)
-        ratios = re.findall(r"\b[0-9]+\s*/\s*[0-9]+\b", text)
-        percents = re.findall(r"\b[0-9]+%", text)
-        phase_labels = [
-            node for node in descendants(candidate)
-            if not node.children and re.match(r"^Phase\s+[0-9]+[A-Za-z]?\b", normalized_text(document, node), re.I)
-        ]
-        return bool(ratios and percents and len(phase_labels) == 1)
 
-    return nearest_ancestor(label, qualifies)
+def number_spans(parser: SourceTreeParser, node: HtmlNode) -> list[tuple[TextSegment, int, int]]:
+    numbers: list[tuple[TextSegment, int, int]] = []
+    for segment in node_segments(parser, node):
+        for match in re.finditer(r"[0-9][0-9,]*", segment.value):
+            numbers.append((segment, match.start(), match.end()))
+    return numbers
+
+
+def bind_number(
+    operations: list[tuple[int, int, str]],
+    document: str,
+    node: HtmlNode,
+    number: tuple[TextSegment, int, int],
+    key: str,
+) -> None:
+    segment, start, end = number
+    if not node.children and normalized_text(document, node) == segment.value[start:end].strip():
+        add_attr_operation(operations, document, node, "data-todo-value", key)
+        return
+    wrap_segment_operation(
+        operations, segment, start, end, f'<span data-todo-value="{key}">', "</span>"
+    )
 
 
 def add_legacy_value_markers(
@@ -476,51 +700,60 @@ def add_legacy_value_markers(
     operations: list[tuple[int, int, str]],
 ) -> None:
     existing = set(attr_values(document, "data-todo-value"))
-    leaves = leaf_nodes(parser)
+    expected_phases = int(current["values"]["phase-count"])
 
     if "phase-count" not in existing:
-        labels = [node for node in leaves if normalized_text(document, node).casefold() == "phases"]
-        if len(labels) != 1:
-            raise RefreshError("legacy page has no unambiguous Phases stat label")
-        container = labels[0].parent
-        targets = [
-            node for node in descendants(container)
-            if not node.children and re.fullmatch(r"[0-9]+", normalized_text(document, node))
-        ] if container is not None else []
-        if len(targets) != 1:
+        _card, value = resolve_stat(
+            document, parser, PHASE_STAT_LABEL_RE, PHASE_STAT_VALUE_RE, "Phases", required=True
+        )
+        numbers = number_spans(parser, value)
+        if len(numbers) not in {1, 2}:
             raise RefreshError("legacy page has no unambiguous phase-count value")
-        add_attr_operation(operations, document, targets[0], "data-todo-value", "phase-count")
+        shown = int(numbers[-1][0].value[numbers[-1][1]:numbers[-1][2]])
+        if shown != expected_phases:
+            raise RefreshError(
+                f"legacy page shows {shown} phases but tasks.md has {expected_phases}; "
+                "the phase structure cannot be reconciled"
+            )
+        if len(numbers) == 2:
+            if "phase-done" in existing:
+                raise RefreshError("legacy page already binds phase-done elsewhere")
+            wrap_segment_operation(
+                operations, numbers[0][0], numbers[0][1], numbers[0][2],
+                '<span data-todo-value="phase-done">', "</span>",
+            )
+            wrap_segment_operation(
+                operations, numbers[1][0], numbers[1][1], numbers[1][2],
+                '<span data-todo-value="phase-count">', "</span>",
+            )
+        else:
+            bind_number(operations, document, value, numbers[0], "phase-count")
 
     if not any(required.issubset(existing) for required in REQUIRED_TASK_BINDING_SETS):
-        labels = [
-            node for node in leaves
-            if normalized_text(document, node).casefold() in {"tasks", "tasks done", "task progress"}
-        ]
-        if len(labels) != 1:
-            raise RefreshError("legacy page has no unambiguous task-progress stat label")
-        container = labels[0].parent
-        candidates = [
-            node for node in descendants(container)
-            if re.fullmatch(r"[0-9,]+\s*/\s*[0-9,]+", normalized_text(document, node))
-        ] if container is not None else []
-        if len(candidates) != 1:
+        _card, value = resolve_stat(
+            document, parser, TASK_STAT_LABEL_RE, TASK_STAT_VALUE_RE, "task-progress",
+            required=True,
+        )
+        numbers = number_spans(parser, value)
+        if len(numbers) != 2:
             raise RefreshError("legacy page has no unambiguous task-progress value")
-        display = candidates[0]
-        numbers: list[tuple[TextSegment, int, int]] = []
-        for segment in node_segments(parser, display):
-            for match in re.finditer(r"[0-9][0-9,]*", segment.value):
-                numbers.append((segment, match.start(), match.end()))
-        if len(numbers) < 2:
-            raise RefreshError("legacy task-progress value does not contain done and total")
-        done, total = numbers[0], numbers[1]
-        wrap_segment_operation(
-            operations, done[0], done[1], done[2],
-            '<span data-todo-value="task-done">', "</span>",
+        for number, key in zip(numbers, ("task-done", "task-total")):
+            wrap_segment_operation(
+                operations, number[0], number[1], number[2],
+                f'<span data-todo-value="{key}">', "</span>",
+            )
+
+    if "task-open" not in existing:
+        found = resolve_stat(
+            document, parser, OPEN_STAT_LABEL_RE, OPEN_STAT_VALUE_RE, "open-task",
+            required=False,
         )
-        wrap_segment_operation(
-            operations, total[0], total[1], total[2],
-            '<span data-todo-value="task-total">', "</span>",
-        )
+        if found is not None:
+            _card, value = found
+            numbers = number_spans(parser, value)
+            if len(numbers) != 1:
+                raise RefreshError("legacy page has no unambiguous open-task value")
+            bind_number(operations, document, value, numbers[0], "task-open")
 
     if "generated-date" not in existing:
         generated_date = current["values"].get("generated-date")
@@ -543,6 +776,113 @@ def add_legacy_value_markers(
         )
 
 
+def page_phase_labels(document: str, nodes: Iterable[HtmlNode]) -> list[tuple[HtmlNode, str]]:
+    labels: list[tuple[HtmlNode, str]] = []
+    for node in nodes:
+        if node.children or node.end_tag_start is None:
+            continue
+        match = PAGE_PHASE_LABEL_RE.match(normalized_text(document, node))
+        if match:
+            labels.append((node, f"phase-{match.group(1).lower()}"))
+    return labels
+
+
+def width_elements(document: str, container: HtmlNode) -> list[HtmlNode]:
+    return [
+        node for node in descendants(container)
+        if WIDTH_RE.search(raw_start_tag(document, node))
+    ]
+
+
+def is_phase_block(document: str, candidate: HtmlNode) -> bool:
+    """One phase label, a done/total ratio, and exactly one progress width."""
+    if len(page_phase_labels(document, descendants(candidate))) != 1:
+        return False
+    if not RATIO_RE.search(normalized_text(document, candidate)):
+        return False
+    return len(width_elements(document, candidate)) == 1
+
+
+def visible_phase_blocks(document: str, parser: SourceTreeParser) -> dict[str, list[HtmlNode]]:
+    blocks: dict[str, list[HtmlNode]] = {}
+    verdicts: dict[int, bool] = {}
+
+    def qualifies(node: HtmlNode) -> bool:
+        if id(node) not in verdicts:
+            verdicts[id(node)] = is_phase_block(document, node)
+        return verdicts[id(node)]
+
+    for label, key in page_phase_labels(document, parser.nodes):
+        container = nearest_ancestor(label, qualifies)
+        if container is None:
+            continue
+        found = blocks.setdefault(key, [])
+        if container not in found:
+            found.append(container)
+    return blocks
+
+
+def refuse_row_state(document: str, container: HtmlNode, key: str) -> None:
+    """Refuse per-task done marks: the helper updates counts, not individual rows."""
+    for node in descendants(container):
+        if not node.children and normalized_text(document, node) in CHECK_GLYPHS:
+            raise RefreshError(f"legacy {key} block renders per-task check marks")
+    rows = [node for node in descendants(container) if node.tag == "li"]
+    signatures: set[str] = set()
+    for row in rows:
+        marks = [
+            raw_start_tag(document, child) for child in row.children
+            if not normalized_text(document, child)
+        ]
+        signatures.add(raw_start_tag(document, row) + "".join(marks))
+    if len(signatures) > 1:
+        raise RefreshError(f"legacy {key} block styles task rows by state")
+
+
+def bind_phase_block(
+    document: str,
+    parser: SourceTreeParser,
+    container: HtmlNode,
+    phase: dict[str, Any],
+    operations: list[tuple[int, int, str]],
+) -> None:
+    key = phase["key"]
+    refuse_row_state(document, container, key)
+    # Task rows are summarized prose; the count, percent, and bar live outside them.
+    leaves = [
+        node for node in descendants(container)
+        if not node.children
+        and node.tag != "li"
+        and nearest_ancestor(node, lambda item: item is container or item.tag == "li") is container
+    ]
+    counts = [node for node in leaves if RATIO_RE.search(normalized_text(document, node))]
+    if len(counts) != 1:
+        raise RefreshError(f"legacy page has no unambiguous count for {key}")
+    progress = width_elements(document, container)[0]
+    percent_labels = [
+        node for node in leaves
+        if re.fullmatch(r"[0-9]+%", normalized_text(document, node))
+    ]
+    if len(percent_labels) > 1:
+        raise RefreshError(f"legacy page has ambiguous percent labels for {key}")
+    count_text = normalized_text(document, counts[0])
+    if DERIVED_NUMBER_RE.search(RATIO_RE.sub(" ", count_text, count=1)):
+        raise RefreshError(f"legacy {key} count carries another progress number: {count_text!r}")
+    bound = {counts[0], *percent_labels}
+    header_text = " ".join(normalized_text(document, node) for node in leaves if node not in bound)
+    if PERCENT_RE.search(header_text) or RATIO_RE.search(header_text):
+        raise RefreshError(f"legacy {key} block shows an unbound percent or ratio")
+    for node in descendants(container):
+        if node is not progress and attr_in_start_tag(document, node, "aria-valuenow") is not None:
+            raise RefreshError(f"legacy {key} block has a second aria-valuenow")
+    add_attr_operation(operations, document, counts[0], "data-todo-phase-count", key)
+    add_attr_operation(operations, document, progress, "data-todo-phase-progress", key)
+    if attr_in_start_tag(document, progress, "aria-valuenow") is None:
+        add_attr_operation(operations, document, progress, "aria-valuenow", str(phase["percent"]))
+    if percent_labels:
+        add_attr_operation(operations, document, percent_labels[0], "data-todo-phase-percent", key)
+
+
 def migrate_legacy_markers(
     document: str,
     current: dict[str, Any],
@@ -550,51 +890,29 @@ def migrate_legacy_markers(
     allow_extra_decisions: bool,
 ) -> tuple[str, dict[str, Any]]:
     parser = parse_source_tree(document)
+    document_end(document, parser)
     operations: list[tuple[int, int, str]] = []
     add_legacy_value_markers(document, parser, current, operations)
 
-    phase_nodes: set[int] = set()
+    # Structural guard: the page's phase blocks must be exactly the parsed phases.
+    parsed_keys = [phase["key"] for phase in current["phases"]]
+    count_bound = set(attr_values(document, "data-todo-phase-count"))
+    progress_bound = set(attr_values(document, "data-todo-phase-progress"))
+    blocks = visible_phase_blocks(document, parser)
+    shown_keys = sorted(set(blocks) | (count_bound & progress_bound))
+    if shown_keys != sorted(parsed_keys):
+        raise RefreshError(
+            f"legacy page shows phase blocks {shown_keys} but tasks.md has {sorted(parsed_keys)}; "
+            "the phase structure cannot be reconciled"
+        )
     for phase in current["phases"]:
         key = phase["key"]
-        count_existing = key in attr_values(document, "data-todo-phase-count")
-        progress_existing = key in attr_values(document, "data-todo-phase-progress")
-        if count_existing and progress_existing:
+        if key in count_bound and key in progress_bound:
             continue
-        container = phase_container_for(document, parser, phase)
-        if container is None or container.start in phase_nodes:
+        containers = blocks.get(key, [])
+        if len(containers) != 1 or key in count_bound or key in progress_bound:
             raise RefreshError(f"legacy page has no unambiguous container for {key}")
-        phase_nodes.add(container.start)
-        leaves = [node for node in descendants(container) if not node.children]
-        counts = [
-            node for node in leaves
-            if re.search(r"\b[0-9]+\s*/\s*[0-9]+\b", normalized_text(document, node))
-        ]
-        if len(counts) != 1:
-            raise RefreshError(f"legacy page has no unambiguous count for {key}")
-        progress = [
-            node for node in descendants(container)
-            if re.search(r"\bwidth\s*:\s*[0-9]+%", raw_start_tag(document, node), re.I)
-        ]
-        if len(progress) != 1:
-            raise RefreshError(f"legacy page has no unambiguous progress bar for {key}")
-        if not count_existing:
-            add_attr_operation(operations, document, counts[0], "data-todo-phase-count", key)
-        if not progress_existing:
-            add_attr_operation(operations, document, progress[0], "data-todo-phase-progress", key)
-            if attr_in_start_tag(document, progress[0], "aria-valuenow") is None:
-                add_attr_operation(
-                    operations, document, progress[0], "aria-valuenow", str(phase["percent"])
-                )
-        percent_labels = [
-            node for node in leaves
-            if re.fullmatch(r"[0-9]+%", normalized_text(document, node))
-        ]
-        if len(percent_labels) > 1:
-            raise RefreshError(f"legacy page has ambiguous percent labels for {key}")
-        if percent_labels:
-            add_attr_operation(
-                operations, document, percent_labels[0], "data-todo-phase-percent", key
-            )
+        bind_phase_block(document, parser, containers[0], phase, operations)
 
     cards = visible_decision_cards(document, parser)
     existing_decisions = {
@@ -760,6 +1078,25 @@ def progress_value(document: str, key: str) -> int:
     return int(width.group(1))
 
 
+def document_end(document: str, parser: SourceTreeParser) -> int:
+    """Return where the state block goes, refusing a page that may be truncated.
+
+    A page either closes both </body> and </html>, or omits the optional html and
+    body tags entirely (a bare `<title>`/`<style>`/content document) and leaves no
+    element open at the end of the file.
+    """
+    closing = re.search(r"</body\s*>", document, re.IGNORECASE)
+    if closing and re.search(r"</html\s*>", document[closing.end() :], re.IGNORECASE):
+        return closing.start()
+    implicit = not re.search(r"<(?:/?body|/?html)\b", document, re.IGNORECASE)
+    if implicit and not parser.stack and document.rstrip().endswith(">"):
+        return len(document.rstrip())
+    raise RefreshError(
+        "infographic is incomplete: it needs closing </body> and </html> tags, "
+        "or no html/body tags and no element left open"
+    )
+
+
 def parse_state(document: str) -> dict[str, Any] | None:
     match = STATE_RE.search(document)
     if not match:
@@ -780,10 +1117,10 @@ def write_state(document: str, state: dict[str, Any], initialize: bool) -> str:
         return STATE_RE.sub(block, document, count=1)
     if not initialize:
         raise RefreshError("infographic has no embedded refresh state")
-    closing = re.search(r"</body\s*>", document, re.IGNORECASE)
-    if not closing:
-        raise RefreshError("infographic has no closing </body> tag")
-    return document[: closing.start()] + block + "\n" + document[closing.start() :]
+    end = document_end(document, parse_source_tree(document))
+    if re.match(r"</body", document[end:], re.IGNORECASE):
+        return document[:end] + block + "\n" + document[end:]
+    return document[:end] + "\n" + block + document[end:]
 
 
 def footprint_hash(path: Path | None) -> str | None:
@@ -804,14 +1141,16 @@ def build_current(
     plan = read_text(plan_path)
     tasks = read_text(tasks_path)
     sections = section_map(plan)
-    phases = parse_phases(tasks)
-    done = sum(phase.done for phase in phases)
-    total = sum(phase.total for phase in phases)
+    model = parse_tasks(tasks)
+    phases = model.phases
+    done = model.done
+    total = model.total
     previous_values = (previous or {}).get("values", {})
     effective_status = status if status is not None else previous_values.get("project-status")
     effective_date = generated_date if generated_date is not None else previous_values.get("generated-date")
     values: dict[str, str] = {
         "phase-count": str(len(phases)),
+        "phase-done": str(sum(1 for phase in phases if phase.total and phase.done == phase.total)),
         "task-total": str(total),
         "task-done": str(done),
         "task-open": str(max(0, total - done)),
@@ -832,6 +1171,7 @@ def build_current(
         "tasks_sha256": sha256_text(tasks),
         "plan_sections": {name: sha256_text(content) for name, content in sections.items()},
         "phase_structure": {phase.key: phase.structure_sha256 for phase in phases},
+        "unphased_tasks_sha256": model.unphased_sha256,
         "footprint_sha256": effective_footprint_hash,
     }
     return {
@@ -839,8 +1179,10 @@ def build_current(
         "source": source,
         "values": values,
         "phases": [asdict(phase) for phase in phases],
+        "unphased_tasks": model.unphased_content,
         "decision_ids": decision_ids(sections),
         "plan_sections": sections,
+        "stub": stub_reasons(plan, sections),
         "footprint_supplied": footprint_path is not None,
     }
 
@@ -862,11 +1204,16 @@ def inspect_project(
     reasons: list[str] = []
     mode = "fresh"
     changed_sections: list[str] = []
+    hidden_sections: list[str] = []
     changed_phases: list[str] = []
+    unphased_changed = False
     content_values: dict[str, str] = {}
     legacy: dict[str, Any] | None = None
 
-    if document is None:
+    if current["stub"]:
+        mode = "stub"
+        reasons.extend(current["stub"])
+    elif document is None:
         mode = "full-build"
         reasons.append("missing-html")
     elif previous is None:
@@ -903,6 +1250,8 @@ def inspect_project(
             mode = "full-build"
             reasons.append("decision-card-structure-changed")
         old_source = previous.get("source", {})
+        # A footprint is supplied only for a full build or an explicit footprint
+        # refresh; without one the recorded footprint is carried forward.
         if (
             current["footprint_supplied"]
             and old_source.get("footprint_sha256") != current["source"].get("footprint_sha256")
@@ -910,13 +1259,22 @@ def inspect_project(
             mode = "full-build"
             reasons.append("file-footprint-changed")
 
-        changed_sections = changed_names(
+        all_changed_sections = changed_names(
             old_source.get("plan_sections", {}), current["source"]["plan_sections"]
         )
+        hidden_sections = [
+            name for name in all_changed_sections if INVISIBLE_PLAN_SECTION_RE.match(name)
+        ]
+        changed_sections = [name for name in all_changed_sections if name not in hidden_sections]
         changed_phases = changed_names(
             old_source.get("phase_structure", {}), current["source"]["phase_structure"]
         )
-        if mode != "full-build" and (changed_sections or changed_phases):
+        # States written before unphased tracking have no baseline; do not flag them.
+        unphased_changed = (
+            "unphased_tasks_sha256" in old_source
+            and old_source["unphased_tasks_sha256"] != current["source"]["unphased_tasks_sha256"]
+        )
+        if mode != "full-build" and (changed_sections or changed_phases or unphased_changed):
             mode = "semantic-refresh"
             reasons.append("source-meaning-changed")
         elif mode != "full-build":
@@ -929,6 +1287,8 @@ def inspect_project(
             if source_changed or values_changed:
                 mode = "fast-refresh"
                 reasons.append("derived-values-changed")
+            if hidden_sections:
+                reasons.append("unrendered-plan-sections-changed")
 
         content_values = extract_leaf_values(document, "data-todo-content")
 
@@ -966,7 +1326,12 @@ def inspect_project(
             ],
             "decision_ids": current["decision_ids"],
         },
-        "changed": {"plan_sections": section_payload, "phases": phase_payload},
+        "changed": {
+            "plan_sections": section_payload,
+            "phases": phase_payload,
+            "unphased_tasks": current["unphased_tasks"] if unphased_changed else None,
+            "unrendered_plan_sections": hidden_sections,
+        },
         "bindings": {
             "content": content_values,
             "content_keys": sorted(content_values),
@@ -1037,8 +1402,10 @@ def apply_exact_patch(document: str, patch_path: Path | None) -> tuple[str, int]
     replacements = patch.get("replacements") if isinstance(patch, dict) else None
     if not isinstance(replacements, list) or not replacements:
         raise RefreshError('exact patch must be shaped as {"replacements": [...]}')
-    if len(replacements) > 8:
-        raise RefreshError("exact patch has more than 8 replacements")
+    if len(replacements) > EXACT_PATCH_MAX_REPLACEMENTS:
+        raise RefreshError(
+            f"exact patch has more than {EXACT_PATCH_MAX_REPLACEMENTS} replacements"
+        )
     total_size = 0
     updated = document
     for index, replacement in enumerate(replacements, start=1):
@@ -1048,8 +1415,10 @@ def apply_exact_patch(document: str, patch_path: Path | None) -> tuple[str, int]
         after = replacement.get("after")
         if not isinstance(before, str) or not isinstance(after, str) or not before:
             raise RefreshError(f"exact patch replacement {index} needs non-empty string before/after")
-        total_size += len(before) + len(after)
-        if total_size > 65536:
+        if STATE_ID in before or STATE_ID in after:
+            raise RefreshError(f"exact patch replacement {index} touches the embedded refresh state")
+        total_size += len(before.encode("utf-8")) + len(after.encode("utf-8"))
+        if total_size > EXACT_PATCH_MAX_BYTES:
             raise RefreshError("exact patch exceeds the 64 KiB bounded-patch limit")
         occurrences = updated.count(before)
         if occurrences != 1:
@@ -1109,6 +1478,8 @@ def migrate_legacy(args: argparse.Namespace) -> dict[str, Any]:
         raise RefreshError("infographic changed after inspection; inspect again before migrating")
     footprint_path = Path(args.footprint_json).resolve() if args.footprint_json else None
     current = build_current(project, args.date, args.status, footprint_path, None)
+    if current["stub"]:
+        raise RefreshError("plan.md is an unfilled stub; fill Goal and Scope before migrating")
     expected_source = manifest.get("source", {})
     for key in ("plan_sha256", "tasks_sha256", "footprint_sha256"):
         if expected_source.get(key) != current["source"].get(key):
@@ -1174,15 +1545,24 @@ def apply_refresh(args: argparse.Namespace) -> dict[str, Any]:
     mode = result["mode"]
     if document is None:
         raise RefreshError("cannot apply a refresh before the HTML exists")
+    if mode == "stub":
+        raise RefreshError("plan.md is an unfilled stub; fill Goal and Scope before refreshing")
     if mode == "full-build" and not args.initialize:
         raise RefreshError(
             "full-build required; regenerate marked HTML, then rerun apply with --initialize"
         )
+    if args.confirm_no_content_change and (args.content_patch or args.exact_patch):
+        raise RefreshError("--confirm-no-content-change cannot be combined with a patch")
+    if args.exact_patch and (mode != "semantic-refresh" or args.initialize):
+        raise RefreshError(
+            "--exact-patch applies only to a semantic-refresh; legacy pages use migrate"
+        )
     if mode == "semantic-refresh" and not args.initialize and not (
-        args.content_patch or args.confirm_no_content_change
+        args.content_patch or args.exact_patch or args.confirm_no_content_change
     ):
         raise RefreshError(
-            "semantic-refresh requires --content-patch or --confirm-no-content-change"
+            "semantic-refresh requires --content-patch, --exact-patch, "
+            "or --confirm-no-content-change"
         )
 
     validate_bindings(document, current)
@@ -1200,7 +1580,16 @@ def apply_refresh(args: argparse.Namespace) -> dict[str, Any]:
         if expected_style_hash and expected_style_hash != original_style_hash:
             raise RefreshError("theme CSS changed since the last initialized build")
 
-    updated = apply_derived_bindings(document, current)
+    # The exact patch's `before` fragments come from the current HTML, so they apply
+    # before derived values move; bindings must survive the patch intact.
+    patch_path = Path(args.exact_patch).resolve() if args.exact_patch else None
+    patched, replacement_count = apply_exact_patch(document, patch_path)
+    if style_hash(patched) != original_style_hash:
+        raise RefreshError("exact patch changed the infographic CSS")
+    if replacement_count:
+        validate_bindings(patched, current)
+
+    updated = apply_derived_bindings(patched, current)
 
     applied_content_keys: list[str] = []
     if args.content_patch:
@@ -1234,6 +1623,7 @@ def apply_refresh(args: argparse.Namespace) -> dict[str, Any]:
         "html": str(html_path),
         "values": current["values"],
         "content_keys_updated": sorted(applied_content_keys),
+        "exact_replacements": replacement_count,
         "theme_css_preserved": True,
     }
 
@@ -1292,8 +1682,7 @@ def verify_project(args: argparse.Namespace) -> dict[str, Any]:
         key = phase["key"]
         if key in phase_percents and phase_percents[key] != f"{phase['percent']}%":
             raise RefreshError(f"visible phase percent {key!r} is stale")
-    if "</html>" not in document.casefold():
-        raise RefreshError("infographic has no closing </html> tag")
+    document_end(document, parse_source_tree(document))
     if has_network_assets(document):
         raise RefreshError("infographic contains a network-loaded asset")
     return {
@@ -1331,6 +1720,10 @@ def parser() -> argparse.ArgumentParser:
     apply_command = subparsers.add_parser("apply", help="apply derived values and prose leaves")
     common(apply_command)
     apply_command.add_argument("--content-patch", help='JSON shaped as {"content": {...}}')
+    apply_command.add_argument(
+        "--exact-patch",
+        help='semantic-refresh only: bounded JSON shaped as {"replacements": [...]}',
+    )
     apply_command.add_argument("--confirm-no-content-change", action="store_true")
     apply_command.add_argument("--initialize", action="store_true")
     apply_command.add_argument(

@@ -1,0 +1,36 @@
+# Every todo-list style pack that has shipped, so `agent-style.sh status` can name the
+# version a global instruction file holds. One row per distinct file: sha256, the pack
+# (claude = assets/CLAUDE.md, codex = assets/AGENTS.md), the first plugin version that
+# shipped it, and the commit. "-pre" marks content that reached main under a version
+# number but was replaced before that version was tagged.
+#
+# When you change a pack, add its row here in the same change; tests/style-contract.sh
+# fails until the shipped packs and every historical one are listed.
+#
+# sha256	pack	version	commit
+1fbe91b7b67d1eca96cc4af60082ac056369658b10533f6e881cd2e95c2ddfd7	claude	1.7.0	7314468
+8e9f68bdf8b4d6db121fce94943cea877038cd61c3d1653d98a563bce46a9df3	codex	1.7.0	7314468
+99b165bc7ba9247afd3368c7207986a046fdb7143e5ccc008d37a610df3d65fe	claude	1.7.1	5bcfed6
+3da24ac23f3496a12cbca3cbd5e26772568293fc10b4d6dc9b66ccfbfd933645	codex	1.7.1	5bcfed6
+fe10a8668baaf3acf1aedd852492d4dbbe1e211c2923820880519d4f758cc359	claude	1.8.1	753988d
+6e77ccd6375a5bb5a056201c809007019636d08b91108b62af037c68767a954c	codex	1.8.1	753988d
+f305512be9868350f056d6b52c03a5d1cf5f039093e60fc342aea5b27422457e	claude	1.8.3	d70d82c
+630aba2457167e2c952e8892bd23c4366bbf693cc632fbbf7a035a8772597c60	claude	1.8.4-pre	3745141
+9d3977285a9486f5e3cdf4cf980390391f9999f27e5cd8ce15c28b8ff3d0da06	codex	1.8.4-pre	3745141
+cf9f6cdd62c0f5def1891ff8a3e7a2da1b573b99366ad1a2e7d853c8f7cadd6e	claude	1.8.4	e4b2488
+c7102ed4747756e71392a087fed32cbe25c5587a1f29360be1db35845805bedc	codex	1.8.4	e4b2488
+348e08ad0615ea226c6224629f155bfa72f7e92518950c923b7a15020f613f99	claude	1.8.5	40a68b8
+7a064ce877694ccf9ed5f5d7f57937c421d433bc9af108f532450a0bc4c0e1ba	codex	1.8.5	40a68b8
+f2a7783940a7937afb6daebfa970f834a7f07b9a034d5dbcf6ea98e61ce61a2c	claude	1.8.6	a7fb0c8
+b31dea4fcfc55b5208106c9562defa5e05fdaf4b58bcf68795018351413fe58b	codex	1.8.6	a7fb0c8
+b8074f1493526c3c218b56bfd2f58e43129c96cfb201a0838dc04674dcca1e8e	claude	1.8.7	174063b
+a07484110e36b6427d6c4358cd8b9315ff0fcfce5751482ff731360eeedd0564	codex	1.8.7	174063b
+a262b67cc6a9a013cec4af125331dc36d99630c97964717a1c1e23e8736abb0f	claude	1.9.0	65a0f3d
+9eceb7c21af37cdcc18da48b563a307d52ddfefee99c646ef6ea91190038bd30	codex	1.9.0	65a0f3d
+43866ff280c067416dd09fe3a0b2777befbed7b3f84d81f58fe9130f4d9fa910	claude	1.10.1	b342e5a
+10cc3606ed08096e006a539cfed37393e8ef05911add549cf49c5b77c4ebe61e	codex	1.10.1	b342e5a
+84a557ab69d2b4dcf900ed3461b82194f4905801abd2ebf0b3b7dd0577e9930e	claude	1.11.3	e4b32a1
+f3b77a98e61733082e28a94ee9117f6ff27c59ccbc6462c8750b94de4ab9bdc9	claude	1.11.4	fa0bb21
+5d410d6be367516c7ff6615c2c3015f9765c84c7fc95f6141b3427aee6fd322b	codex	1.11.4	fa0bb21
+3ca0fc9939d3c1e8dadb293013f9f38a734b7d8f972a98778861045b1f060263	claude	1.11.7	9a8366b
+e8776bc30ad038e8eddfb6b14f14a8e3a7b3a5c1017fb6175fdde607d517abd1	codex	1.11.7	9a8366b

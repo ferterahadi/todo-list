@@ -19,10 +19,11 @@ file. To change state use `/todo-state`; to do the work use `/todo-execute`.
 
 Hybrid, matching the hub's house pattern:
 
-- **Gathering is mechanical** — reading `index.md`, counting checkboxes, extracting open
-  task lines. When triaging **3+ projects**, delegate gathering to a **fast**-tier
-  subagent when dispatching is available; for 1–2 projects just read inline. The subagent
-  returns the object declared in [Step 2](#step-2--gather-remaining-work) and nothing else.
+- **Gathering is mechanical** — deterministic helper output: one hub-wide count plus one
+  open-task listing per project. When triaging **3+ projects**, delegate gathering to a
+  **fast**-tier subagent when dispatching is available; for 1–2 projects run it inline. The
+  subagent returns the object declared in [Step 2](#step-2--gather-remaining-work) and
+  nothing else.
 - **The recommendation is judgment** — classifying each task against the routing rubric
   requires reading the plan's context. Do this **inline on the main model**; never
   delegate the tier-per-task decision to the gathering subagent.
@@ -37,7 +38,8 @@ Resolve every hub path against `$TODO_HUB` — see
 Validate every `<placeholder>` before it reaches a shell:
 [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Placeholder safety. Here
 that means `<short-name>`, `<project>`, and `<project-path>`. On a failure, skip the
-command and report the offending row.
+command and report the offending row. Every command this skill prints carries the
+registry short-name in full — a shortened name resolves to nothing.
 
 ## How the user invokes this
 
@@ -56,13 +58,14 @@ Read active `$TODO_HUB/index.md` for default and section scopes.
 
 - No argument → every project with status `ready` or `in-progress`. Mention `planning`
   projects only in a footer line ("N projects still in planning — no tasks to triage;
-  run `/todo-plan`").
+  run `/todo-plan <short-name>`", naming each).
 - Short name → resolve per
   [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project. An
   archived project with no open work produces an empty result.
 - Section name (`work` / `self-initiative`) → all `ready`/`in-progress` rows in that table.
-- `done` projects are skipped unless they have **open Revisions** — those still count as
-  remaining work and get triaged.
+- `done` projects are skipped unless their export row shows remaining work
+  (`open_revisions` above zero or `done < total`) — an open or awaiting-verify revision
+  still counts and gets triaged.
 
 ## Step 1.5 — Filter through the ready frontier
 
@@ -88,22 +91,42 @@ fall back to treating untyped relationships as blockers.
 
 ## Step 2 — Gather remaining work
 
-For each in-scope project (via the fast-tier gathering subagent when 3+, else inline):
+Never read a large `tasks.md` whole (they run past 100 KB; the open items are usually a
+tiny fraction). The helpers apply the canonical rule in
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks and
+§ Task IDs — the Status legend, commented templates, fences, and Notes/Context never
+surface as tasks.
 
-- **Open tasks**: every `- [ ]` line in `tasks.md`, kept verbatim, grouped under its
-  phase header. **Extract — never read a large tasks.md whole** (they run up to 115KB;
-  the open items are usually a tiny fraction):
-  ```bash
-  grep -nE '^(#{2,3} |\s*- \[ \])' tasks.md    # phase headers + open items only
-  ```
-  Apply the shared exclusions from
-  [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks.
-- **Open Revisions**: every case-insensitive `### R<n> … [open]` heading, including
-  suffixed IDs, with its `Gap:` line
-  (`grep -iA1 -E '^### R[0-9]+[A-Za-z]*.*\[open\]' tasks.md`).
-- **Completion**: `done/total` via that same shared count.
-- **Blockers**: if `artifacts/blockers.md` exists, one line per blocker — a blocked task
-  gets flagged, not model-routed (no model fixes a missing credential).
+1. **Completion, once for the whole hub** — reuse the `NODE` rows from one call:
+   ```bash
+   python3 <todo-graph-skill-dir>/scripts/graph-report.py export "$TODO_HUB"
+   ```
+   `tasks=<done>/<total>` and `open_revisions=<n>` per project. Read the rows, not the exit
+   status.
+2. **Open tasks, per in-scope project** — uncapped, with canonical IDs:
+   ```bash
+   python3 <todo-graph-skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" "<short-name>" --open
+   ```
+   Each `TASK\t<id>\topen\t<line>\t<text>` row is one open task; its `<id>` is the
+   handle every command below uses. A row whose ID starts with `R` is a Revisions
+   checkbox — route it as part of that revision, not as a separate task.
+3. **Live Revisions** — extract each live revision heading and its `Gap:` line; the
+   terminal tag decides the route, per
+   [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Revision tags:
+   ```bash
+   grep -inE -A4 '^#{2,3} R[0-9]+[A-Za-z]*([^A-Za-z0-9].*)?\[(open|fixed[^]]*awaiting verify|advisory)[^]]*\][[:space:]]*$' tasks.md
+   ```
+   Keep the heading and the first `Gap:` line of each match.
+   - `[open]`, `[OPEN]`, `[open — note]` → an **open revision**, fixed by
+     `/todo-revise <short-name> R<n>`. These headings must number exactly `open_revisions`;
+     a mismatch means a heading the grep cannot see (an unusual tag or a commented block)
+     — report it rather than guessing.
+   - `[fixed — awaiting verify]` → **verify work**. Its `R` checkbox stays open until a
+     green `/todo-verify <short-name>` ticks it; route it there, never to revise or execute.
+   - `[advisory]` → an **optional** coverage gap with no checkbox. List it; never count it
+     as remaining work. `/todo-revise <short-name> R<n>` promotes it to `[open]`.
+4. **Blockers**: if `artifacts/blockers.md` exists, one line per blocker — a blocked task
+   gets flagged, not model-routed (no model fixes a missing credential).
 
 **Return contract** — whether gathered inline or by subagent, the result takes this shape
 ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Subagent return
@@ -116,16 +139,19 @@ contracts):
     "status": "planning | ready | in-progress | done",
     "done": 14,
     "total": 20,
-    "open_tasks": [{"id": "5.2", "phase": "<phase header>", "text": "<verbatim task line>"}],
+    "open_tasks": [{"id": "5.2", "phase": "<phase from the ID, e.g. 5 or 6a; - outside phases>", "text": "<verbatim TASK text>"}],
     "open_revisions": [{"id": "R3", "source_task": "4.1", "gap": "<the Gap: line>"}],
+    "awaiting_verify": [{"id": "R4", "source_task": "5.2", "gap": "<the Gap: line>"}],
+    "advisory": [{"id": "R8", "source_task": "5.3", "gap": "<the Gap: line>"}],
     "blockers": ["<one line each, or [] when blockers.md is absent>"]
   }]
 }
 ```
 
-`text` is the task line **verbatim** — the board renders it and `/todo-execute` targets it
-by `id`, so a helpfully reworded task is a broken handle. An empty `open_tasks` with a
-`done` below `total` means the gatherer could not parse the file: say so rather than
+`id` and `text` are copied **verbatim** from the helper — the board renders them and
+`/todo-execute` targets the `id`, so a helpfully reworded task or a renumbered ID is a
+broken handle. The open `TASK` rows (including `R` rows) must number exactly
+`total − done`; any other count means truncated or re-derived output — say so rather than
 routing a project as finished.
 
 Also read each project's `plan.md` (Goal, Constraints, Key Decisions) — you need it to
@@ -134,7 +160,8 @@ sections are enough; don't load whole plans for 15 projects.
 
 ## Step 3 — Recommend a model per task
 
-Classify each open task and open Revision against this rubric. **Default to the
+Classify each open task and open Revision against this rubric (awaiting-verify rows skip
+it — they run on `todo-verify`'s tier). **Default to the
 cheapest model that can do the job safely; when torn between adjacent tiers, bump up
 one tier — never two.**
 
@@ -174,18 +201,21 @@ Modifiers that keep a task **down**:
 Each recommendation carries a short **why** that fits its table cell ("auth token
 exchange — security-sensitive", "mechanical checkbox sync").
 
-### Effort tier (the second dial)
+### Effort (the second dial)
 
-Model and reasoning effort are independent levers. Recommend one effort per item and
-resolve the tier to the current host using `todo-llm-routing/SKILL.md`:
+Model and reasoning effort are independent levers. Start from the effort
+`todo-llm-routing/SKILL.md` lists for the tier **on the current host**, and write only
+values that skill lists:
 
-- **low** — mechanical or fully spec'd work; thinking longer can't change the answer.
-- **medium** — default for routine implementation.
-- **high** — debugging unknown causes, security-sensitive reasoning, anything a
-  Revision already proved subtle. House precedent: `todo-verify` and `todo-infographic`
-  run the balanced tier at **high** effort.
+- Take the tier's listed effort as-is for routine work.
+- Raise it to **high** for debugging an unknown cause, security-sensitive reasoning, or
+  anything a Revision already proved subtle. House precedent: `todo-verify` and
+  `todo-infographic` run the balanced tier at **high** effort.
+- Where the routing skill says the model takes no effort setting (the Claude Code fast
+  model), the cell reads `default` and never gets raised; route up a tier instead.
+- `xhigh` / `max` appear only on the routing skill's own terms. Never invent a level.
 
-Render the tier and resolved host model in the model cell, for example
+Render the tier, resolved host model, and effort in the model cell, for example
 `balanced · <resolved host model> · medium` or `balanced · <resolved host model> · high`.
 
 ### Skill pairing (procedure beats raw intelligence)
@@ -212,18 +242,29 @@ Per project, a card — status icon, progress bar, then the table. Progress bars
 cells of `▓`/`░` (`round(done/total*10)`):
 
 ```
-### 🔄 rmq-vertical-scaler-quorum-queue   ▓▓▓▓▓▓▓░░░ 14/20 · 2 open revisions
+### 🔄 rmq-vertical-scaler-quorum-queue   ▓▓▓▓▓▓▓░░░ 14/20 · 1 open revision · 1 awaiting verify
 
 | # | remaining task | phase | tier · model · effort | skill | why |
 |---|---|---|---|---|---|
-| 5.2 | Failover drill under quorum loss | Phase 5 | **frontier · resolved model · highest** | verify | data-integrity, gates 5.3–5.5 |
+| 5.2 | Failover drill under quorum loss | Phase 5 | **frontier · resolved model · high** | verify | data-integrity, gates 5.3–5.5 |
 | 5.3 | Grafana panel for quorum lag | Phase 5 | balanced · resolved model · medium | dataviz | spec'd in plan, contained |
 | R3 | Re-verify scaler after fix ⟵ Task 4.1 | Revisions | deep · resolved model · high | code-review | rework of drifted work |
-| 6.1 | Bump version + changelog | Phase 6 | fast · resolved model · low | — | mechanical version bump |
+| R4 | Consumer backoff ⟵ Task 4.3 · awaiting verify | Revisions | balanced · resolved model · high | verify | fix accepted — `/todo-verify` closes it |
+| 6.1 | Bump version + changelog | Phase 6 | fast · resolved model · default | — | mechanical version bump |
+
+Optional: R8 advisory — no e2e covers the rotate endpoint (`/todo-revise rmq-vertical-scaler-quorum-queue R8` promotes it)
 ```
 
-- Number rows by their task/revision identifiers so `/todo-execute <name>` and
-  `/todo-revise <name> <n>` can target them directly.
+The fast row shows the effort the routing skill lists for the host running the triage —
+`default` where that model takes no effort setting.
+
+- Number rows by the helper's IDs so commands target them directly:
+  `/todo-execute <short-name> tasks <id,id,…>` for tasks,
+  `/todo-revise <short-name> R<n>` for an open revision — the `R` is part of the handle —
+  and `/todo-verify <short-name>` for awaiting-verify rows; one verify run covers them all.
+  A verify row takes `todo-verify`'s own tier (balanced · high), not a rubric pick.
+- `[advisory]` entries go on one `Optional:` line under the table, never in it; they are
+  not counted in the card's total or the totals line.
 - Blocked tasks get a `⛔ blocked` model cell with the blocker one-liner as the why.
 - Order cards most-complete first (same instinct as `/todo-list sort`), but don't edit
   `index.md` order — this is display only.
@@ -233,13 +274,13 @@ cells of `▓`/`░` (`round(done/total*10)`):
 End with:
 
 1. **Totals line**, e.g.
-   `31 items left — 3 frontier · 7 deep · 14 balanced · 5 fast · 2 blocked`
+   `31 items left — 3 frontier · 7 deep · 14 balanced · 5 fast · 2 blocked · 1 verify`
    Follow with a one-line token read: how many expensive-tier items exist and whether a
    skill pairing lets any of them drop a tier (e.g. "2 of 3 frontier items are gated by
    verification — could run deep · high instead").
 2. **Fan-out candidates**: if one project has 2+ file-disjoint balanced/fast tasks, name
-   them as a `/todo-execute <name> parallel` group (the biggest efficiency win this skill can
-   surface).
+   them as a `/todo-execute <short-name> parallel tasks <id,id,…>` group (the biggest
+   efficiency win this skill can surface).
 3. **Batch hint**: if fast-tier items span projects (state syncs, doc fixes), suggest
    clearing them in one cheap sweep before starting expensive work.
 4. **Session plan** — turn the tiers into commands the user can run as-is. Group the
@@ -250,18 +291,20 @@ End with:
    ## ▶ Session plan
 
    now (this session)       dispatch the 5 fast items — say "go" and I'll sweep them
-   <balanced host model>    → /todo-execute rmq-vertical-scaler tasks 5.3,6.1
-   <deep host model>        → /todo-revise api-token-rotation 3
-   <frontier host model>    → /todo-execute payments-retry tasks 2.1
+   <balanced host model>    → /todo-execute rmq-vertical-scaler-quorum-queue tasks 5.3
+   <balanced host model>    → /todo-verify rmq-vertical-scaler-quorum-queue
+   <deep host model>        → /todo-revise rmq-vertical-scaler-quorum-queue R3
+   <frontier host model>    → /todo-execute rmq-vertical-scaler-quorum-queue tasks 5.2
    ```
 
    Resolve placeholders from `todo-llm-routing/SKILL.md` and show commands only for the current
    host. For example, Claude Code uses `claude --model <name>`; Codex uses
    `codex --model <model-id> -c model_reasoning_effort=<effort>`. Fast items never need
    a new session when they can be dispatched inline. Emit one line per
-   model × project pair, carrying the exact task/revision numbers from the board; if the
-   session is already on the right model for a group, say so instead of telling the user
-   to relaunch. Use the host's model picker when available.
+   model × project pair, carrying the full short-name and the exact IDs from the board
+   (`tasks <id,id,…>` for tasks, `R<n>` for a revision, one revision per `/todo-revise`
+   line, one `/todo-verify <short-name>` line per project with awaiting-verify rows); if the session is already on the right model for a group, say so instead of
+   telling the user to relaunch. Use the host's model picker when available.
 
 ## Notes
 

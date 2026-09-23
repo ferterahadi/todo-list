@@ -24,104 +24,97 @@ expand_hub() {
   printf '%s\n' "$value"
 }
 
-revision_stats() {
-  local tasks="$1"
-  awk '
-    function visible(value, start, rest, ending) {
+# Visible-line scanner for the tasks.md counters (`context`, `audit`). It applies the hub's
+# canonical rules (todo-conventions § Counting tasks), matching graph-report.py
+# `visible_lines`: HTML comments are removed, even mid-line; a fence opens on three or
+# more backticks or tildes and closes only on a run of the same character at least as
+# long; blank lines are skipped; `line` holds the visible text without trailing space.
+TASK_SCAN_AWK='
+  function visible(value,   out, position) {
+    out = ""
+    while (value != "") {
       if (in_comment) {
-        ending = index(value, "-->")
-        if (!ending) return ""
-        value = substr(value, ending + 3)
+        position = index(value, "-->")
+        if (!position) return out
+        value = substr(value, position + 3)
         in_comment = 0
+        continue
       }
-      while ((start = index(value, "<!--")) > 0) {
-        rest = substr(value, start + 4)
-        ending = index(rest, "-->")
-        if (ending) {
-          value = substr(value, 1, start - 1) substr(rest, ending + 3)
-        } else {
-          value = substr(value, 1, start - 1)
-          in_comment = 1
-          break
-        }
-      }
-      return value
+      position = index(value, "<!--")
+      if (!position) return out value
+      out = out substr(value, 1, position - 1)
+      value = substr(value, position + 4)
+      in_comment = 1
     }
+    return out
+  }
+  function run_length(value, char,   count) {
+    count = 0
+    while (substr(value, count + 1, 1) == char) count++
+    return count
+  }
+  function scan(raw,   stripped, char, count) {
+    if (fence_char != "") {
+      stripped = raw
+      sub(/^[[:space:]]+/, "", stripped)
+      count = run_length(stripped, fence_char)
+      if (count >= fence_len && substr(stripped, count + 1) ~ /^[[:space:]]*$/) fence_char = ""
+      return 0
+    }
+    line = visible(raw)
+    stripped = line
+    sub(/^[[:space:]]+/, "", stripped)
+    char = substr(stripped, 1, 1)
+    if (char == "`" || char == "~") {
+      count = run_length(stripped, char)
+      if (count >= 3) {
+        fence_char = char
+        fence_len = count
+        return 0
+      }
+    }
+    sub(/[[:space:]]+$/, "", line)
+    return line != ""
+  }
+  function section_title(value) {
+    if (value !~ /^##[[:space:]]+[^[:space:]]/) return ""
+    sub(/^##[[:space:]]+/, "", value)
+    return tolower(value)
+  }
+  function is_open_revision(value,   lower) {
+    lower = tolower(value)
+    return lower ~ /^###[[:space:]]+r[0-9]+[a-z]*([^a-z0-9_]|$)/ &&
+      lower ~ /\[[[:space:]]*open([[:space:]]+[^]]*)?[[:space:]]*\][[:space:]]*$/
+  }
+  # `[fixed — awaiting verify]`: the fix landed but its verify checkbox is still open.
+  function is_pending_verify(value,   lower) {
+    lower = tolower(value)
+    return lower ~ /^###[[:space:]]+r[0-9]+[a-z]*([^a-z0-9_]|$)/ &&
+      lower ~ /\[[[:space:]]*fixed[^]]*awaiting[[:space:]]+verify[^]]*\][[:space:]]*$/
+  }
+'
+
+# One pass over a project's tasks.md and, when it has tombstones, one pass over its
+# journal. Prints: detailed_done  open_revisions  link_repairs  broken_tombstones
+# open_tasks  pending_verify. open_tasks follows the canonical count, so Revisions
+# checkboxes are included.
+# The journal side keeps the exact matching rules `lookup` uses (anchor_stats and
+# legacy_heading_count), so an audit verdict and a lookup always agree.
+project_stats() {
+  TASKS_FILE="$1" JOURNAL_FILE="$2" awk "$TASK_SCAN_AWK"'
     function finish_entry() {
       if (in_revision && is_done && has_detail && !has_pointer) detailed_done++
-    }
-    function reset_entry() {
       in_revision = 0
       is_done = 0
       has_detail = 0
       has_pointer = 0
     }
-
-    {
-      line = visible($0)
-      if (line == "") next
-      if (line ~ /^[[:space:]]*(```|~~~)/) {
-        in_fence = !in_fence
-        next
-      }
-      if (in_fence) next
-    }
-
-    line ~ /^## Revisions[[:space:]]*$/ {
-      finish_entry()
-      reset_entry()
-      in_revisions = 1
-      next
-    }
-    in_revisions && line ~ /^## / {
-      finish_entry()
-      reset_entry()
-      in_revisions = 0
-      next
-    }
-    !in_revisions { next }
-
-    line ~ /^### [Rr][0-9]+[A-Za-z]*/ {
-      finish_entry()
-      in_revision = 1
-      lower = tolower(line)
-      is_done = lower ~ /\[done[^]]*\][[:space:]]*$/
-      if (lower ~ /\[open[^]]*\][[:space:]]*$/) open_revisions++
-      has_detail = 0
-      has_pointer = 0
-      next
-    }
-
-    in_revision && line ~ /^### / {
-      finish_entry()
-      reset_entry()
-      next
-    }
-
-    in_revision && line ~ /^- archived →/ {
-      has_pointer = 1
-      next
-    }
-    in_revision && line ~ /[^[:space:]]/ {
-      has_detail = 1
-    }
-
-    END {
-      finish_entry()
-      printf "%d\t%d\n", detailed_done + 0, open_revisions + 0
-    }
-  ' "$tasks"
-}
-
-pointer_records() {
-  local tasks="$1"
-  awk '
-    function visible(value, start, rest, ending) {
-      if (in_comment) {
+    function journal_visible(value, start, rest, ending) {
+      if (journal_comment) {
         ending = index(value, "-->")
         if (!ending) return ""
         value = substr(value, ending + 3)
-        in_comment = 0
+        journal_comment = 0
       }
       while ((start = index(value, "<!--")) > 0) {
         rest = substr(value, start + 4)
@@ -130,51 +123,114 @@ pointer_records() {
           value = substr(value, 1, start - 1) substr(rest, ending + 3)
         } else {
           value = substr(value, 1, start - 1)
-          in_comment = 1
+          journal_comment = 1
           break
         }
       }
       return value
     }
+    # The lowercase revision id of a `## R<n>` / `### R<n>` heading, else "".
+    function heading_id(value,   rest, space) {
+      if (substr(value, 1, 3) == "## ") rest = substr(value, 4)
+      else if (substr(value, 1, 4) == "### ") rest = substr(value, 5)
+      else return ""
+      space = match(rest, /[[:space:]]/)
+      return tolower(space ? substr(rest, 1, space - 1) : rest)
+    }
 
-    {
-      line = visible($0)
-      if (line == "") next
-      if (line ~ /^[[:space:]]*(```|~~~)/) {
-        in_fence = !in_fence
-        next
+    BEGIN {
+      tasks_file = ENVIRON["TASKS_FILE"]
+      journal_file = ENVIRON["JOURNAL_FILE"]
+      while ((getline raw < tasks_file) > 0) {
+        if (!scan(raw)) continue
+        title = section_title(line)
+        if (title != "") {
+          finish_entry()
+          in_revisions = title == "revisions"
+          counting = title != "status" && title != "notes" && title != "context"
+          revision_id = ""
+          continue
+        }
+        if (counting && line ~ /^[[:space:]]*-[[:space:]]+\[ \][[:space:]]/) open_tasks++
+        if (!in_revisions) continue
+
+        if (is_open_revision(line)) open_revisions++
+        if (is_pending_verify(line)) pending_verify++
+        if (line ~ /^###[[:space:]]+[Rr][0-9]+/) {
+          finish_entry()
+          in_revision = 1
+          lower = tolower(line)
+          is_done = lower ~ /\[done[^]]*\][[:space:]]*$/
+          split(line, fields, /[[:space:]]+/)
+          revision_id = fields[2]
+          continue
+        }
+        if (line ~ /^(#|##|###)[[:space:]]/) {
+          if (line ~ /^###[[:space:]]/) finish_entry()
+          revision_id = ""
+          if (line ~ /^###[[:space:]]/) continue
+        }
+        if (line ~ /^- archived →/) {
+          if (in_revision) has_pointer = 1
+          if (revision_id != "") {
+            pointers++
+            pointer_id[pointers] = tolower(revision_id)
+            expected = "](artifacts/journal.md#revision-" tolower(revision_id) ")"
+            pointer_linked[pointers] = index(tolower(line), expected) > 0
+            wanted[tolower(revision_id)] = 1
+          }
+          continue
+        }
+        if (in_revision) has_detail = 1
       }
-      if (in_fence) next
-    }
+      close(tasks_file)
+      finish_entry()
 
-    line ~ /^## Revisions[[:space:]]*$/ {
-      in_revisions = 1
-      revision_id = ""
-      next
-    }
-    in_revisions && line ~ /^## / {
-      in_revisions = 0
-      revision_id = ""
-      next
-    }
-    !in_revisions { next }
+      if (pointers && journal_file != "") {
+        while ((getline raw < journal_file) > 0) {
+          value = journal_visible(raw)
+          if (value == "") continue
+          if (value ~ /^[[:space:]]*(```|~~~)/) {
+            journal_fence = !journal_fence
+            continue
+          }
+          if (journal_fence) continue
+          if (value ~ /^<a id="revision-[^"]*"><\/a>$/) {
+            anchor = substr(value, 17, length(value) - 22)
+            if (anchor in wanted) {
+              anchors[anchor]++
+              waiting = anchor
+              continue
+            }
+          }
+          if (waiting != "") {
+            if (value ~ /^[[:space:]]*$/) continue
+            if (heading_id(value) == waiting) valid_anchors[waiting]++
+            waiting = ""
+          }
+          id = heading_id(value)
+          if (id != "" && (id in wanted)) headings[id]++
+        }
+        close(journal_file)
+      }
 
-    line ~ /^### [Rr][0-9]+[A-Za-z]*/ {
-      split(line, fields, /[[:space:]]+/)
-      revision_id = fields[2]
-      next
+      for (i = 1; i <= pointers; i++) {
+        id = pointer_id[i]
+        anchor_count = anchors[id] + 0
+        valid_count = valid_anchors[id] + 0
+        heading_count = headings[id] + 0
+        if (anchor_count > 1 ||
+          (anchor_count == 1 && valid_count != 1) ||
+          (anchor_count == 0 && heading_count != 1)) {
+          broken++
+        } else if (!pointer_linked[i] || anchor_count == 0) {
+          repairs++
+        }
+      }
+      printf "%d\t%d\t%d\t%d\t%d\t%d\n", detailed_done + 0, open_revisions + 0, \
+        repairs + 0, broken + 0, open_tasks + 0, pending_verify + 0
     }
-    line ~ /^#{1,3} / {
-      revision_id = ""
-      next
-    }
-    revision_id != "" && line ~ /^- archived →/ {
-      lower = tolower(line)
-      expected = "](artifacts/journal.md#revision-" tolower(revision_id) ")"
-      linked = index(lower, expected) > 0
-      printf "%s\t%d\n", revision_id, linked
-    }
-  ' "$tasks"
+  '
 }
 
 anchor_stats() {
@@ -275,70 +331,31 @@ task_context() {
     exit 3
   }
 
-  awk '
-    function visible(value, start, rest, ending) {
-      if (in_comment) {
-        ending = index(value, "-->")
-        if (!ending) return ""
-        value = substr(value, ending + 3)
-        in_comment = 0
-      }
-      while ((start = index(value, "<!--")) > 0) {
-        rest = substr(value, start + 4)
-        ending = index(rest, "-->")
-        if (ending) {
-          value = substr(value, 1, start - 1) substr(rest, ending + 3)
-        } else {
-          value = substr(value, 1, start - 1)
-          in_comment = 1
-          break
-        }
-      }
-      sub(/[[:space:]]+$/, "", value)
-      return value
-    }
-
+  # Counts follow the canonical rule, so SUMMARY agrees with graph-report.py `tasks`:
+  # Revisions checkboxes are real tasks, and `[X]` is done.
+  awk "$TASK_SCAN_AWK"'
     {
-      line = visible($0)
-      if (line == "") next
-      if (line ~ /^[[:space:]]*(```|~~~)/) {
-        in_fence = !in_fence
+      if (!scan($0)) next
+      title = section_title(line)
+      if (title != "") {
+        in_revisions = title == "revisions"
+        counting = title != "status" && title != "notes" && title != "context"
         next
       }
-      if (in_fence) next
-
-      if (line ~ /^## Revisions[[:space:]]*$/) {
-        in_revisions = 1
-        in_tasks = 0
-        next
-      }
-      if (line ~ /^## /) {
-        in_revisions = 0
-        in_tasks = line !~ /^## (Status|Notes|Context)([[:space:]]|$)/
-        next
-      }
-
-      if (in_revisions && line ~ /^### [Rr][0-9]+[A-Za-z]*/) {
-        lower = tolower(line)
-        if (lower ~ /\[open[^]]*\][[:space:]]*$/) {
+      if (line ~ /^#+[[:space:]]/) {
+        if (in_revisions && is_open_revision(line)) {
           open_revisions++
-          if (open_revisions <= 20) {
-            printf "REVISION\t%d\t%s\n", NR, line
-          }
+          if (open_revisions <= 20) printf "REVISION\t%d\t%s\n", NR, line
         }
         next
       }
-
-      if (in_tasks && line ~ /^[[:space:]]*- \[[ xX]\]/) {
+      if (counting && line ~ /^[[:space:]]*-[[:space:]]+\[[ xX]\][[:space:]]/) {
         total++
-        lower = tolower(line)
-        if (lower ~ /^[[:space:]]*- \[x\]/) {
+        if (line ~ /^[[:space:]]*-[[:space:]]+\[[xX]\]/) {
           done++
         } else {
           open_tasks++
-          if (open_tasks <= 20) {
-            printf "TASK\t%d\t%s\n", NR, line
-          }
+          if (open_tasks <= 20) printf "TASK\t%d\t%s\n", NR, line
         }
       }
     }
@@ -405,6 +422,18 @@ audit() {
       }
     }
   ' "$temp_dir/rows.tsv" | sort > "$temp_dir/duplicates.txt"
+  # Prefix each row with its duplicate flag and lowercase status (never empty, so tab
+  # splitting cannot shift them), so the per-project loop spawns no helper for either.
+  awk -F '\t' -v OFS='\t' -v duplicates="$temp_dir/duplicates.txt" '
+    BEGIN {
+      while ((getline name < duplicates) > 0) duplicate[name] = 1
+      close(duplicates)
+    }
+    {
+      status = tolower($5)
+      print (($3 in duplicate) ? 1 : 0), (status == "" ? "-" : status), $0
+    }
+  ' "$temp_dir/rows.tsv" > "$temp_dir/rows.annotated"
 
   local detailed_total=0
   local repair_total=0
@@ -420,7 +449,7 @@ audit() {
     duplicate_total="$(wc -l < "$temp_dir/duplicates.txt" | tr -d '[:space:]')"
   fi
 
-  while IFS=$'\t' read -r source section name relative_path status; do
+  while IFS=$'\t' read -r duplicate status_lower source section name relative_path status; do
     [ -n "$name" ] || continue
     if [ -n "$filter" ] && [ "$name" != "$filter" ]; then
       continue
@@ -433,36 +462,21 @@ audit() {
     local open_revisions=0
     local repairs=0
     local broken=0
+    local open_tasks=0
+    local pending_verify=0
     local tasks_exists=0
     if [ -f "$tasks" ]; then
       tasks_exists=1
-      bytes="$(wc -c < "$tasks" | tr -d '[:space:]')"
-      IFS=$'\t' read -r detailed open_revisions < <(revision_stats "$tasks")
-
-      local journal="$hub/$relative_path/artifacts/journal.md"
-      while IFS=$'\t' read -r revision_id linked; do
-        [ -n "$revision_id" ] || continue
-        local normalized_id
-        normalized_id="$(printf '%s' "$revision_id" | tr '[:upper:]' '[:lower:]')"
-        local anchor_count=0
-        local valid_anchor_count=0
-        local heading_count=0
-        if [ -f "$journal" ]; then
-          IFS=$'\t' read -r anchor_count valid_anchor_count < <(
-            anchor_stats "$journal" "$normalized_id" "$revision_id"
-          )
-          heading_count="$(legacy_heading_count "$journal" "$revision_id")"
-        fi
-
-        if [ "$anchor_count" -gt 1 ] ||
-          { [ "$anchor_count" -eq 1 ] && [ "$valid_anchor_count" -ne 1 ]; } ||
-          { [ "$anchor_count" -eq 0 ] && [ "$heading_count" -ne 1 ]; }; then
-          broken=$((broken + 1))
-        elif [ "$linked" -eq 0 ] || [ "$anchor_count" -eq 0 ]; then
-          repairs=$((repairs + 1))
-        fi
-      done < <(pointer_records "$tasks")
+      bytes="$(wc -c < "$tasks")"
+      bytes=$((bytes))
+      IFS=$'\t' read -r detailed open_revisions repairs broken open_tasks pending_verify < <(
+        project_stats "$tasks" "$hub/$relative_path/artifacts/journal.md"
+      )
     fi
+    # Unfinished revisions: `[open…]` plus `[fixed — awaiting verify]`. An active `done`
+    # row must also have no open real task, so it never retires with open work.
+    local unfinished=$((open_revisions + pending_verify))
+    local active_open_work=$((unfinished + open_tasks))
 
     local oversized=0
     if [ "$bytes" -gt 20480 ]; then
@@ -470,19 +484,13 @@ audit() {
     fi
 
     local registry_action="-"
-    local duplicate=0
-    local status_lower
-    status_lower="$(printf '%s' "$status" | tr '[:upper:]' '[:lower:]')"
-    if grep -Fxq "$name" "$temp_dir/duplicates.txt"; then
-      duplicate=1
-    fi
 
     local state_conflict=0
     if [ "$tasks_exists" -eq 0 ] ||
-      { [ "$source" = archive ] && { [ "$status_lower" != done ] || [ "$open_revisions" -gt 0 ]; }; } ||
-      { [ "$source" = active ] && [ "$status_lower" = done ] && [ "$open_revisions" -gt 0 ]; } ||
+      { [ "$source" = archive ] && { [ "$status_lower" != done ] || [ "$unfinished" -gt 0 ]; }; } ||
+      { [ "$source" = active ] && [ "$status_lower" = done ] && [ "$active_open_work" -gt 0 ]; } ||
       { [ "$source" = active ] && [ "$section" = Archive ] &&
-        { [ "$status_lower" != done ] || [ "$open_revisions" -gt 0 ]; }; }; then
+        { [ "$status_lower" != done ] || [ "$unfinished" -gt 0 ]; }; }; then
       state_conflict=1
       state_conflict_total=$((state_conflict_total + 1))
     fi
@@ -521,7 +529,7 @@ audit() {
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
       "$name" "$source" "$section" "$bytes" "$detailed" "$repairs" "$broken" "$open_revisions" "$registry_action" \
       >> "$temp_dir/report.tsv"
-  done < "$temp_dir/rows.tsv"
+  done < "$temp_dir/rows.annotated"
 
   [ "$candidate_total" -gt 0 ] || return 0
 

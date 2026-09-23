@@ -1,14 +1,16 @@
 ---
 name: todo-refer
 description: >-
-  Use when the user invokes /todo-refer, says "refer to project X", "pull in the context
-  for X", "give me the plan for X to review against", or wants a hub project's plan/tasks
-  loaded before another command — and equally when they say "where was I", "pick up where
-  we left off", "continue the migration project", "what happened last session", "what's
-  the state of X", or start a fresh session on a project with prior work. Also handles
-  "what happened in R4"-style revision history questions. Replaces the former
-  /todo-resume, which is now this skill's `resume` mode — treat that spelling as an
-  invocation of this skill. Read-only, active-or-archived, and cross-repo.
+  Use when the user invokes /todo-refer or wants one hub project's context — says "refer
+  to project X", "pull in the context for X", "give me the plan for X to review against",
+  or wants a project's plan/tasks loaded before another command — and equally for
+  where-was-I on one project: "where was I", "pick up where we left off", "continue the
+  migration project", "what happened last session", "what's the state of X", or a fresh
+  session on a project with prior work. Also handles "what happened in R4"-style revision
+  history questions. Replaces the former /todo-resume, which is now this skill's `resume`
+  mode — treat that spelling as an invocation of this skill. Read-only, one project,
+  active-or-archived, and cross-repo; the all-projects overview is todo-list, and
+  changing or auditing recorded state is todo-state.
 ---
 
 # Project Refer Skill
@@ -35,8 +37,8 @@ model rather than delegating it.
 Resolve every hub path against `$TODO_HUB`, and validate every `<placeholder>` before it
 reaches a shell — [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md)
 § Hub location and § Placeholder safety. This skill touches the widest set of values in
-the hub (`<short-name>`, `<project-path>`, `<repo>`, `<owner>`, `<base>`); on a failure,
-skip the command and report the offending row rather than repairing it.
+the hub (`<short-name>`, `<project-path>`, `<repo>`); on a failure, skip the command and
+report the offending row rather than repairing it.
 
 ## Invocation
 
@@ -67,9 +69,9 @@ loading either file into model context. Three fallbacks are this skill's own:
 Record the owning registry, section, path, repo, status, and related names. Resolve the
 project folder as `$TODO_HUB/<path>`.
 
-For an archived row, always run Step 2's bounded context helper—even on the
-revision-only fast path. Any `REVISION` row means the registry is stale. Keep this
-read-only, flag the mismatch, and direct the user to
+For an archived row, always run Step 2's task listing—even on the revision-only fast
+path. `done < total` or `open_revisions` above zero means the registry is stale. Keep
+this read-only, flag the mismatch, and direct the user to
 `/todo-state <short-name> in-progress`.
 
 ## Step 2 — Read current context economically
@@ -80,18 +82,25 @@ expansion, then jump to Step 3. Every other mode uses the full path below.
 
 Read `plan.md` because it is the grounding — in full for grounding mode; in resume mode
 the `## Goal` paragraph and whether a `## Verification` block exists are usually enough,
-with a full read only when the file is small. Extract current task state with the bundled
+with a full read only when the file is small. Extract current task state with the graph
 helper rather than loading `tasks.md`:
 
 ```bash
-bash <todo-archive-skill-dir>/scripts/archive-report.sh context \
-  "$TODO_HUB" "<project-path>"
+python3 <todo-graph-skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" "<short-name>" --open
+grep -inE '^#{2,3} R[0-9]+[A-Za-z]*([^A-Za-z0-9].*)?\[(open|fixed[^]]*awaiting verify|advisory)[^]]*\][[:space:]]*$' \
+  "$TODO_HUB/<project-path>/tasks.md"
 ```
 
-`TASK` and `REVISION` rows are capped at 20 each. `SUMMARY` always carries complete
-done / total / open-task / open-revision counts. The parser strips HTML comments,
-ignores fenced examples and non-task Notes/Context sections, and reads only visible
-current state.
+Each `TASK\t<id>\topen\t<line>\t<text>` row is one open task with its canonical ID,
+uncapped. The closing `SUMMARY\ttasks\tproject=…\tdone=<d>\ttotal=<t>\topen_revisions=<n>`
+is the project's one Done number — the canonical rule in
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Counting tasks. Print
+it and no other count. `ERROR\tMISSING_TASKS` means there is no `tasks.md` yet.
+
+The `grep` lists live revision headings; route each by its tag per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Revision tags — `[open…]`
+is open work, `[fixed — awaiting verify]` waits on `/todo-verify`, `[advisory]` is
+optional and never blocks.
 
 Read all of `tasks.md` only when it is below about 15 kilobytes or the follow-on command
 explicitly needs completed-task detail.
@@ -140,7 +149,7 @@ python3 <todo-graph-skill-dir>/scripts/graph-report.py context \
 ```
 
 Use its exact one-hop `depends-on`, derived blocker, `related-to`, `supersedes`, and
-legacy-context rows. Read only each named neighbor's `## Goal` paragraph when the
+legacy-context rows; its task count is Step 2's number, so don't print it twice. Read only each named neighbor's `## Goal` paragraph when the
 follow-on request needs that context; never load neighboring tasks or journals.
 
 Record unsatisfied hard prerequisites as graph blockers. Canonical `related-to`,
@@ -155,22 +164,25 @@ names as non-blocking context only. Never infer a dependency from the fallback.
 
 ## Step 5 — Gather the repo trail (resume mode only)
 
-If the owning registry row names a target repo that exists locally:
+If the owning registry row names a target repo (not `-`), run `todo-state`'s read-only
+evidence helper once:
 
 ```bash
-git -C <repo> worktree list                          # is <repo>-wt/<short-name> still there?
-git -C <repo> branch --list 'todo/<short-name>' 'feat/*'
-git -C <repo> log origin/<base>..todo/<short-name> --oneline | head -5   # unshipped commits
-git -C <repo>-wt/<short-name> status --short 2>/dev/null | head -10      # uncommitted work
-gh pr list --repo <owner>/<repo> --head todo/<short-name> --state all --limit 3   # PR state (if gh works here)
+bash <todo-state-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" --hub "$TODO_HUB"
 ```
 
-`<repo>`, `<owner>`, `<base>`, and `<short-name>` all come out of the registry row — check
-them against **Placeholder safety** above before running any of these.
+It validates both values, derives the GitHub slug and base branch from `origin`, and
+attributes only this project's branches and worktrees — `todo/<short-name>`, the
+`<repo>-wt/<short-name>` worktree, and parallel-mode `feat/…` branches that name the
+project — never every `feat/*`. `BRANCH`, `WORKTREE`, and `PR` rows carry the detail;
+the closing `SUMMARY` gives `branch`, `pr`, `worktree`, `unshipped`, and `uncommitted`.
 
-Take what succeeds and skip what doesn't (no repo, no gh auth) — note gaps rather than
-erroring. The point is to know whether work is **uncommitted, committed-but-unshipped,
-in an open PR, or merged**.
+No `--fetch`: resume stays read-only on the repo too, so remote refs are as of the last
+fetch; PR state from `gh` is live. Exit 2 is a refused input — report the row. Exit 3 or
+an `unknown` field (repo not on disk, no `gh`) is a gap to note, not an error. The point
+is to know whether work is **uncommitted, committed-but-unshipped, in an open PR, or
+merged** — shipped as defined in
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Shipped work.
 
 ## Step 6 — Emit the digest
 
@@ -182,7 +194,7 @@ Registry: active
 Goal: <one line>
 Status: in-progress
 Open tasks: <first 3–5, then count>
-Done: 12/20 tasks
+Done: 12/20 tasks          (Step 2 SUMMARY)
 Depends on: token-foundation — <goal> (done, archived)
 Context: token-rotation — <goal> (in-progress)
 ```
@@ -208,20 +220,26 @@ Blockers:
 - ❌ staging RabbitMQ creds missing (blockers.md, 2026-07-05)
 Next open task: 4.2 dead-letter exchange for poison messages
 
-▶ Next: /todo-execute queue-migration   (or /todo-push from the worktree to ship the 3 commits first)
+▶ Next: /todo-push from <repo>-wt/queue-migration to ship the 3 commits   (then /todo-execute queue-migration)
 ```
 
-The `▶ Next` line is resume mode's deliverable — pick one primary recommendation from the
-evidence, with at most one alternative:
+The `▶ Next` line is resume mode's deliverable — the first matching row is the primary
+recommendation, with at most one alternative:
 
 | Evidence | Recommend |
 |---|---|
-| Open tasks, no unshipped work | `/todo-execute <name>` |
-| All tasks done, `## Verification` block in plan.md | `/todo-verify <name>` |
-| Open revisions | `/todo-revise <name>` |
-| Committed-but-unshipped worktree commits | `/todo-push` (from the worktree) |
-| Only blockers remain | name the blocker — no command unblocks a missing credential |
-| Unsatisfied project dependency | `/todo-graph why <name>` |
+| Unsatisfied project dependency | `/todo-graph why <short-name>` |
+| Status `planning`, `total=0`, or no `tasks.md` | `/todo-plan <short-name>` |
+| `unshipped` above zero or `pr=open` | `/todo-push` (from the worktree) |
+| An `[open…]` revision | `/todo-revise <short-name> R<n>` |
+| A `[fixed — awaiting verify]` revision | `/todo-verify <short-name>` |
+| Only blocked tasks remain | name the blocker — no command unblocks a missing credential |
+| Open tasks | `/todo-execute <short-name>` |
+| All tasks done, `## Verification` block in plan.md | `/todo-verify <short-name>` |
+| All tasks done, no `## Verification` block, shipped | `/todo-state <short-name> done` |
+
+An `unknown` repo field leaves shipping unproven: name the gap instead of recommending
+`done`. `[advisory]` entries are optional — mention them, never as the primary line.
 
 Grounding and revision modes end with one next-command nudge instead; do not run that
 command or edit hub files.
