@@ -8,6 +8,14 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.15.0] — 2026-09-24
+
+### Changed
+- **`/todo-plan` inspects the target repo before drafting.** Plans now show the current →
+  proposed implementation, source evidence, and checkable proof for tasks and outcomes.
+- **Plan review shows the design and links to the full files.** New scaffolds identify
+  themselves as drafts, and the example demonstrates the expected detail.
+
 ## [1.14.0] — 2026-09-23
 
 ### Added
