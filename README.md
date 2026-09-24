@@ -45,6 +45,10 @@ Here's a whole project, start to finish:
 /todo-revise api-rate-limiting             # fix whatever the check caught
 ```
 
+`/todo-add` creates a planning scaffold. `/todo-plan` inspects the target repo, records
+the current and proposed behavior in `plan.md`, then writes short, checkable tasks in
+`tasks.md`. A project remains `planning` until that plan is reviewed and confirmed.
+
 Stopped halfway through? `/todo-refer api-rate-limiting resume` works out where you left
 off and picks it back up.
 

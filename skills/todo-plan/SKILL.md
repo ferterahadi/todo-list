@@ -9,7 +9,9 @@ You plan projects stored in a hub repo. Each project has plan.md and tasks.md. Y
 
 This is judgment work involving discovery, scope, and decisions. Run it inline on the
 current session model; use at least the **balanced** tier from
-[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md).
+[`../todo-llm-routing/SKILL.md`](../todo-llm-routing/SKILL.md). Use its **deep** tier
+when the design is ambiguous or crosses services; model choice does not replace repo
+inspection.
 
 ## Compose with installed skills — organize, don't replace
 
@@ -58,35 +60,18 @@ A short-name in neither registry is not a dead end here: offer to scaffold it wi
 `todo-add` now — its single prompt covers short-name and work vs self-initiative — then
 continue planning the new row in the same run.
 
-## Step 2 — Ask only what's missing
+## Step 2 — Establish the starting point
 
-Before researching or writing, settle the seven discovery questions below — but skip each
-one the hub already answers: a row `repo` that exists on disk, a filled `plan.md` section
-(not template text), a `## Relationships` row `todo-add` seeded, or what this session's
-`todo-add` prompt captured. On a replan, show what the current plan says and ask only what
-should change. Ask everything still open in one turn.
-Use the host's structured choice prompt for enumerable questions when available —
-clickable options beat walls of prompt text for a visual reader — and plain text for
-open-ended questions:
+Read the current plan, tasks, registry row, and any user-supplied context. A `planning`
+row may contain only the scaffold from `todo-add`; treat placeholder text as missing, not
+as an answer. On a replan, preserve accepted decisions and completed work, but verify
+current-state claims against the repo before carrying them forward.
 
-Via structured choices (include a free-text path when the host supports it):
-- **Repo path** — only when the row's `repo` is `-` or not on disk: offer the row's value
-  as the first option ("Confirmed: `~/code/…`") plus "Different path" (for `-`, skip the
-  widget and just ask).
-- **Verification layer** — "Does this project have a verification MCP layer?" with
-  options like "Yes — I'll name the feature/target" / "No — drop the Verification block".
-- **Constraint categories** (multiSelect) — "Which constraints apply?" with options
-  "Hard deadline" / "Tech stack locked" / "Team dependency" / "None of these"; follow
-  up in text for specifics on whatever they pick.
-
-As plain questions in the accompanying message:
-1. What is this project? What problem does it solve?
-2. What does done look like? What's the expected outcome? (push for observable, checkable signals — these become Success Criteria)
-3. Any prior context to read? (docs, tickets, other repos or paths)
-4. Does it require, replace, or merely relate to another tracked project? Ask for exact
-   short-names and a one-clause reason; do not infer dependencies from similar names.
-
-Wait for the answers before continuing.
+If the row's `repo` is `-` or the path does not exist, ask for the target repo path now.
+If the outcome itself is unclear, ask what observable result the user wants. Ask for any
+specific docs, tickets, or other repos they want considered. Defer detailed design
+questions that source inspection can answer. Use structured choices for enumerable
+questions when available, and ask the missing basics in one turn.
 
 ## Step 3 — Verify the repo
 
@@ -96,20 +81,35 @@ Once the repo path is settled — confirmed by the user, or a row `repo` Step 2 
 - If it's a git repo, note the current branch
 - If the path doesn't exist, tell the user and ask for the correct path before continuing
 
-## Step 4 — Research (only if user points to something)
+## Step 4 — Inspect the current system
 
-If the user references a local repo, doc, or path:
-- Read the referenced files relevant to this project
-- Extract what's useful for the plan
-- Write a brief summary to `research/findings.md` inside the project folder
+Inspect the confirmed repo even when the user named no source file. Search the relevant
+entry points, callers, data models, tests, configuration, and nearby docs; follow the
+current request or data path far enough to explain the behavior being changed. Read
+user-supplied references and any related repos as needed. Keep the search proportional:
+a small change needs a focused trace; a cross-service or data-integrity change needs the
+contracts and failure paths across its boundaries. Do not invent file paths or APIs.
 
-Regardless of references, check the confirmed repo for existing superpowers docs —
+Record a concise evidence map in `research/findings.md`: source baseline/branch, current
+behavior with file paths, the affected components, existing tests and constraints,
+material unknowns, and any external claim that still needs confirmation. Label proposed
+behavior as proposed. This file supports the plan; it is not a substitute for the
+implementation approach in `plan.md`.
+
+Also check the confirmed repo for existing superpowers docs —
 `<repo>/docs/superpowers/plans/` and `<repo>/docs/superpowers/specs/` (written by the
 brainstorming / writing-plans skills in earlier target-repo sessions). Read any that touch
 this project, list them as rows in `research/superpowers-docs.md` (a table: doc path ·
 source · one-line summary), and fold their decisions into the plan instead of re-deciding.
 
-If no external reference is given and the repo has no superpowers docs, skip this step.
+After inspection, ask only for material choices the repo cannot settle: outcome and scope,
+external constraints (such as deadlines or locked technology), whether a verification MCP
+layer exists and its feature/target if so, and exact tracked-project relationships with
+a reason. Present the observed baseline and a recommendation beside each choice; batch
+open questions. Wait for answers to decisions that change the design.
+If an answer can safely be deferred, state the unknown and make its investigation an
+explicit task that gates dependent implementation. Do not turn an unknown into a guessed
+decision.
 
 ## Step 5 — Write plan.md
 
@@ -120,7 +120,15 @@ Fill in the project's `plan.md`:
 - **Success Criteria**: observable, checkable outcomes (the expectation) — written as a `- [ ]` list, distinct from tasks. These are what `todo-revise` compares completed work against, so make them concrete and testable, not aspirational
 - **Constraints**: deadlines, tech limits, non-negotiables
 - **Scope**: what's in / what's out
+- **Implementation Approach**: explain the current path → proposed path in terms of the
+  actual components and interfaces. Include the data/API contract, important edge and
+  failure behavior, compatibility or migration, and rollout/recovery when they matter.
+  Link the evidence map and any larger design artifact. Scale detail to complexity: a
+  small change may need one paragraph; a multi-service change needs the boundary and
+  sequence an executor would otherwise have to rediscover. Keep agreed design here,
+  not solely in a distant artifact.
 - **Key Decisions**: choices already made so the next agent doesn't re-litigate them. Number them `D1`, `D2`, … — `todo-infographic` and the feedback loop reference decisions by ID. If the architecture/approach is still genuinely open (the user couldn't answer "how"), don't pad this section with guesses — check for an installed brainstorming/architecture skill (e.g. from superpowers) and offer to run it to converge on the decision first; otherwise record the open question explicitly as a decision-to-make task. If such a skill writes its output into the target repo (`docs/superpowers/…`), immediately record a pointer in `research/superpowers-docs.md` and under plan.md References — a doc that lives only in the target repo is lost to the hub
+- **Key Decisions**: choices already made so the next agent doesn't re-litigate them. Number them `D1`, `D2`, … — `todo-infographic` and the feedback loop reference decisions by ID. If the approach is open, use an installed brainstorming/architecture skill when applicable to develop a recommendation; ask the user only for a material choice they own. Otherwise make the unresolved choice a decision task that gates implementation. Do not pad this section with guesses. If another skill writes into the target repo (`docs/superpowers/…`), immediately record a pointer in `research/superpowers-docs.md` and under plan.md References — a doc that lives only in the target repo is lost to the hub
 - **Trade-offs**: planning-time knowledge the infographic renders later — capture it now or it's lost. Three parts, per the template: one `**D<n>** — gain: … · cost: …` row per Key Decision; **Forgone** — alternatives you and the user considered and rejected (plus scope deliberately cut), one clause of why each; **Known gaps** — limitations the build deliberately accepts. Record rejected alternatives *as they're rejected* during discovery, not reconstructed afterwards. If a part is genuinely empty, delete its stub line rather than padding it.
 - **Relationships**: the canonical typed project graph. Write one row per explicit
   relationship: `depends-on` for a hard prerequisite, `related-to` for context, or
@@ -133,7 +141,8 @@ Fill in the project's `plan.md`:
 - **Repo**: absolute path to the local codebase (confirmed in Step 3)
 - **References**: paths or links to relevant resources
 
-Write with enough detail that a cold agent session can pick this up without talking to the user.
+Replace every scaffold placeholder and the scaffold marker. Write with enough detail that
+a cold agent session can pick this up without talking to the user.
 
 ## Step 6 — Write tasks.md
 
@@ -150,9 +159,10 @@ Break the work into a concrete checklist:
   phase or in a new phase when order allows: inserting mid-phase renumbers every later task
   in it, and existing `⟵ Task <id>` backlinks would point at the wrong work.
 - **One line per task (~150 chars max).** Supporting detail, mechanics, and rationale go
-  to `research/findings.md` with a pointer (`— see research/findings.md § Token exchange`),
-  never inline in the task line. `tasks.md` is read whole by several skills; it must stay a
-  checklist, not a journal.
+  to `plan.md` for agreed behavior or `research/findings.md` for source evidence, with a
+  pointer when the link is not obvious. Every task needs a concrete output and a check
+  that proves it works; those may live in the plan rather than on the checklist line.
+  `tasks.md` is read whole by several skills; it must stay a checklist, not a journal.
 
 ## Step 6.5 — Quality gate, before anything is shown
 
@@ -163,11 +173,21 @@ shown:
   someone can check, or a named artifact). If it contains "improve", "support",
   "enhance", or "better" without a measurable object → rewrite until a stranger could
   say yes/no to "did this happen?".
+- [ ] **Scaffold test**: no template instructions, placeholder tasks, or scaffold marker
+  remain in the plan or task checklist.
 - [ ] **Success Criteria test**: for each criterion, write down (mentally) the exact
   command, test, or observation that would check it. Can't name one → the criterion is
   aspirational; rewrite it or move it to Context.
+- [ ] **Evidence and design test**: the plan identifies the source baseline and explains
+  the affected current path → proposed path. Current-state claims have repo or
+  user-supplied evidence; assumptions and proposed behavior are labelled. For a material
+  interface or data change, the plan states the contract and failure/compatibility path.
 - [ ] **Task test**: every task line starts with a verb, names its target (file, system,
   endpoint), and fits on one line. "Think about X" / "handle Y properly" fail.
+- [ ] **Execution test**: each implementation task has an output and a checkable proof
+  in the task or plan. Every Success Criterion is covered by a task and verification
+  method; every necessary migration, rollback, or operational gate has an owner/task.
+  An unresolved design choice has a decision/spike task before dependent work.
 - [ ] **Dependency walk**: read tasks.md top to bottom once; if any task needs an output
   produced by a later task, reorder now.
 - [ ] **Project-graph test**: after writing Relationships, check this project only —
@@ -185,10 +205,16 @@ shown:
 - [ ] **Repo check**: the Repo path in plan.md was verified on disk this session (you
   saw the `ls`/git output in Step 3, not remembered it).
 
-## Step 7 — Confirm with a plan-at-a-glance render
+## Step 7 — Review the actual plan
 
-Render the plan as a compact block rather than pasting plan.md/tasks.md — the user is a
-visual reader — and offer the full files on request:
+Render a compact, decision-quality preview and link the full `plan.md` and `tasks.md` by
+their verified absolute paths. Include the current → proposed path, one representative
+implementation task with its proof, and the main unresolved choice or risk. The preview
+helps scanning; it must not hide the design the user is being asked to accept. If the user
+asked for a detailed plan in the conversation, show the relevant design and task detail
+directly rather than offering to reveal it later.
+
+For example:
 
 ```
 ## 📋 rmq-dlq-support — plan at a glance
@@ -204,11 +230,17 @@ visual reader — and offer the full files on request:
 
 **Decisions** ① quorum queues, not classic ② retry via per-queue TTL, not delayed-exchange plugin
 
+**Change** Consumer failure → bounded retry queues → parking lot + alert; broker restart is not required.
+
+**Proof** Force retries to exhaust in a test run; inspect the parked message and alert.
+
 **Graph** auth-foundation ─▶ rmq-dlq-support · token-rotation (context)
 
 **Constraints** ⛔ no broker restart in prod · ⚠️ ship before the 4.1 upgrade
 
 **Verification** 🔬 `rmq-dlq` gates Phase 3   (or: — none)
+
+**Full files** [plan.md](<absolute path>) · [tasks.md](<absolute path>)
 ```
 
 Rules for the render:
@@ -217,6 +249,8 @@ Rules for the render:
   don't paste the checklist.
 - Decisions numbered ①②③, one clause each. Constraints as chips: ⛔ hard, ⚠️ soft.
 - Graph = hard prerequisites first, then context/lineage; omit the line when empty.
+- Change and Proof = the most important design path and a concrete check; mention an
+  unresolved decision or risk when one remains. Link full files using paths that exist.
 
 Then ask via the host's structured choice prompt when available: "Does this plan look
 right?" with options

@@ -1,5 +1,7 @@
 # Project: [Name]
 
+> Planning scaffold from `/todo-add`. `/todo-plan` must inspect the target repo and replace these placeholders before this project is ready.
+
 ## Goal
 What success looks like in one sentence.
 
@@ -16,6 +18,12 @@ How we'll know it's done and good. Observable, checkable outcomes — not tasks.
 ## Scope
 **In:** what's included  
 **Out:** what's excluded
+
+## Implementation Approach
+<!-- Explain the current path → proposed path using the actual components and contracts.
+     Include important failure/compatibility behavior and rollout/recovery when applicable.
+     Put source evidence in research/findings.md and link it here. Scale detail to scope. -->
+Current behavior, proposed flow, affected components, and proof of the change.
 
 ## Key Decisions
 Document choices already made so the executing agent doesn't re-litigate them.
