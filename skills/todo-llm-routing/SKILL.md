@@ -13,8 +13,8 @@ keep using the four tiers.
 | Tier | Claude Code | Codex | Use for |
 |---|---|---|---|
 | `frontier` | `Fable 5.1`, high effort | `gpt-6-astra`, high effort | Security, payments, data integrity, concurrency, multi-repo architecture |
-| `deep` | `Opus 5.5`, high effort | `gpt-6-sol`, high effort | Ambiguous design, unknown-cause debugging, cross-file refactors |
-| `balanced` | `Sonnet 5`, medium effort | `gpt-6-sol`, medium effort | Well-scoped implementation, verification, visual generation |
+| `deep` | `Opus 5.5`, high effort | `gpt-6.1-sol`, high effort | Ambiguous design, unknown-cause debugging, cross-file refactors |
+| `balanced` | `Sonnet 5.5`, medium effort | `gpt-6.1-sol`, medium effort | Well-scoped implementation, verification, visual generation |
 | `fast` | `Haiku 4.5`, default settings (no effort parameter) | `gpt-6-luna`, low effort | Mechanical edits, formatting, state updates, routine Git operations |
 
 These are workload defaults, not cross-provider accuracy equivalences. Use `balanced`
@@ -49,7 +49,7 @@ not Codex or Claude Code subscription-quota multipliers.
 | `fast` | $1 / $5 | $0.10 / $0.50 |
 
 At equal uncached token counts, Sonnet costs 50% less than Opus for both input and
-output. On OpenAI, `deep` and `balanced` share `gpt-6-sol`, so effort is the only cost
+output. On OpenAI, `deep` and `balanced` share `gpt-6.1-sol`, so effort is the only cost
 lever between them there. Actual task savings and accuracy on this repository are
 **unmeasured**. Token counts, reasoning, cache reuse, long-context rates, retries, and
 plan-specific limits can change the economics. For subscription users, use observed quota
@@ -66,7 +66,7 @@ price increase.
 1. Select the tier required by the task and any calling-skill constraints.
 2. Resolve the model and effort against the current host's exposed model list or picker.
    API documentation does not prove account or subagent availability. On Claude Code,
-   verify the version behind an alias rather than assuming `sonnet` means Sonnet 5.
+   verify the version behind an alias rather than assuming `sonnet` means Sonnet 5.5.
 3. If the entry is unavailable, prefer an available model that meets the same capability
    need; use a higher tier if necessary. State the fallback and use only supported effort
    values. If no adequate model is available, report the limitation rather than silently

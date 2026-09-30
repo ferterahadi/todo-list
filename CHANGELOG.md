@@ -8,6 +8,12 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.15.1] — 2026-10-01
+
+### Changed
+- **`todo-llm-routing` moves to Sonnet 5.5 and `gpt-6.1-sol`.** `balanced` on Claude Code uses
+  Sonnet 5.5; `deep` and `balanced` on Codex share `gpt-6.1-sol` at high and medium effort.
+
 ## [1.15.0] — 2026-09-24
 
 ### Changed
