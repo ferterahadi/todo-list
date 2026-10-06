@@ -106,6 +106,21 @@ done
 grep -Fq 'Never use `<details>`' "$codex_asset" ||
   fail "the Codex pack must forbid <details> outright"
 
+# Flows render as Mermaid on both harnesses — in a widget for Claude Code, in a written HTML
+# file for Codex. ASCII box-and-arrow drawings and raw mermaid fences render as plain text.
+for asset in "$claude_asset" "$codex_asset"; do
+  grep -Fq 'Mermaid flowchart' "$asset" ||
+    fail "style pack lost its Mermaid flow rule: ${asset#"$repo_root"/}"
+  grep -Fq 'never ASCII boxes or a raw mermaid fence' "$asset" ||
+    fail "style pack must forbid ASCII flow boxes and raw mermaid fences: ${asset#"$repo_root"/}"
+  grep -Eq 'ASCII boxes$|inline text boxes|Never emit Mermaid' "$asset" &&
+    fail "style pack still draws flows as text boxes: ${asset#"$repo_root"/}"
+done
+grep -Fq 'Mermaid flowchart in an inline widget' "$claude_asset" ||
+  fail "the Claude pack must render flows in an inline widget"
+grep -Fq 'Mermaid flowchart in a written HTML file' "$codex_asset" ||
+  fail "the Codex pack must render flows in a written HTML file"
+
 # Harness-specific rules must actually differ. Each harness gets one decision surface and
 # one complex-visual form; neither repeats options in a table, cards, and a picker.
 grep -Fq 'artifact' "$claude_asset" ||

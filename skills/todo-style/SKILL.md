@@ -20,7 +20,7 @@ surfaces render and accept different things:
 
 | | Claude Code | Codex |
 |-|-|-|
-| Complex diagrams | artifact widget | written-to-disk HTML (never mermaid) |
+| Flows and diagrams | Mermaid in an inline widget | Mermaid in a written-to-disk HTML file |
 | Decision surface | interactive picker only | comparison table only |
 
 The decision split is the one to remember: Claude Code puts the options in its interactive
