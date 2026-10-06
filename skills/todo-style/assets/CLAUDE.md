@@ -115,7 +115,7 @@ Use the smallest visual that makes the relationship easier to understand:
 One fact          → labelled sentence
 Several points   → bullets
 Comparison       → table
-Three to six steps → inline text boxes
+Flow or 3+ steps → Mermaid flowchart in an inline widget
 Hierarchy        → inline tree
 Complex system   → HTML/SVG artifact widget
 ```
@@ -124,8 +124,8 @@ Complex system   → HTML/SVG artifact widget
   compact Decision and Verdict tables are intentional exceptions.
 - Choose only useful rows and columns; never add filler to satisfy a minimum.
 - Use a widget when requested or interaction helps; otherwise prefer the smallest readable visual.
-- Never emit Mermaid; Claude Desktop cannot render it inline.
-- An artifact must be self-contained, theme-aware, and contain no external assets.
+- Draw flows as Mermaid in a widget; never ASCII boxes or a raw mermaid fence in chat.
+- An artifact must be self-contained and theme-aware; its only external script is Mermaid.
 - Introduce a meaningful visual with one sentence stating its takeaway.
 - Do not rely on color or an icon alone; pair status symbols with plain text.
 - A visual replaces detailed prose, but the takeaway remains for accessibility.

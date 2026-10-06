@@ -115,7 +115,7 @@ Use the smallest visual that makes the relationship easier to understand:
 One fact          → labelled sentence
 Several points   → bullets
 Comparison       → table
-Three to six steps → inline ASCII boxes
+Flow or 3+ steps → Mermaid flowchart in a written HTML file
 Hierarchy        → inline tree
 Complex system   → self-contained HTML, inline when supported
 ```
@@ -124,8 +124,8 @@ Complex system   → self-contained HTML, inline when supported
   compact Decision and Verdict tables are intentional exceptions.
 - Choose only useful rows and columns; never add filler to satisfy a minimum.
 - Use a widget when requested or interaction helps; otherwise prefer the smallest readable visual.
-- Never emit Mermaid; this terminal cannot render it reliably.
-- A written visual must be theme-aware, contain no external assets, and have an exact path.
+- Draw flows as Mermaid in a written HTML file; never ASCII boxes or a raw mermaid fence.
+- A written visual must be theme-aware, load only a pinned Mermaid script, and have an exact path.
 - Introduce a meaningful visual with one sentence stating its takeaway.
 - Do not rely on color or an icon alone; pair status symbols with plain text.
 - A visual replaces detailed prose, but the takeaway remains for accessibility.
