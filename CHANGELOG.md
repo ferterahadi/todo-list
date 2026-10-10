@@ -12,7 +12,7 @@ request; how it works lives in the diff.
 
 ### Changed
 - **`todo-state` is now `todo-sync`.** Same modes; `/todo-state` keeps working as an alias
-  until 2.0.0.
+  until 2.0.0. `/todo-sync` alone used to mean `audit`; it now asks what to change — use `/todo-sync audit`.
 - **`todo-list` is merged into `todo-triage`.** `/todo-triage archive` lists finished
   projects and `/todo-archive sort` ranks the index; `/todo-list` is an alias until 2.0.0.
 - **`todo-conventions` and `todo-llm-routing` are hidden from the command menu.** Other

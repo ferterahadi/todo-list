@@ -46,7 +46,8 @@ Completion is `done/total` from one hub-wide helper call, never one count per pr
 python3 <todo-graph-skill-dir>/scripts/graph-report.py export "$TODO_HUB"
 ```
 
-Use only `NODE` rows whose registry is `active`.
+Use only `NODE` rows whose registry is `active`. Read the rows, not the exit status: exit 1
+only flags graph issues — mention `/todo-graph audit` when `ERROR` rows appear.
 
 - `tasks=0/0` (missing or empty `tasks.md`) is 0%; report it.
 - Sort descending by ratio; ties keep their existing relative order.
@@ -193,5 +194,5 @@ queue-migration     -                -                     -       index → arc
 ```
 
 Include total bytes removed from `tasks.md`, and list each conflict handed to `todo-sync`.
-`archive.md` is a cold file: default list, triage, `todo-sync audit`, and execution scans
+`archive.md` is a cold file: default triage, `todo-sync audit`, and execution scans
 read only `index.md`; exact historical lookup falls back to `archive.md`.

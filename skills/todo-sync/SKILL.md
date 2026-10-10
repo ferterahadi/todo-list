@@ -70,7 +70,7 @@ absolute root to any edit subagent so it writes there, not into the cwd. Validat
 /todo-sync queue-migration 2.3 edit "Retry with jittered backoff"   ← reword one task
 /todo-sync queue-migration in-progress           ← status only; reopens an archived row
 /todo-sync queue-migration done                  ← mark the whole project done
-/todo-sync                                       ← ask which project, or act on context
+/todo-sync                                       ← ask which project and what to change; never act on context
 /todo-sync audit [queue-migration]               ← report drift; writes nothing
 /todo-sync audit fix [queue-migration]           ← report, confirm once, apply
 ```

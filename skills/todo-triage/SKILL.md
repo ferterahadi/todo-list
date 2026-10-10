@@ -59,7 +59,8 @@ which one the user meant instead of guessing.
 ## Archive view
 
 `/todo-triage archive` lists finished projects from cold `$TODO_HUB/archive.md` instead of
-triaging open work. Take progress from one helper call and read nothing else:
+triaging open work. Read `archive.md` for the rows and take progress from one helper call;
+read nothing else:
 
 ```bash
 python3 <todo-graph-skill-dir>/scripts/graph-report.py export "$TODO_HUB"
@@ -69,7 +70,10 @@ Render each archived section as a compact table — `short-name`, `repo`, `compl
 progress from the matching `NODE` row with registry `archive`: `tasks=<done>/<total>`, plus
 `· <n> rev` when `open_revisions` is above zero. A row with open work is stale: say so and
 point at `/todo-sync <short-name> in-progress`. If `archive.md` is absent or has no rows,
-say there are no archived projects; never scaffold it. The archive view skips Steps 1–5.
+say there are no archived projects; never scaffold it. Read the helper's rows, not its exit
+status: exit 1 only flags graph issues — mention `/todo-graph audit` when `ERROR` rows appear.
+A legacy `## Archive` section still inside `index.md` is not shown here; note that it needs
+`/todo-archive registry`. The archive view skips Steps 1–5.
 
 ## Step 1 — Resolve scope
 

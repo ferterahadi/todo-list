@@ -109,7 +109,7 @@ The amber rows are the scanners noticing capabilities this pack grants on purpos
 
 | What they flag | Which skills | Why it's there |
 |---|---|---|
-| Runs shell commands | add, execute, graph, refer, state, triage | `python3` for the graph helper, `grep`/`awk` for task counts, `git`/`gh` for repo evidence |
+| Runs shell commands | add, execute, graph, refer, sync, triage | `python3` for the graph helper, `grep`/`awk` for task counts, `git`/`gh` for repo evidence |
 | Reads text someone else wrote | most of them | `plan.md`, `tasks.md`, `index.md` are the input. A planning tool that won't read your plans is not a planning tool |
 | Publishes and merges code | push, execute | `/todo-push` exists to branch, commit, push, open a PR, and merge. That authority is the feature |
 | Hands work to subagents | execute, triage | Parallel execution and fast-tier gathering |

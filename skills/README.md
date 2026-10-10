@@ -19,8 +19,9 @@ date stamping in `todo-sync`, revision archival in `todo-archive`, model tiers i
 `todo-llm-routing` — and everyone else points at it. Two copies of a rule are two rules
 waiting to disagree.
 
-Menu: 16 commands. `todo-conventions` and `todo-llm-routing` are hidden from the command
-menu (other skills read them); `todo-state` and `todo-list` are renamed aliases until 2.0.0.
+Menu: 16 commands, plus the renamed aliases `todo-state` and `todo-list` until 2.0.0.
+`todo-conventions` and `todo-llm-routing` are hidden from the command menu (other skills
+read them).
 
 | Skill | Purpose |
 |-------|---------|

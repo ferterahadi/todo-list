@@ -12,7 +12,7 @@ metadata:
 
 | Typed | Run |
 |---|---|
-| `/todo-list` or `/todo-list <status>` | [`../todo-triage/SKILL.md`](../todo-triage/SKILL.md), no arguments |
+| `/todo-list` or `/todo-list <status>` | [`../todo-triage/SKILL.md`](../todo-triage/SKILL.md), no arguments; say the status filter is gone and finished projects are under `archive` |
 | `/todo-list archive` | [`../todo-triage/SKILL.md`](../todo-triage/SKILL.md) with `archive` |
 | `/todo-list all` | `../todo-triage/SKILL.md` with no arguments, then again with `archive` |
 | `/todo-list sort` | [`../todo-archive/SKILL.md`](../todo-archive/SKILL.md) with `sort` |
