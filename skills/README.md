@@ -19,6 +19,9 @@ date stamping in `todo-sync`, revision archival in `todo-archive`, model tiers i
 `todo-llm-routing` — and everyone else points at it. Two copies of a rule are two rules
 waiting to disagree.
 
+Menu: 16 commands. `todo-conventions` and `todo-llm-routing` are hidden from the command
+menu (other skills read them); `todo-state` and `todo-list` are renamed aliases until 2.0.0.
+
 | Skill | Purpose |
 |-------|---------|
 | `todo-list` | Renamed: merged into `todo-triage` in 1.16.0; the old name keeps working until 2.0.0 |
@@ -49,7 +52,8 @@ optional escape hatch when the person who must rule on the findings isn't the pe
 ran the review. `todo-graph` coordinates those loops
 through explicit `depends-on` edges; `todo-refer resume` / `todo-sync audit` /
 `todo-archive` keep multi-session work continuable, honest, and compact. Exact short-name
-lookups check active `index.md` first, then cold `archive.md` only on a miss.
+lookups check active `index.md` first, then cold `archive.md` only on a miss. `revise`
+fixes a wrong result; `learn` changes the agent's habit in a repo.
 
 ## Install
 

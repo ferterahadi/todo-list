@@ -158,4 +158,10 @@ for skill_file in "$repo_root"/skills/*/SKILL.md; do
 done
 [ "$visible" -eq 16 ] || fail "the command menu shows $visible skills, expected 16"
 
+# --- F. The README says which command to use when ------------------------------------------
+grep -Fq '`revise` = the result is wrong · `learn` = the agent'"'"'s habit is wrong' "$repo_root/README.md" ||
+  fail "README must distinguish revise from learn"
+grep -Fq '## The 16 commands' "$repo_root/README.md" ||
+  fail "README heading must state the command count"
+
 printf 'ok - naming contract\n'

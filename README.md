@@ -149,54 +149,66 @@ One thing worth knowing: updating only refreshes the plugin's own files. If you 
 afterwards — that's a separate step, and it's the one that rewrites your own instruction
 file.
 
-## The 17 skills
+## The 16 commands
 
-**Track** — getting projects in, and seeing where they stand
+**Loop** — plan the work, do it, check it, fix it, ship it
 
-|Skill|Purpose|
+|Skill|Use it when|
 |-|-|
-|`todo-add`|Sets up a new project folder and adds it to the index|
-|`todo-list`|Renamed: merged into `todo-triage` in 1.16.0; the old name works until 2.0.0|
-|`todo-triage`|What's left in one project or all of them, with a suggested model per task; `archive` lists finished projects|
-|`todo-sync`|Tick tasks or change status by hand; `audit` checks it against what git shows|
+|`todo-add`|You start tracking something new — sets up the folder and the index row|
+|`todo-plan`|A project needs a plan — looks into the repo, then writes `plan.md` and `tasks.md`|
+|`todo-execute`|You want the checklist worked; `parallel` splits tasks across git worktree agents|
+|`todo-verify`|You want the check: runs the tests, ticks tasks, opens Revisions for failures, marks done once green and shipped|
+|`todo-revise`|The result is wrong — fixes what the check or you caught, then checks again|
+|`todo-push`|You want it shipped: branch → commit → push → PR → merge|
 
-**Work** — the loop itself, plus how projects depend on each other
+**Context**
 
-|Skill|Purpose|
+|Skill|Use it when|
 |-|-|
-|`todo-plan`|Looks into it, then writes `plan.md` and `tasks.md`|
-|`todo-execute`|Works through the checklist; `parallel` splits tasks across git worktree agents|
-|`todo-graph`|Say which projects block which, then ask what's ready, what's stuck, and why|
-|`todo-review`|Checks a diff against the plan — did it drift, is anything unproven|
-|`todo-review-handoff`|Packages a review so someone else can make the call — claims, what to check, a sheet to fill in|
-|`todo-verify`|The check: runs the tests, ticks tasks, opens Revisions for anything that failed, and marks the project done once it's green and shipped|
-|`todo-revise`|Fixes what the check caught, then checks again|
-
-**Bridge** — connecting the hub to your real repos
-
-|Skill|Purpose|
-|-|-|
-|`todo-refer`|Loads a project's context from any repo; `resume` works out where things stopped|
-|`todo-push`|The whole shipping run: branch → commit → push → PR → merge|
-|`todo-infographic`|Turns a plan into a one-page HTML infographic|
-|`todo-learn`|Turns "don't do that again" into a standing rule in that repo's own skill files|
+|`todo-refer`|You pick a project back up — loads its plan from any repo; `resume` says where things stopped|
+|`todo-triage`|You ask what's left, in one project or all of them, with a suggested model per task; `archive` lists finished projects|
 
 **Housekeeping**
 
-|Skill|Purpose|
+|Skill|Use it when|
 |-|-|
-|`todo-archive`|Moves finished rows into `archive.md` — nothing is thrown away|
-|`todo-style`|Swaps in the bundled response-style pack for Claude Code and Codex, backing your current file up first|
-|`todo-state`|Renamed to `todo-sync` in 1.16.0; the old name works until 2.0.0|
+|`todo-sync`|You tick tasks or change status by hand; `audit` checks the records against git|
+|`todo-archive`|Files get long or projects finish — moves history aside losslessly; `sort` ranks the index|
 
-**Shared** — not a command you run
+**Review**
+
+|Skill|Use it when|
+|-|-|
+|`todo-review`|You check a diff against the plan — did it drift, is anything unproven|
+|`todo-review-handoff`|Someone else must rule on a review, e.g. the PR's author — claims, what to check, a sheet to fill in|
+
+**Extras**
+
+|Skill|Use it when|
+|-|-|
+|`todo-graph`|Only when one project must wait for another — record the link, then ask what's ready or blocked|
+|`todo-learn`|The agent's habit is wrong — turns "don't do that again" into a standing rule in that repo|
+|`todo-infographic`|You want a plan as a one-page HTML infographic|
+|`todo-style`|You want the bundled response style for Claude Code and Codex (backs your file up first)|
+
+`revise` = the result is wrong · `learn` = the agent's habit is wrong · `conventions` = the plugin's own rulebook, not a command.
+
+**Internal** — hidden from the command menu; other skills read them
 
 |Skill|Purpose|
 |-|-|
 |`todo-conventions`|The hub contract every skill follows — where files live, how a project is looked up, what gets checked before a status changes|
 |`todo-llm-routing`|The shared settings that decide which model each skill asks for|
 
-All 17 above share both.
+**Renamed in 1.16.0** — the old names keep working until 2.0.0
+
+|Skill|Now|
+|-|-|
+|`todo-state`|Renamed to `todo-sync`|
+|`todo-list`|Renamed: merged into `todo-triage` (sorting moved to `todo-archive sort`)|
+
+All of these work in both Claude Code and Codex.
 
 Projects move through `planning → ready → in-progress → done`. If you want the full rules
 for a skill, they're in [`skills/`](skills/).
