@@ -1,6 +1,6 @@
 ---
 name: todo-graph
-description: Use when the user invokes /todo-graph, asks "what can I start?", "what's blocked and why?", "what does finishing X unlock?", how tracked projects depend on each other, requests a dependency path or graph audit/export, or wants to add/remove a typed project relationship. Also lists one project's real tasks with their IDs for other skills. Answers from a deterministic project graph and never guesses dependencies from prose. For "what's left and which model should do it", use todo-triage instead.
+description: Only needed when one project must wait for another. Use when the user invokes /todo-graph, asks "what can I start?", "what's blocked and why?", "what does finishing X unlock?", how tracked projects depend on each other, requests a dependency path or graph audit/export, or wants to add/remove a typed project relationship. Also lists one project's real tasks with their IDs for other skills. Answers from a deterministic project graph and never guesses dependencies from prose. For "what's left and which model should do it", use todo-triage instead.
 ---
 
 # Todo Graph

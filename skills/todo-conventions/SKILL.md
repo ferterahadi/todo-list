@@ -1,6 +1,7 @@
 ---
 name: todo-conventions
-description: Use when a todo-* skill needs the hub's shared contract — resolving paths against $TODO_HUB, looking a project up active-first then archived, validating a value before it reaches a shell, counting real task checkboxes, naming a task by its ID, reading a revision tag, deciding whether code work is shipped, gating a status flip on the project graph, or choosing between an act-now command and a next-session handoff. A reference, not a workflow; nothing here is invoked directly by the user.
+description: Internal — use when a todo-* skill needs the hub's shared contract — resolving paths against $TODO_HUB, looking a project up active-first then archived, validating a value before it reaches a shell, counting real task checkboxes, naming a task by its ID, reading a revision tag, deciding whether code work is shipped, gating a status flip on the project graph, or choosing between an act-now command and a next-session handoff. A reference, not a workflow; nothing here is invoked directly by the user.
+user-invocable: false
 ---
 
 # Hub conventions

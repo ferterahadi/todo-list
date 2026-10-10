@@ -128,4 +128,34 @@ grep -Fq '/todo-archive sort' "$repo_root/skills/todo-archive/SKILL.md" ||
 grep -Fq 'then again with `archive`' "$repo_root/skills/todo-list/SKILL.md" ||
   fail "/todo-list all must still show active and archived projects"
 
+# --- C. Internal skills are hidden from the command menu ------------------------------------
+hidden_expected="todo-conventions todo-llm-routing"
+hidden_actual=""
+for skill_file in "$repo_root"/skills/*/SKILL.md; do
+  if [ "$(frontmatter_field "$skill_file" user-invocable)" = "false" ]; then
+    hidden_actual="$hidden_actual $(basename "$(dirname "$skill_file")")"
+  fi
+done
+[ "${hidden_actual# }" = "$hidden_expected" ] ||
+  fail "hidden skills are '${hidden_actual# }', expected '$hidden_expected'"
+for name in $hidden_expected; do
+  case "$(description "$repo_root/skills/$name/SKILL.md")" in
+    "Internal — "*) ;;
+    *) fail "$name description must start with 'Internal — ' (Codex cannot hide skills)" ;;
+  esac
+done
+case "$(description "$repo_root/skills/todo-graph/SKILL.md")" in
+  "Only needed when one project must wait for another."*) ;;
+  *) fail "todo-graph description must open with when it is needed" ;;
+esac
+
+# --- D. Menu size -------------------------------------------------------------------------
+visible=0
+for skill_file in "$repo_root"/skills/*/SKILL.md; do
+  if [ "$(frontmatter_field "$skill_file" user-invocable)" = "false" ]; then continue; fi
+  if [ -n "$(frontmatter_metadata "$skill_file" renamed-to)" ]; then continue; fi
+  visible=$((visible + 1))
+done
+[ "$visible" -eq 16 ] || fail "the command menu shows $visible skills, expected 16"
+
 printf 'ok - naming contract\n'

@@ -1,6 +1,7 @@
 ---
 name: todo-llm-routing
-description: Use when choosing a Claude Code or Codex model for todo-list work, mapping capability tiers across providers, or balancing model cost, accuracy, and reasoning effort.
+description: Internal — use when choosing a Claude Code or Codex model for todo-list work, mapping capability tiers across providers, or balancing model cost, accuracy, and reasoning effort.
+user-invocable: false
 ---
 
 # Cross-platform model routing
