@@ -91,4 +91,30 @@ stale="$(stale_refs 'todo-state|state-contract\.sh')"
 [ -z "$stale" ] || fail "stale todo-state references:
 $stale"
 
+# --- B. Renamed-command aliases -----------------------------------------------------------
+aliases="todo-state:todo-sync"
+for pair in $aliases; do
+  old="${pair%%:*}"
+  new="${pair#*:}"
+  stub="$repo_root/skills/$old/SKILL.md"
+  [ -f "$stub" ] || fail "alias $old is missing"
+  [ "$(frontmatter_metadata "$stub" renamed-to)" = "$new" ] ||
+    fail "alias $old must declare metadata.renamed-to: $new"
+  target="$repo_root/skills/$new/SKILL.md"
+  [ -f "$target" ] || fail "alias $old points at missing skill $new"
+  [ -z "$(frontmatter_metadata "$target" renamed-to)" ] ||
+    fail "alias $old points at another alias ($new)"
+  [ "$(find "$repo_root/skills/$old" -type f | wc -l | tr -d ' ')" = "1" ] ||
+    fail "alias $old must contain only SKILL.md"
+  [ "$(wc -l < "$stub" | tr -d ' ')" -le 20 ] || fail "alias $old grew beyond a stub"
+  desc="$(description "$stub")"
+  case "$desc" in
+    *'"'*) fail "alias $old description carries quoted trigger phrases: $desc" ;;
+  esac
+  case "$desc" in
+    *"only when the user types /$old"*) ;;
+    *) fail "alias $old description must fire only on the typed name" ;;
+  esac
+done
+
 printf 'ok - naming contract\n'

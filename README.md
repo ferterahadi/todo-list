@@ -187,6 +187,7 @@ file.
 |-|-|
 |`todo-archive`|Moves finished rows into `archive.md` — nothing is thrown away|
 |`todo-style`|Swaps in the bundled response-style pack for Claude Code and Codex, backing your current file up first|
+|`todo-state`|Renamed to `todo-sync` in 1.16.0; the old name works until 2.0.0|
 
 **Shared** — not a command you run
 
