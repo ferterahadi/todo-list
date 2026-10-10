@@ -81,8 +81,8 @@ If `plan.md` is missing critical info (goal unclear, no repo path, no context), 
 
 ## Step 3 — Activate the project and update status
 
-A `done` row, active or archived, reopens through `todo-state` set mode —
-`/todo-state <short-name> in-progress`. It runs the status-flip gate, moves an archived row
+A `done` row, active or archived, reopens through `todo-sync` set mode —
+`/todo-sync <short-name> in-progress`. It runs the status-flip gate, moves an archived row
 back to its `index.md` section, preserves `started`, and clears `completed` /
 `elapsed (days)` in one edit. If it refuses, stop and report the blocker.
 
@@ -117,7 +117,7 @@ overwrite your working tree — the usual cause of "my changes vanished."
 - Resumed run: if that worktree/branch already exists, reuse it — don't recreate. One
   exception: a branch that already shipped would replay its squash-merged commits into
   the next PR. Check once with
-  `bash <todo-state-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" --fetch --hub "$TODO_HUB"`;
+  `bash <todo-sync-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" --fetch --hub "$TODO_HUB"`;
   when its `SUMMARY` shows `branch=merged`, `pr` not `open`, `unshipped=0`, and
   `uncommitted=0`, restart the branch at the base inside the same worktree:
   `git -C <repo>-wt/<short-name> switch -C todo/<short-name> origin/<base>`. Any
@@ -228,8 +228,8 @@ Update the active `index.md` row. Shipping is checked first, whether or not `pla
   gate that flips `done`, and it refuses while work is unmerged. Code-complete + unit
   tests ≠ done.
 - All tasks complete, shipped or hub-only, no `## Verification` block → set `done`, and
-  stamp `completed` = today plus `elapsed (days)` = `completed − started` (`todo-state`
-  § Date stamping). After a `/todo-push`, the same flip is `/todo-state <short-name> done`.
+  stamp `completed` = today plus `elapsed (days)` = `completed − started` (`todo-sync`
+  § Date stamping). After a `/todo-push`, the same flip is `/todo-sync <short-name> done`.
 
 Summarize:
 - What was completed

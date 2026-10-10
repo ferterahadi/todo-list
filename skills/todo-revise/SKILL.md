@@ -155,7 +155,7 @@ Rules:
   unticked until Step 6 closes the entry.
 - If a completed source task no longer holds, leave its original `[x]` as-is but note in the revision that the source is being corrected; the project status reconcile (Step 7) handles the rest.
 - If the project is `done`, active or archived, opening the first revision reopens it: hand
-  the flip to `todo-state` set mode — `/todo-state <short-name> in-progress` — which runs
+  the flip to `todo-sync` set mode — `/todo-sync <short-name> in-progress` — which runs
   the status-flip gate, moves an archived row back to `index.md`, and clears `completed` /
   `elapsed (days)` in one edit. If the gate refuses, keep the revision, leave the status,
   and report the blocker.
@@ -191,7 +191,7 @@ the host's structured choice prompt when available: "Does R<n> now match what yo
 expected?" with options
 "Accepted" / "Still off — here's the gap" / "Park it for now".
 
-- **Accepted** → re-confirm the source task's state via the same checkbox logic `todo-state` uses (re-check it if it had been reopened). Then close by the project's gate:
+- **Accepted** → re-confirm the source task's state via the same checkbox logic `todo-sync` uses (re-check it if it had been reopened). Then close by the project's gate:
   - `plan.md` has a `## Verification` block → tag the heading `[fixed — awaiting verify]`
     and leave its `- [ ]` unticked. `/todo-verify` ticks it, tags it `[done]`, and archives
     it on a green run; a red run sends it back to `[open]`.
@@ -206,13 +206,13 @@ Never claim a revision is fixed without the user accepting it or you having run 
 
 **Status honesty:** an `[open]` or `[fixed — awaiting verify]` revision still carries an
 unticked checkbox, so a project holding one is not done; a `done` project was already
-reopened through `todo-state` in Step 4. Never flip it to `done` here while fixes are
+reopened through `todo-sync` in Step 4. Never flip it to `done` here while fixes are
 unshipped or awaiting verification — hand off instead:
 
 - **Unshipped fixes** in `<repo>-wt/<short-name>` → `/todo-push` from that worktree first.
 - **Then** `/todo-verify <short-name>` when `plan.md` has a `## Verification` block — it
   closes the awaiting-verify entries and flips `done` — otherwise
-  `/todo-state <short-name> done`, which runs the graph gate and stamps the dates.
+  `/todo-sync <short-name> done`, which runs the graph gate and stamps the dates.
 - **Hub-only fixes, no `## Verification` block**, every revision closed and every task
   `[x]` → run the gate from
   [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § The status-flip gate

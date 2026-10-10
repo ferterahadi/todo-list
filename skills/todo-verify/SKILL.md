@@ -208,25 +208,25 @@ Decide status once, here, from `tasks.md` as Step 5 left it. `done` requires all
 4. **Graph gate** — § The status-flip gate passes, run now rather than reused from earlier.
 
 All four hold → set `done` without asking; this run is the gate the other skills defer to.
-Stamp `completed` = today and `elapsed (days)` per `todo-state` § Date stamping, never
+Stamp `completed` = today and `elapsed (days)` per `todo-sync` § Date stamping, never
 overwriting a real `started`. An archived project that stays `done` keeps its `archive.md`
 row, updated in place. Any check fails → the project is not `done`; report which check held
 it. A refused gate holds the *status*, never the ticks Step 5 wrote.
 
 **Reopening:** a project recorded as `done` that now has open work (check 2 — a failed run
-lands there through its `[open]` entries) is not done. Hand the flip to `todo-state` set
-mode — `/todo-state <short-name> in-progress` — which runs the status-flip gate, moves an
+lands there through its `[open]` entries) is not done. Hand the flip to `todo-sync` set
+mode — `/todo-sync <short-name> in-progress` — which runs the status-flip gate, moves an
 archived row back to `index.md`, and clears `completed` / `elapsed (days)` in one edit. If
 that gate refuses, leave the row and report both the open work and the blocker. A blocked
 run or an `[advisory]` entry never reopens a project.
 
 **Shipping check** — proof that the project's code reached `<base>`, as defined in
 [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Shipped work. A hub-only
-project (repo `-`, or execution skipped the worktree) passes. Otherwise run `todo-state`'s
+project (repo `-`, or execution skipped the worktree) passes. Otherwise run `todo-sync`'s
 evidence helper once:
 
 ```bash
-bash <todo-state-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" \
+bash <todo-sync-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" \
   --fetch --hub "$TODO_HUB"
 ```
 

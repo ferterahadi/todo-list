@@ -1,6 +1,6 @@
 ---
 name: todo-archive
-description: Use when the user invokes /todo-archive, says "compact tasks.md", "archive this project", "clean up the hub", "tidy the index", "this tasks file is huge", or a SessionStart archive-candidate report appears. Losslessly moves completed revision detail to anchored journal entries, leaves direct tombstones, and moves completed project rows from active index.md to cold archive.md.
+description: Use when the user invokes /todo-archive, says "compact tasks.md", "archive this project", "clean up the hub", "tidy the index", "this tasks file is huge", "sort the index", "rank projects by progress", or a SessionStart archive-candidate report appears. Losslessly moves completed revision detail to anchored journal entries, leaves direct tombstones, and moves completed project rows from active index.md to cold archive.md.
 ---
 
 # Project Archive Skill
@@ -28,9 +28,35 @@ Project-relative paths inside a row stay unchanged when it moves between registr
 /todo-archive                     scan the whole hub and propose a sweep
 /todo-archive api-token-rotation  compact one project
 /todo-archive registry            retire completed project rows only
+/todo-archive sort                reorder active index.md by completion
 ```
 
-Plain language counts: "this tasks file is enormous", "clean up my done projects".
+Plain language counts: "this tasks file is enormous", "clean up my done projects",
+"sort the index", "rank projects by progress".
+
+## Sort mode
+
+`/todo-archive sort` reorders section tables in active `index.md`, most complete first, and
+does nothing else — skip Steps 1–4. Never read or write `archive.md`; never reorder a
+legacy `## Archive` section.
+
+Completion is `done/total` from one hub-wide helper call, never one count per project:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py export "$TODO_HUB"
+```
+
+Use only `NODE` rows whose registry is `active`. Read the rows, not the exit status: exit 1
+only flags graph issues — mention `/todo-graph audit` when `ERROR` rows appear.
+
+- `tasks=0/0` (missing or empty `tasks.md`) is 0%; report it.
+- Sort descending by ratio; ties keep their existing relative order.
+- Keep sections independent and reproduce every non-row line byte-for-byte.
+- Helper unavailable → stop and report; do not count by hand.
+
+Delegate the mechanical reorder to a **fast**-tier subagent when available, passing the
+absolute hub root, the `done/total` per short-name, and the byte-preservation rule. Report
+the new order and `done/total` for each section without pasting the whole file.
 
 ## Step 1 — Run the deterministic report
 
@@ -134,11 +160,11 @@ Never retire a row the audit flags as a conflict. Report it and hand it off:
 
 - Archived status other than `done`, or a terminal `[open…]` or
   `[fixed — awaiting verify]` revision in any case (`registry_action=reactivate`) →
-  report the row and hand off `/todo-state <short-name> in-progress`. `todo-state` owns
+  report the row and hand off `/todo-sync <short-name> in-progress`. `todo-sync` owns
   the reverse move, the graph gate, and the date rules; do not edit the row here.
 - Active `done` row with open work — an open revision or any open real task, an unticked
   awaiting-verify checkbox included (`registry_action=reopen-status`) → keep it active
-  and hand off the same `/todo-state <short-name> in-progress`.
+  and hand off the same `/todo-sync <short-name> in-progress`.
 - Missing `tasks.md` or duplicate registry names → stop for that project; do not move
   the row or infer its state.
 
@@ -152,7 +178,7 @@ Move unknown paths under `## Other` and flag them for confirmation before any la
 reopen.
 
 This skill moves only `done` rows forward into `archive.md`. Every move back to
-`index.md` and every status change belongs to `todo-state`.
+`index.md` and every status change belongs to `todo-sync`.
 
 ## Step 4 — Verify and report
 
@@ -167,6 +193,6 @@ api-token-rotation  96KB → 11KB     12                    2       -
 queue-migration     -                -                     -       index → archive
 ```
 
-Include total bytes removed from `tasks.md`, and list each conflict handed to `todo-state`.
-`archive.md` is a cold file: default list, triage, `todo-state audit`, and execution scans
+Include total bytes removed from `tasks.md`, and list each conflict handed to `todo-sync`.
+`archive.md` is a cold file: default triage, `todo-sync audit`, and execution scans
 read only `index.md`; exact historical lookup falls back to `archive.md`.

@@ -15,14 +15,18 @@ fallback when nothing relevant is installed.
 Second house rule: **each shared rule is written once.** `todo-conventions` holds the
 contract every skill follows; a skill carries the operative one-liner where the rule binds
 and links back for the reasoning. Where a rule has a natural owner it stays there —
-date stamping in `todo-state`, revision archival in `todo-archive`, model tiers in
+date stamping in `todo-sync`, revision archival in `todo-archive`, model tiers in
 `todo-llm-routing` — and everyone else points at it. Two copies of a rule are two rules
 waiting to disagree.
 
+Menu: 16 commands, plus the renamed aliases `todo-state` and `todo-list` until 2.0.0.
+`todo-conventions` and `todo-llm-routing` are hidden from the command menu (other skills
+read them).
+
 | Skill | Purpose |
 |-------|---------|
-| `todo-list` | Show every active project at a glance with a task-progress column (`14/20 · 1 rev`); `archive` reads the cold completed registry and `sort` reorders active rows by task completion (fast tier) |
-| `todo-triage` | Tabulate what's left across projects and recommend frontier/deep/balanced/fast tier · effort · skill pairing per item (read-only; fast-tier gathering, routing judgment inline) |
+| `todo-list` | Renamed: merged into `todo-triage` in 1.16.0; the old name keeps working until 2.0.0 |
+| `todo-triage` | Tabulate what's left across projects and recommend frontier/deep/balanced/fast tier · effort · skill pairing per item (read-only; fast-tier gathering, routing judgment inline) · `archive` lists completed projects from `archive.md` |
 | `todo-refer` | Load project context — cross-repo, read-only, three modes. Default: `plan.md`+`tasks.md` as grounding. `resume`: where the work stopped (open tasks, last journal entry, blockers, worktree/branch/PR state) plus the next command. `R<n>`: follows the direct journal anchor and reads only that historical revision |
 | `todo-add` | Scaffold a new project folder + register it in `index.md` (fast tier) |
 | `todo-plan` | Write `plan.md` and `tasks.md` for a project |
@@ -30,10 +34,11 @@ waiting to disagree.
 | `todo-graph` | Compile typed `plan.md` relationships into the ready frontier, blocker chains, impact, forward and reverse paths, integrity audits, validated edits, and stable exports; `tasks` lists one project's real tasks with canonical IDs. Queries run inline |
 | `todo-review` | Review a repo's diff against the project's plan — scope drift, violated constraints, ticked tasks with no evidence — then a correctness pass via the installed `code-review` skill (report-only) |
 | `todo-review-handoff` | Package a review for someone else to adjudicate: findings become numbered falsifiable claims with confidence grades, a script spec that prints plain-English evidence per claim, and a ruling sheet whose columns include *reviewer is wrong*. Hub-optional — accepted rows feed `todo-revise`, or a standalone second-agent brief (deep tier) |
-| `todo-state` | Own the recorded state, both directions. Default: tick, add, or edit tasks and move status by hand. `audit`: cross-check the owning registry against `tasks.md` and target-repo git/PR evidence from `repo-evidence.sh` (fetched once per repo), report drift; `audit fix` applies after one confirmation. Also the hub's authority on `started`/`completed`/`elapsed` stamping (fast-tier edits and gathering; drift verdicts inline) |
+| `todo-sync` | Own the recorded state, both directions. Default: tick, add, or edit tasks and move status by hand. `audit`: cross-check the owning registry against `tasks.md` and target-repo git/PR evidence from `repo-evidence.sh` (fetched once per repo), report drift; `audit fix` applies after one confirmation. Also the hub's authority on `started`/`completed`/`elapsed` stamping (fast-tier edits and gathering; drift verdicts inline) |
+| `todo-state` | Renamed to `todo-sync` in 1.16.0; the old name keeps working until 2.0.0 |
 | `todo-verify` | The "check" gate: drive a record-only verification run, tick tasks, open Revisions on run failures and record coverage gaps as `[advisory]` entries that never block `done`; sets `done` itself when the run is green, no work is open, and the code shipped (balanced tier, high effort) |
 | `todo-revise` | Gap-driven rework: review done items, capture feedback per item, fix in the project worktree, mark accepted fixes `[fixed — awaiting verify]`, and verify; `R<n>` goes straight to one fix |
-| `todo-archive` | Lossless housekeeping: move closed revision detail behind direct journal links and move completed rows from active `index.md` to cold `archive.md`; open work blocks retirement and registry conflicts are handed to `todo-state` (fast tier) |
+| `todo-archive` | Lossless housekeeping: move closed revision detail behind direct journal links and move completed rows from active `index.md` to cold `archive.md`; open work blocks retirement and registry conflicts are handed to `todo-sync` (fast tier) · `sort` reorders active rows by task completion |
 | `todo-learn` | Capture a correction as one shared repo skill under `.agents/skills/` and `.claude/skills/` (balanced tier, high effort) |
 | `todo-infographic` | Turn a plan into a one-page HTML infographic, fresh theme each time (+ staleness hook). Generation uses balanced tier, high effort |
 | `todo-push` | General-purpose git shipping workflow (any repo): branch off the current HEAD, commit, push, PR, merge with the repo's own strategy, land back on the base branch. Also lands an existing branch's PR (`land.sh --merge-existing`). Plan phase balanced tier, land phase fast tier |
@@ -46,9 +51,10 @@ loop is `todo-plan` → `todo-execute` → `todo-verify` → `todo-revise`, with
 as an optional intent check between do and check and `todo-review-handoff` as its
 optional escape hatch when the person who must rule on the findings isn't the person who
 ran the review. `todo-graph` coordinates those loops
-through explicit `depends-on` edges; `todo-refer resume` / `todo-state audit` /
+through explicit `depends-on` edges; `todo-refer resume` / `todo-sync audit` /
 `todo-archive` keep multi-session work continuable, honest, and compact. Exact short-name
-lookups check active `index.md` first, then cold `archive.md` only on a miss.
+lookups check active `index.md` first, then cold `archive.md` only on a miss. `revise`
+fixes a wrong result; `learn` changes the agent's habit in a repo.
 
 ## Install
 

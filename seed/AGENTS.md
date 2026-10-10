@@ -65,10 +65,10 @@ session's skill listing and never invent a skill that isn't there.
 Prefer the `/todo-*` skills over hand edits:
 - `/todo-add` scaffold a project + index row · `/todo-plan` write plan.md/tasks.md
 - `/todo-execute` work the checklist (`tasks <ids>` for a subset · add `parallel` to fan independent tasks to worktree agents · serial merge queue lands PRs)
-- `/todo-state` flip status/checkboxes · `/todo-list` overview (`sort` reorders by completion)
+- `/todo-sync` flip status/checkboxes · `/todo-triage` what's left (`archive` lists finished projects) · `/todo-archive sort` reorders by completion
 - `/todo-verify` reconcile the verification result · `/todo-revise` fix gaps
 - `/todo-review` review a diff against the plan · `/todo-refer <name> resume` pick up where a project left off
-- `/todo-state audit` reconcile recorded status vs repo reality · `/todo-archive` compact tasks.md + move done rows to archive.md
+- `/todo-sync audit` reconcile recorded status vs repo reality · `/todo-archive` compact tasks.md + move done rows to archive.md
 - `/todo-triage` tabulate open tasks/revisions across projects + recommend a model tier per item
 - `/todo-graph` derive the ready frontier across projects, explain blockers, and validate/edit typed relationships
 - `/todo-infographic`, `/todo-refer`, `/todo-learn`

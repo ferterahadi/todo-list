@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Contract test for the state/context skills' deterministic repo evidence.
-# Drives skills/todo-state/scripts/repo-evidence.sh against scratch repos with a local bare
+# Drives skills/todo-sync/scripts/repo-evidence.sh against scratch repos with a local bare
 # remote and a stubbed `gh`, so nothing here touches GitHub or a real hub. It proves the
 # helper validates every input before running anything, derives owner/name and base from
 # the repo, fetches at most once, attributes branches/worktrees/PRs without collapsing
@@ -12,7 +12,7 @@ set -euo pipefail
 export PYTHONDONTWRITEBYTECODE=1
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-helper="$repo_root/skills/todo-state/scripts/repo-evidence.sh"
+helper="$repo_root/skills/todo-sync/scripts/repo-evidence.sh"
 bash_bin="$(command -v bash)"
 
 fail() {
@@ -374,11 +374,11 @@ r remote set-head origin main
 # ---------------------------------------------------------------------------
 # 7. Skill text uses the shared helpers and runnable commands only.
 # ---------------------------------------------------------------------------
-list_skill="$repo_root/skills/todo-list/SKILL.md"
+
 triage_skill="$repo_root/skills/todo-triage/SKILL.md"
-state_skill="$repo_root/skills/todo-state/SKILL.md"
+state_skill="$repo_root/skills/todo-sync/SKILL.md"
 refer_skill="$repo_root/skills/todo-refer/SKILL.md"
-for skill in "$list_skill" "$triage_skill" "$state_skill" "$refer_skill"; do
+for skill in "$triage_skill" "$state_skill" "$refer_skill"; do
   text="$(cat "$skill")"
   label="${skill#"$repo_root"/}"
   expect_contains "$label counts through graph-report" "$text" "graph-report.py"
@@ -386,6 +386,9 @@ for skill in "$list_skill" "$triage_skill" "$state_skill" "$refer_skill"; do
   expect_lacks "$label passes no registry owner" "$text" "<owner>/<repo>"
   expect_lacks "$label lists no repo-wide feat branches" "$text" "'feat/*'"
 done
+archive_skill="$repo_root/skills/todo-archive/SKILL.md"
+expect_contains "todo-archive sort counts through graph-report" "$(cat "$archive_skill")" "graph-report.py export"
+expect_contains "triage asks when a project is named archive" "$(cat "$triage_skill")" "literally named \`archive\`"
 for skill in "$state_skill" "$refer_skill"; do
   expect_contains "${skill#"$repo_root"/} gathers repo evidence via the helper" \
     "$(cat "$skill")" "repo-evidence.sh"
@@ -403,7 +406,7 @@ grep -Eq '/todo-revise [a-z0-9-]+ R[0-9]' "$triage_skill" ||
   fail "triage session plan lacks a runnable /todo-revise <short> R<n> line"
 refer_text="$(cat "$refer_skill")"
 expect_lacks "refer prints no second count from the archive context helper" "$refer_text" "archive-report.sh context"
-expect_contains "refer routes a finished project without a gate to done" "$refer_text" "| \`/todo-state <short-name> done\` |"
+expect_contains "refer routes a finished project without a gate to done" "$refer_text" "| \`/todo-sync <short-name> done\` |"
 expect_contains "refer routes a planning project to todo-plan" "$refer_text" "| \`/todo-plan <short-name>\` |"
 expect_contains "refer targets a revision by ID" "$refer_text" "| \`/todo-revise <short-name> R<n>\` |"
 

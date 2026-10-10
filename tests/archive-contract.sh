@@ -480,7 +480,7 @@ esac
 expect_contains "$repo_root/seed/archive.md" '# Project Archive'
 expect_contains "$repo_root/skills/todo-archive/SKILL.md" '$TODO_HUB/archive.md'
 expect_contains "$repo_root/skills/todo-refer/SKILL.md" 'archive.md'
-expect_contains "$repo_root/skills/todo-list/SKILL.md" 'archive.md'
+expect_contains "$repo_root/skills/todo-triage/SKILL.md" 'archive.md'
 
 if grep -Eq '^## Archive$' "$repo_root/seed/index.md"; then
   fail "seed/index.md must remain active-only"
@@ -489,7 +489,7 @@ fi
 for skill in \
   "$repo_root/skills/todo-archive/SKILL.md" \
   "$repo_root/skills/todo-revise/SKILL.md" \
-  "$repo_root/skills/todo-state/SKILL.md"; do
+  "$repo_root/skills/todo-sync/SKILL.md"; do
   expect_matches \
     "$skill" \
     'artifacts/journal\.md#revision-r(<n>|[0-9]+[A-Za-z]*)'
