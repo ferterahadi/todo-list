@@ -162,7 +162,7 @@ a blocked merge as exit 10 without ever passing `--admin` or force-pushing, and 
 linked worktree neither checks out the base branch nor passes `--delete-branch`; and that
 `land.sh --merge-existing` merges an open PR without deleting or switching branches.
 
-Run `tests/state-contract.sh` for changes to `/todo-state`, `/todo-refer`, `/todo-list`,
+Run `tests/sync-contract.sh` for changes to `/todo-sync`, `/todo-refer`, `/todo-list`,
 `/todo-triage`, or `repo-evidence.sh`. It drives the helper against local bare repos with a
 stubbed `gh`, and must prove inputs are validated before anything runs, the repo is fetched
 at most once, `unknown` stays distinct from `absent`, and merge, rebase, squash, and PR

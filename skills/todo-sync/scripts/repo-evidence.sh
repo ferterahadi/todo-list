@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Read-only git and GitHub evidence for the hub projects that share one target repo.
-# /todo-state audit calls it once per distinct repo; /todo-refer resume calls it for one
+# /todo-sync audit calls it once per distinct repo; /todo-refer resume calls it for one
 # project. Every value is derived from the repo itself — nothing comes from the registry
 # except the repo path and the short-names, and both are validated before use.
 #

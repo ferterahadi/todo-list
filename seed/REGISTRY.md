@@ -88,7 +88,7 @@ A row that appears directly as `done` — retroactive bookkeeping — falls back
 cleared alongside `completed`.
 
 **The mechanical rules — which flip stamps what, and what overwrites what — live in
-`todo-state` § Date stamping.** That section is the authority; every skill that flips a
+`todo-sync` § Date stamping.** That section is the authority; every skill that flips a
 status follows it.
 
 ### `infographic`

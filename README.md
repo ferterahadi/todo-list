@@ -158,7 +158,7 @@ file.
 |`todo-add`|Sets up a new project folder and adds it to the index|
 |`todo-list`|Shows the index by status; also does `archive` and `sort`|
 |`todo-triage`|Lists open work across every project and suggests a model for each task|
-|`todo-state`|Tick tasks or change status by hand; `audit` checks it against what git shows|
+|`todo-sync`|Tick tasks or change status by hand; `audit` checks it against what git shows|
 
 **Work** — the loop itself, plus how projects depend on each other
 

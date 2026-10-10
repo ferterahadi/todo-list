@@ -225,4 +225,4 @@ otherwise return the requested slice in chat.
   are registry-wide and block every project.
 - Read-only modes never edit. Link validation happens before the single plan-row edit.
 - Do not auto-change status when a dependency regresses. Report an in-progress dependent
-  as at risk and let `todo-state audit` reconcile state deliberately.
+  as at risk and let `todo-sync audit` reconcile state deliberately.

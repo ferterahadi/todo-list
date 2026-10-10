@@ -134,11 +134,11 @@ Never retire a row the audit flags as a conflict. Report it and hand it off:
 
 - Archived status other than `done`, or a terminal `[open…]` or
   `[fixed — awaiting verify]` revision in any case (`registry_action=reactivate`) →
-  report the row and hand off `/todo-state <short-name> in-progress`. `todo-state` owns
+  report the row and hand off `/todo-sync <short-name> in-progress`. `todo-sync` owns
   the reverse move, the graph gate, and the date rules; do not edit the row here.
 - Active `done` row with open work — an open revision or any open real task, an unticked
   awaiting-verify checkbox included (`registry_action=reopen-status`) → keep it active
-  and hand off the same `/todo-state <short-name> in-progress`.
+  and hand off the same `/todo-sync <short-name> in-progress`.
 - Missing `tasks.md` or duplicate registry names → stop for that project; do not move
   the row or infer its state.
 
@@ -152,7 +152,7 @@ Move unknown paths under `## Other` and flag them for confirmation before any la
 reopen.
 
 This skill moves only `done` rows forward into `archive.md`. Every move back to
-`index.md` and every status change belongs to `todo-state`.
+`index.md` and every status change belongs to `todo-sync`.
 
 ## Step 4 — Verify and report
 
@@ -167,6 +167,6 @@ api-token-rotation  96KB → 11KB     12                    2       -
 queue-migration     -                -                     -       index → archive
 ```
 
-Include total bytes removed from `tasks.md`, and list each conflict handed to `todo-state`.
-`archive.md` is a cold file: default list, triage, `todo-state audit`, and execution scans
+Include total bytes removed from `tasks.md`, and list each conflict handed to `todo-sync`.
+`archive.md` is a cold file: default list, triage, `todo-sync audit`, and execution scans
 read only `index.md`; exact historical lookup falls back to `archive.md`.

@@ -1,6 +1,6 @@
 ---
 name: todo-list
-description: Use when the user invokes /todo-list, asks to list projects, wants the status overview of all projects ("what am I working on", "how far along is everything"), asks to show completed/archived projects, or says "sort the index", "rank projects by progress", or "reorder index.md". Hub-wide overview only — one project's context or where-was-I is todo-refer, and changing or auditing recorded state is todo-state. Default view reads active index.md plus one progress count; archive view reads cold archive.md; sort reorders active rows only.
+description: Use when the user invokes /todo-list, asks to list projects, wants the status overview of all projects ("what am I working on", "how far along is everything"), asks to show completed/archived projects, or says "sort the index", "rank projects by progress", or "reorder index.md". Hub-wide overview only — one project's context or where-was-I is todo-refer, and changing or auditing recorded state is todo-sync. Default view reads active index.md plus one progress count; archive view reads cold archive.md; sort reorders active rows only.
 ---
 
 # Project List Skill
@@ -107,6 +107,6 @@ the new order and `done/total` for each section without pasting the whole file.
 
 - View modes are idempotent and read-only.
 - Sort changes row order only.
-- Status or checkbox changes belong to `todo-state`.
+- Status or checkbox changes belong to `todo-sync`.
 - Registry status is not dependency readiness. “What can I start now?” belongs to
   `todo-graph`, which evaluates canonical `depends-on` edges and completion evidence.

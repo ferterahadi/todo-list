@@ -13,7 +13,7 @@ picks the session model or dispatch target per task instead of running everythin
 the most expensive model by default.
 
 This is **read-only**. Never edit `index.md`, `tasks.md`, `plan.md`, or any project
-file. To change state use `/todo-state`; to do the work use `/todo-execute`.
+file. To change state use `/todo-sync`; to do the work use `/todo-execute`.
 
 ## The model this runs on
 

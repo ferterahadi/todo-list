@@ -262,11 +262,11 @@ registry until the user confirms.
 
 - Set `repo` to the confirmed absolute local path.
 - `planning` → set `ready` and stamp `started` = today, overwriting the creation stamp
-  `/todo-add` left (`todo-state` § Date stamping).
+  `/todo-add` left (`todo-sync` § Date stamping).
 - `ready` or `in-progress` → leave `status` and `started` alone; a replan never demotes
   work that has begun, and never clobbers a real start date.
 - `done`, active or archived → a replan that leaves open tasks reopens it: hand the flip to
-  `todo-state` set mode — `/todo-state <short-name> in-progress` — which runs the
+  `todo-sync` set mode — `/todo-sync <short-name> in-progress` — which runs the
   status-flip gate, moves an archived row back to `index.md`, and clears `completed` /
   `elapsed (days)` in one edit. A replan that adds no open task leaves it `done`.
 

@@ -53,7 +53,7 @@ exists in either registry or any section:
 
 - Stop. Do not overwrite or scaffold over it.
 - Point the user at the existing project, its active/archived location, and status. Suggest
-  either a different short-name or `/todo-state <existing-name> in-progress` to
+  either a different short-name or `/todo-sync <existing-name> in-progress` to
   reopen an archived project; never reuse an archived identity.
 
 Also check that the target folder `projects/<work|self-initiative>/<short-name>/` doesn't already exist on disk — if it does, treat it as a collision the same way.
@@ -97,7 +97,7 @@ Add a row to the correct section table (`## Work` or `## Self-initiative`) in `i
 - `status` is `planning` — the plan isn't filled in yet.
 - `started` is today's date (`YYYY-MM-DD`) — the lowest-tier provisional stamp, overwritten
   by a later `ready` or `in-progress` flip. `completed` and `elapsed (days)` stay `-`. See
-  `todo-state` § Date stamping for the full tier chain.
+  `todo-sync` § Date stamping for the full tier chain.
 - `infographic` stays `-` — `/todo-infographic` fills it after the plan exists.
 - `related` stays `-` for new projects. It is a legacy context-only field retained for
   existing hubs; canonical typed relationships now live in `plan.md`.

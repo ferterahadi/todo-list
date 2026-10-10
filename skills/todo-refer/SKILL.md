@@ -10,7 +10,7 @@ description: >-
   history questions. Replaces the former /todo-resume, which is now this skill's `resume`
   mode — treat that spelling as an invocation of this skill. Read-only, one project,
   active-or-archived, and cross-repo; the all-projects overview is todo-list, and
-  changing or auditing recorded state is todo-state.
+  changing or auditing recorded state is todo-sync.
 ---
 
 # Project Refer Skill
@@ -72,7 +72,7 @@ project folder as `$TODO_HUB/<path>`.
 For an archived row, always run Step 2's task listing—even on the revision-only fast
 path. `done < total` or `open_revisions` above zero means the registry is stale. Keep
 this read-only, flag the mismatch, and direct the user to
-`/todo-state <short-name> in-progress`.
+`/todo-sync <short-name> in-progress`.
 
 ## Step 2 — Read current context economically
 
@@ -164,11 +164,11 @@ names as non-blocking context only. Never infer a dependency from the fallback.
 
 ## Step 5 — Gather the repo trail (resume mode only)
 
-If the owning registry row names a target repo (not `-`), run `todo-state`'s read-only
+If the owning registry row names a target repo (not `-`), run `todo-sync`'s read-only
 evidence helper once:
 
 ```bash
-bash <todo-state-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" --hub "$TODO_HUB"
+bash <todo-sync-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" --hub "$TODO_HUB"
 ```
 
 It validates both values, derives the GitHub slug and base branch from `origin`, and
@@ -236,7 +236,7 @@ recommendation, with at most one alternative:
 | Only blocked tasks remain | name the blocker — no command unblocks a missing credential |
 | Open tasks | `/todo-execute <short-name>` |
 | All tasks done, `## Verification` block in plan.md | `/todo-verify <short-name>` |
-| All tasks done, no `## Verification` block, shipped | `/todo-state <short-name> done` |
+| All tasks done, no `## Verification` block, shipped | `/todo-sync <short-name> done` |
 
 An `unknown` repo field leaves shipping unproven: name the gap instead of recommending
 `done`. `[advisory]` entries are optional — mention them, never as the primary line.
@@ -253,6 +253,6 @@ command or edit hub files.
 - Uncommitted changes in a worktree are the highest-priority resume signal: surface them
   first, they're the easiest thing to lose.
 - If hub state and repo state disagree (tasks ticked but no commits anywhere, or merged
-  PRs for unticked tasks), say so in the digest and point at `/todo-state audit` — don't
+  PRs for unticked tasks), say so in the digest and point at `/todo-sync audit` — don't
   reconcile here.
-- To change state use `todo-state`; to execute use `todo-execute`.
+- To change state use `todo-sync`; to execute use `todo-execute`.

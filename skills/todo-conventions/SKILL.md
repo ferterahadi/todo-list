@@ -202,10 +202,10 @@ Code work is shipped when all of these hold:
   beyond it, every commit patch-equivalent to one on base (`git cherry`, covers rebase
   merges), or its tip equals a MERGED PR's `headRefOid` (covers squash merges).
 
-`skills/todo-state/scripts/repo-evidence.sh` implements this check; skills call it rather
+`skills/todo-sync/scripts/repo-evidence.sh` implements this check; skills call it rather
 than re-deriving it. A check that cannot run means unknown, and unknown holds `done`: it
 never reopens a `done` project on its own. Reopening a `done` project, active or
-archived, always goes through `/todo-state <short-name> in-progress`.
+archived, always goes through `/todo-sync <short-name> in-progress`.
 
 ## Session handoff
 
@@ -255,7 +255,7 @@ name is real and the fallback is silent.
 
 ## Date stamping
 
-`todo-state` § Date stamping is the authority on `started`, `completed`, and
+`todo-sync` § Date stamping is the authority on `started`, `completed`, and
 `elapsed (days)` for the whole hub. Any skill that flips a status applies those rules in
 the same edit as the status change — read them there rather than restating them.
 
@@ -265,5 +265,5 @@ the same edit as the status change — read them there rather than restating the
 the interrupted-run conflict rule. Any skill that closes a revision applies that procedure by
 reference. Archive only `[done…]` entries, never `[open]`, `[fixed — awaiting verify]`, or
 `[advisory]` ones, and match `[done` case-insensitively so `[DONE 2026-07-13]` cannot
-escape. Registry state conflicts the archive audit finds go to `todo-state`, which owns
+escape. Registry state conflicts the archive audit finds go to `todo-sync`, which owns
 every status flip.

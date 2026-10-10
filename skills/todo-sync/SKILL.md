@@ -1,8 +1,8 @@
 ---
-name: todo-state
+name: todo-sync
 description: >-
   Use when the user wants to change or audit a hub project's recorded state — invokes
-  /todo-state, says "mark X as done", "tick off task Y", "uncheck that", "add a task to
+  /todo-sync, says "mark X as done", "tick off task Y", "uncheck that", "add a task to
   X", "reword task 2.3", "set this to in-progress", "reopen this archived project", "mark
   this project done", or wants to record progress without a full execution pass — and
   equally when they say "is the index accurate", "does the todo match reality", "audit my
@@ -11,9 +11,8 @@ description: >-
   or archived registry row in sync; `audit` only reports drift against tasks and git
   evidence, and `audit fix` applies it after one confirmation. Not for looking: the
   all-projects overview is todo-list, and one project's context or where-was-I is
-  todo-refer. Replaces the former /todo-update-state (now the default mode) and
-  /todo-sync (now `audit`) — treat either of those spellings as an invocation of this
-  skill.
+  todo-refer. Renamed from todo-state in 1.16.0; the older /todo-update-state spelling
+  also means this skill.
 ---
 
 # Project State Skill
@@ -64,16 +63,16 @@ absolute root to any edit subagent so it writes there, not into the cwd. Validat
 ## How the user invokes this
 
 ```
-/todo-state queue-migration                       ← show its status, then ask what to change
-/todo-state queue-migration 2.1 2.3 done          ← tick tasks by ID
-/todo-state queue-migration 2.3 undone            ← untick a task
-/todo-state queue-migration add "Alert on DLQ depth" under 4   ← append one task to Phase 4
-/todo-state queue-migration 2.3 edit "Retry with jittered backoff"   ← reword one task
-/todo-state queue-migration in-progress           ← status only; reopens an archived row
-/todo-state queue-migration done                  ← mark the whole project done
-/todo-state                                       ← ask which project, or act on context
-/todo-state audit [queue-migration]               ← report drift; writes nothing
-/todo-state audit fix [queue-migration]           ← report, confirm once, apply
+/todo-sync queue-migration                       ← show its status, then ask what to change
+/todo-sync queue-migration 2.1 2.3 done          ← tick tasks by ID
+/todo-sync queue-migration 2.3 undone            ← untick a task
+/todo-sync queue-migration add "Alert on DLQ depth" under 4   ← append one task to Phase 4
+/todo-sync queue-migration 2.3 edit "Retry with jittered backoff"   ← reword one task
+/todo-sync queue-migration in-progress           ← status only; reopens an archived row
+/todo-sync queue-migration done                  ← mark the whole project done
+/todo-sync                                       ← ask which project, or act on context
+/todo-sync audit [queue-migration]               ← report drift; writes nothing
+/todo-sync audit fix [queue-migration]           ← report, confirm once, apply
 ```
 
 The user will usually say what they want in plain language. Set mode: "mark the migration
@@ -174,7 +173,7 @@ direct state edit must not bypass the dependency check `/todo-execute` enforces 
 loophole is the whole reason the gate is repeated here.
 
 **Reopen an archived project** — any status change on an `archive.md` row, including
-`/todo-state <short-name> in-progress` handed off by `todo-archive` for an archived row
+`/todo-sync <short-name> in-progress` handed off by `todo-archive` for an archived row
 with open work or a non-`done` status, is also a registry move:
 
 1. Gate first when the target is `in-progress`. A refusal moves nothing.
@@ -200,7 +199,7 @@ otherwise disagree, reconcile — and say what you did:
 - All tasks now checked and no open revisions, but status isn't `done` → offer to set it
   `done` (or just set it and report, if the user already said "mark done").
 - A task got unchecked or added on a project marked `done` → it's no longer truly done;
-  flag it and offer `/todo-state <short-name> in-progress` (for an archived row, that
+  flag it and offer `/todo-sync <short-name> in-progress` (for an archived row, that
   reopens it).
 - First task checked on a `planning`/`ready` project → work has started; suggest
   `in-progress`, stamping dates from the state before this edit.
@@ -227,7 +226,7 @@ kept consistent.
 
 # Audit mode
 
-`/todo-state audit` detects and reports; it never writes. `/todo-state audit fix` runs the
+`/todo-sync audit` detects and reports; it never writes. `/todo-sync audit fix` runs the
 same detection, shows the board with the exact edits it would make, asks **once**, and
 applies them on a yes — or only the rows the user names. A "yes, fix them" reply after a
 plain audit is `audit fix`: show the edits and ask that one question before writing.
@@ -257,7 +256,7 @@ Four sources, cross-checked:
    two spellings of one path are one repo) and run the helper **once per distinct repo**,
    passing every short-name on it:
    ```bash
-   bash <todo-state-skill-dir>/scripts/repo-evidence.sh "<repo>" <short-name>... \
+   bash <todo-sync-skill-dir>/scripts/repo-evidence.sh "<repo>" <short-name>... \
      --fetch --hub "$TODO_HUB"
    ```
    It validates its inputs, derives owner/name from `origin`, the base from `origin/HEAD`,
@@ -352,7 +351,7 @@ not a judgment call: read the value, don't reason about what it probably was.
 
 Every drifted row cites its evidence (PR URL, branch, task IDs) — a verdict without the
 evidence line is not reportable. A plain `audit` ends here, with
-`/todo-state audit fix` as the act-now pointer when anything drifted.
+`/todo-sync audit fix` as the act-now pointer when anything drifted.
 
 ## Step A5 — Apply fixes (`audit fix` only)
 
