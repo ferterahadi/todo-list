@@ -1,6 +1,6 @@
 ---
 name: todo-triage
-description: Use when the user invokes /todo-triage, says "what's left", "tabulate remaining work", "which model should handle this", "triage my tasks", or wants a cross-project table of open tasks with a recommended model per task. Read-only — tabulates and recommends, never edits.
+description: Use when the user invokes /todo-triage, says "what's left", "tabulate remaining work", "which model should handle this", "triage my tasks", "what am I working on", "show completed projects", or wants a table of open tasks with a recommended model per task, for one project or the whole hub. Read-only — tabulates and recommends, never edits.
 ---
 
 # Project Triage Skill
@@ -47,10 +47,29 @@ registry short-name in full — a shortened name resolves to nothing.
 /todo-triage                              ← every ready/in-progress project
 /todo-triage rmq-vertical-scaler-quorum-queue   ← one project
 /todo-triage work                         ← one section (work | self-initiative)
+/todo-triage archive                      ← finished projects from archive.md
 ```
 
 Plain language counts too: "what's left across my projects", "which model for these
-tasks", "triage the quorum queue work".
+tasks", "triage the quorum queue work", "show completed projects", "what am I working on".
+
+`archive` is the archive view unless a project is literally named `archive`; then ask
+which one the user meant instead of guessing.
+
+## Archive view
+
+`/todo-triage archive` lists finished projects from cold `$TODO_HUB/archive.md` instead of
+triaging open work. Take progress from one helper call and read nothing else:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py export "$TODO_HUB"
+```
+
+Render each archived section as a compact table — `short-name`, `repo`, `completed`, and
+progress from the matching `NODE` row with registry `archive`: `tasks=<done>/<total>`, plus
+`· <n> rev` when `open_revisions` is above zero. A row with open work is stale: say so and
+point at `/todo-sync <short-name> in-progress`. If `archive.md` is absent or has no rows,
+say there are no archived projects; never scaffold it. The archive view skips Steps 1–5.
 
 ## Step 1 — Resolve scope
 
@@ -266,7 +285,7 @@ The fast row shows the effort the routing skill lists for the host running the t
 - `[advisory]` entries go on one `Optional:` line under the table, never in it; they are
   not counted in the card's total or the totals line.
 - Blocked tasks get a `⛔ blocked` model cell with the blocker one-liner as the why.
-- Order cards most-complete first (same instinct as `/todo-list sort`), but don't edit
+- Order cards most-complete first (same instinct as `/todo-archive sort`), but don't edit
   `index.md` order — this is display only.
 
 ## Step 5 — Summarize and point at execution

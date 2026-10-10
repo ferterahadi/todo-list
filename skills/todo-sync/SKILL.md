@@ -10,7 +10,7 @@ description: >-
   drifted from what actually happened in the repos. Edits tasks.md and the owning active
   or archived registry row in sync; `audit` only reports drift against tasks and git
   evidence, and `audit fix` applies it after one confirmation. Not for looking: the
-  all-projects overview is todo-list, and one project's context or where-was-I is
+  all-projects overview is todo-triage, and one project's context or where-was-I is
   todo-refer. Renamed from todo-state in 1.16.0; the older /todo-update-state spelling
   also means this skill.
 ---

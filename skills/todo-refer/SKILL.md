@@ -9,7 +9,7 @@ description: >-
   session on a project with prior work. Also handles "what happened in R4"-style revision
   history questions. Replaces the former /todo-resume, which is now this skill's `resume`
   mode — treat that spelling as an invocation of this skill. Read-only, one project,
-  active-or-archived, and cross-repo; the all-projects overview is todo-list, and
+  active-or-archived, and cross-repo; the all-projects overview is todo-triage, and
   changing or auditing recorded state is todo-sync.
 ---
 
@@ -64,7 +64,7 @@ loading either file into model context. Three fallbacks are this skill's own:
 - No name, grounding mode → list active names from `index.md` only and ask which project.
 - No name, resume mode → pick the active `in-progress` project whose `tasks.md` changed
   most recently (`ls -t`), say which one you picked, and offer the others. No
-  `in-progress` projects at all → show the index the way `/todo-list` does and ask.
+  `in-progress` projects at all → list the active rows of `index.md` and ask.
 
 Record the owning registry, section, path, repo, status, and related names. Resolve the
 project folder as `$TODO_HUB/<path>`.

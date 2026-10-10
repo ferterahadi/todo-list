@@ -374,11 +374,11 @@ r remote set-head origin main
 # ---------------------------------------------------------------------------
 # 7. Skill text uses the shared helpers and runnable commands only.
 # ---------------------------------------------------------------------------
-list_skill="$repo_root/skills/todo-list/SKILL.md"
+
 triage_skill="$repo_root/skills/todo-triage/SKILL.md"
 state_skill="$repo_root/skills/todo-sync/SKILL.md"
 refer_skill="$repo_root/skills/todo-refer/SKILL.md"
-for skill in "$list_skill" "$triage_skill" "$state_skill" "$refer_skill"; do
+for skill in "$triage_skill" "$state_skill" "$refer_skill"; do
   text="$(cat "$skill")"
   label="${skill#"$repo_root"/}"
   expect_contains "$label counts through graph-report" "$text" "graph-report.py"
@@ -386,6 +386,9 @@ for skill in "$list_skill" "$triage_skill" "$state_skill" "$refer_skill"; do
   expect_lacks "$label passes no registry owner" "$text" "<owner>/<repo>"
   expect_lacks "$label lists no repo-wide feat branches" "$text" "'feat/*'"
 done
+archive_skill="$repo_root/skills/todo-archive/SKILL.md"
+expect_contains "todo-archive sort counts through graph-report" "$(cat "$archive_skill")" "graph-report.py export"
+expect_contains "triage asks when a project is named archive" "$(cat "$triage_skill")" "literally named \`archive\`"
 for skill in "$state_skill" "$refer_skill"; do
   expect_contains "${skill#"$repo_root"/} gathers repo evidence via the helper" \
     "$(cat "$skill")" "repo-evidence.sh"

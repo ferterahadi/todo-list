@@ -1,6 +1,6 @@
 ---
 name: todo-archive
-description: Use when the user invokes /todo-archive, says "compact tasks.md", "archive this project", "clean up the hub", "tidy the index", "this tasks file is huge", or a SessionStart archive-candidate report appears. Losslessly moves completed revision detail to anchored journal entries, leaves direct tombstones, and moves completed project rows from active index.md to cold archive.md.
+description: Use when the user invokes /todo-archive, says "compact tasks.md", "archive this project", "clean up the hub", "tidy the index", "this tasks file is huge", "sort the index", "rank projects by progress", or a SessionStart archive-candidate report appears. Losslessly moves completed revision detail to anchored journal entries, leaves direct tombstones, and moves completed project rows from active index.md to cold archive.md.
 ---
 
 # Project Archive Skill
@@ -28,9 +28,34 @@ Project-relative paths inside a row stay unchanged when it moves between registr
 /todo-archive                     scan the whole hub and propose a sweep
 /todo-archive api-token-rotation  compact one project
 /todo-archive registry            retire completed project rows only
+/todo-archive sort                reorder active index.md by completion
 ```
 
-Plain language counts: "this tasks file is enormous", "clean up my done projects".
+Plain language counts: "this tasks file is enormous", "clean up my done projects",
+"sort the index", "rank projects by progress".
+
+## Sort mode
+
+`/todo-archive sort` reorders section tables in active `index.md`, most complete first, and
+does nothing else — skip Steps 1–4. Never read or write `archive.md`; never reorder a
+legacy `## Archive` section.
+
+Completion is `done/total` from one hub-wide helper call, never one count per project:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py export "$TODO_HUB"
+```
+
+Use only `NODE` rows whose registry is `active`.
+
+- `tasks=0/0` (missing or empty `tasks.md`) is 0%; report it.
+- Sort descending by ratio; ties keep their existing relative order.
+- Keep sections independent and reproduce every non-row line byte-for-byte.
+- Helper unavailable → stop and report; do not count by hand.
+
+Delegate the mechanical reorder to a **fast**-tier subagent when available, passing the
+absolute hub root, the `done/total` per short-name, and the byte-preservation rule. Report
+the new order and `done/total` for each section without pasting the whole file.
 
 ## Step 1 — Run the deterministic report
 

@@ -21,8 +21,8 @@ waiting to disagree.
 
 | Skill | Purpose |
 |-------|---------|
-| `todo-list` | Show every active project at a glance with a task-progress column (`14/20 · 1 rev`); `archive` reads the cold completed registry and `sort` reorders active rows by task completion (fast tier) |
-| `todo-triage` | Tabulate what's left across projects and recommend frontier/deep/balanced/fast tier · effort · skill pairing per item (read-only; fast-tier gathering, routing judgment inline) |
+| `todo-list` | Renamed: merged into `todo-triage` in 1.16.0; the old name keeps working until 2.0.0 |
+| `todo-triage` | Tabulate what's left across projects and recommend frontier/deep/balanced/fast tier · effort · skill pairing per item (read-only; fast-tier gathering, routing judgment inline) · `archive` lists completed projects from `archive.md` |
 | `todo-refer` | Load project context — cross-repo, read-only, three modes. Default: `plan.md`+`tasks.md` as grounding. `resume`: where the work stopped (open tasks, last journal entry, blockers, worktree/branch/PR state) plus the next command. `R<n>`: follows the direct journal anchor and reads only that historical revision |
 | `todo-add` | Scaffold a new project folder + register it in `index.md` (fast tier) |
 | `todo-plan` | Write `plan.md` and `tasks.md` for a project |
@@ -34,7 +34,7 @@ waiting to disagree.
 | `todo-state` | Renamed to `todo-sync` in 1.16.0; the old name keeps working until 2.0.0 |
 | `todo-verify` | The "check" gate: drive a record-only verification run, tick tasks, open Revisions on run failures and record coverage gaps as `[advisory]` entries that never block `done`; sets `done` itself when the run is green, no work is open, and the code shipped (balanced tier, high effort) |
 | `todo-revise` | Gap-driven rework: review done items, capture feedback per item, fix in the project worktree, mark accepted fixes `[fixed — awaiting verify]`, and verify; `R<n>` goes straight to one fix |
-| `todo-archive` | Lossless housekeeping: move closed revision detail behind direct journal links and move completed rows from active `index.md` to cold `archive.md`; open work blocks retirement and registry conflicts are handed to `todo-sync` (fast tier) |
+| `todo-archive` | Lossless housekeeping: move closed revision detail behind direct journal links and move completed rows from active `index.md` to cold `archive.md`; open work blocks retirement and registry conflicts are handed to `todo-sync` (fast tier) · `sort` reorders active rows by task completion |
 | `todo-learn` | Capture a correction as one shared repo skill under `.agents/skills/` and `.claude/skills/` (balanced tier, high effort) |
 | `todo-infographic` | Turn a plan into a one-page HTML infographic, fresh theme each time (+ staleness hook). Generation uses balanced tier, high effort |
 | `todo-push` | General-purpose git shipping workflow (any repo): branch off the current HEAD, commit, push, PR, merge with the repo's own strategy, land back on the base branch. Also lands an existing branch's PR (`land.sh --merge-existing`). Plan phase balanced tier, land phase fast tier |

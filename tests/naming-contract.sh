@@ -92,7 +92,7 @@ stale="$(stale_refs 'todo-state|state-contract\.sh')"
 $stale"
 
 # --- B. Renamed-command aliases -----------------------------------------------------------
-aliases="todo-state:todo-sync"
+aliases="todo-state:todo-sync todo-list:todo-triage"
 for pair in $aliases; do
   old="${pair%%:*}"
   new="${pair#*:}"
@@ -116,5 +116,16 @@ for pair in $aliases; do
     *) fail "alias $old description must fire only on the typed name" ;;
   esac
 done
+
+# --- E. todo-list is merged into todo-triage ------------------------------------------------
+stale="$(stale_refs '(^|[[:space:]`(])/todo-list([^:@a-z-]|$)|skills/todo-list/|`todo-list`|overview is todo-list')"
+[ -z "$stale" ] || fail "stale todo-list references:
+$stale"
+grep -Fq '/todo-triage archive' "$repo_root/skills/todo-triage/SKILL.md" ||
+  fail "todo-triage must document its archive view"
+grep -Fq '/todo-archive sort' "$repo_root/skills/todo-archive/SKILL.md" ||
+  fail "todo-archive must document its sort mode"
+grep -Fq 'then again with `archive`' "$repo_root/skills/todo-list/SKILL.md" ||
+  fail "/todo-list all must still show active and archived projects"
 
 printf 'ok - naming contract\n'

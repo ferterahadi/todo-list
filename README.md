@@ -90,7 +90,7 @@ export TODO_HUB=~/my/hub/path
 ### Try it
 
 ```
-/todo-list                              # see the project index
+/todo-triage                              # see what's left across projects
 /todo-refer example-feature             # load its plan + tasks
 /todo-execute example-feature           # work its checklist
 ```
@@ -156,8 +156,8 @@ file.
 |Skill|Purpose|
 |-|-|
 |`todo-add`|Sets up a new project folder and adds it to the index|
-|`todo-list`|Shows the index by status; also does `archive` and `sort`|
-|`todo-triage`|Lists open work across every project and suggests a model for each task|
+|`todo-list`|Renamed: merged into `todo-triage` in 1.16.0; the old name works until 2.0.0|
+|`todo-triage`|What's left in one project or all of them, with a suggested model per task; `archive` lists finished projects|
 |`todo-sync`|Tick tasks or change status by hand; `audit` checks it against what git shows|
 
 **Work** — the loop itself, plus how projects depend on each other
