@@ -8,6 +8,18 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.16.0] — 2026-10-10
+
+### Changed
+- **`todo-state` is now `todo-sync`.** Same modes; `/todo-state` keeps working as an alias
+  until 2.0.0.
+- **`todo-list` is merged into `todo-triage`.** `/todo-triage archive` lists finished
+  projects and `/todo-archive sort` ranks the index; `/todo-list` is an alias until 2.0.0.
+- **`todo-conventions` and `todo-llm-routing` are hidden from the command menu.** Other
+  skills still read them; their descriptions start "Internal —" for Codex.
+- **`todo-graph` says when it is needed** — only when one project must wait for another.
+- **The README groups commands by when to use them**, and separates `revise` from `learn`.
+
 ## [1.15.2] — 2026-10-06
 
 ### Changed
