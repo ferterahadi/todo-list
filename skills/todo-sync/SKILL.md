@@ -120,6 +120,11 @@ mismatch means the file moved — re-list and re-match. The operations:
 
 **Tick or untick tasks** (`<id…> done`, `<id…> undone`) — change only the box character:
 `- [ ]` → `- [x]`, or `- [x]` / `- [X]` → `- [ ]`. The task text is never touched here.
+An `R<n>` ID is refused and nothing is written: a revision's checkbox moves with its
+heading tag, which this skill never edits. Route it per
+[`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Revision tags — an
+`[open]` entry to `/todo-revise <short-name> R<n>`, a `[fixed — awaiting verify]` entry to
+`/todo-verify <short-name>`.
 
 **Add a task** (`add "<text>" [under <phase>]`):
 
@@ -147,7 +152,7 @@ revision entry's wording belongs to `/todo-revise <short-name> R<n>`. Report
 
 1. List with `--open`. If `open_revisions` is above zero or any open row has an `R` ID,
    refuse and write nothing. Read each such revision's heading tag
-   (`grep -inE '^#{2,3} (R3|R4)([^A-Za-z0-9]|$)' tasks.md` with the listed IDs) and route
+   (`grep -inE '^#{2,3} (R3|R4)([^A-Za-z0-9]|$)' "$TODO_HUB/<project-path>/tasks.md"` with the listed IDs) and route
    it per [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Revision tags:
    `[open…]` → `/todo-revise <short-name> R<n>`; `[fixed — awaiting verify]` →
    `/todo-verify <short-name>`, which ticks it. `[advisory]` entries carry no checkbox and
@@ -208,11 +213,11 @@ Don't silently override the user's explicit instruction — if they said "set st
 ready" while tasks are all checked, do what they asked and just note the mismatch.
 
 **Archive housekeeping:** if the `tasks.md` you touched exceeds 20,480 bytes, mention it
-and offer `/todo-archive <short-name>`. When this skill itself flips a revision tag to a
-case-insensitive `[done…]`, apply `todo-archive` Step 2 to that entry immediately — an
-`<a id="revision-r<n>"></a>` anchor before the journal entry and
-`[journal:R<n>](artifacts/journal.md#revision-r<n>)` in the two-line tombstone. Never
-archive ordinary task checkboxes.
+and offer `/todo-archive <short-name>`. This skill never flips a revision tag, so it never
+archives a revision entry itself; closed entries are compacted by `todo-revise`,
+`todo-verify`, or `/todo-archive`, which leave an `<a id="revision-r<n>"></a>` anchor
+before the journal entry and `[journal:R<n>](artifacts/journal.md#revision-r<n>)` in the
+two-line tombstone. Never archive ordinary task checkboxes.
 
 ## Step S5 — Confirm what changed
 
@@ -322,7 +327,7 @@ Compare the sources. The canonical mismatches and their fixes:
 | `done` | `done < total` or `open_revisions` above zero | not actually done | status → `in-progress` |
 | `done` | not shipped per [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Shipped work — `unshipped` or `uncommitted` above zero, or `pr=open` | shipped on paper only | status → `in-progress`, point at `/todo-push` |
 | `in-progress` | all tasks ticked, `branch=merged` or `pr=merged`, `uncommitted=0` | finished but never recorded | status → `done` (via `/todo-verify` if plan.md has a `## Verification` block — the gate flips `done`, not this skill) |
-| `ready`/`in-progress` | `branch=absent`, `pr=none`, `worktree=absent`, `done=0` | stale — never started | status → `ready`, or ask if it's abandoned |
+| `in-progress` | `branch=absent`, `pr=none`, `worktree=absent`, `done=0` | stale — never started | status → `ready`, or ask if it's abandoned |
 | any | ticked tasks but `branch=absent`, `pr=none`, and no artifacts | unbacked claims | flag the specific tasks; suggest `/todo-review <short-name>` for the audit-by-diff |
 | any | `uncommitted` above zero | work at risk | surface it — `/todo-refer <short-name> resume` before anything else |
 | `in-progress` | hard prerequisite is no longer settled | execution order at risk | stop execution; `/todo-graph why <short-name>` |
@@ -330,8 +335,12 @@ Compare the sources. The canonical mismatches and their fixes:
 
 `branch=empty` — a branch with no commits of its own — is not drift by itself.
 
-Any `unknown` in a project's `repo` block makes it **unverifiable**, not drifted — report
-it in its own bucket, never guess a verdict from partial evidence. That is a field check,
+An `unknown` in a project's `repo` block blocks only the verdicts that read a repo field:
+for those the project is **unverifiable**, not drifted — report it in its own bucket,
+never guess a verdict from partial evidence. Verdicts that need no repo field are still
+judged: `done` with open tasks or revisions (row 1) and the two graph rows. A hub-only
+project (`checked: false`) is judged on those rows plus the artifacts check, and is never
+placed in the unverifiable bucket merely for having no repo. That is a field check,
 not a judgment call: read the value, don't reason about what it probably was.
 
 ## Step A4 — Report the drift board

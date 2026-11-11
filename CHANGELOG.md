@@ -8,6 +8,28 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.17.0] — 2026-11-11
+
+### Added
+- **`/todo-plan` supports hub-only projects.** Plan research, writing, or analysis without a code repo.
+
+### Changed
+- **Sequential `/todo-execute` commits each verified repo task on its project branch** before
+  checking it off. A missing target repo stops execution before the project status changes.
+- **`/todo-verify` checks shipping before starting a run** and shows the manual acceptance path
+  when the project has no verification layer.
+- **Both response packs use shorter replies for small changes and respect required output formats.**
+  Claude Code also falls back to a table or numbered list when interactive tools are unavailable.
+- **Review handoffs use `C` IDs for claims** and put hub-linked documents in the registered project folder.
+
+### Fixed
+- **The Superpowers Stop hook stays quiet in unrelated repos.**
+- **`/todo-sync audit` leaves unstarted ready projects alone.** Revision checkboxes go through
+  `/todo-revise` or `/todo-verify`.
+- **`/todo-triage` shows completed projects that still have open work.**
+- **`/todo-push` reports when the PR merged but the local base did not sync.**
+- **The README walkthrough starts with commands that work on the bundled example.**
+
 ## [1.16.0] — 2026-10-10
 
 ### Changed

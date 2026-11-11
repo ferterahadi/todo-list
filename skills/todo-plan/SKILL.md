@@ -1,6 +1,6 @@
 ---
 name: todo-plan
-description: Use when the user invokes /todo-plan, says "plan this project", "replan X", "update the plan", "break X into tasks", or names a hub project and wants its plan created or revised. Runs discovery, verifies the target repo exists locally, then writes the hub project's plan.md and tasks.md — not a writer for generic implementation plans outside the hub.
+description: Use when the user invokes /todo-plan, says "plan this project", "replan X", "update the plan", "break X into tasks", or names a hub project and wants its plan created or revised. Runs discovery, verifies the target repo exists locally (or records the project as hub-only when it has no code repo), then writes the hub project's plan.md and tasks.md — not a writer for generic implementation plans outside the hub.
 ---
 
 # Project Planning Skill
@@ -67,7 +67,12 @@ row may contain only the scaffold from `todo-add`; treat placeholder text as mis
 as an answer. On a replan, preserve accepted decisions and completed work, but verify
 current-state claims against the repo before carrying them forward.
 
-If the row's `repo` is `-` or the path does not exist, ask for the target repo path now.
+If the row's `repo` is `-` or the path does not exist, ask once for the target repo path,
+offering two other answers: **no code repo** — a hub-only project (research, writing,
+analysis) whose output lives in `artifacts/` — and **not on this machine**. Hub-only keeps
+`repo` as `-`; skip Step 3 and the repo inspection in Step 4, and plan from the user's
+context and any documents they name. Not on this machine → stop with nothing written and
+say the plan needs the repo cloned locally first; never ask for the path twice.
 If the outcome itself is unclear, ask what observable result the user wants. Ask for any
 specific docs, tickets, or other repos they want considered. Defer detailed design
 questions that source inspection can answer. Use structured choices for enumerable
@@ -79,7 +84,8 @@ Once the repo path is settled — confirmed by the user, or a row `repo` Step 2 
 
 - Check the path exists on disk
 - If it's a git repo, note the current branch
-- If the path doesn't exist, tell the user and ask for the correct path before continuing
+- If the path doesn't exist, tell the user and ask once for the correct path. A second
+  miss stops the run with nothing written — do not loop
 
 ## Step 4 — Inspect the current system
 
@@ -138,7 +144,8 @@ Fill in the project's `plan.md`:
   Keep the three-column table empty when there are no relationships. If an older plan has
   no section, insert the canonical table before `## Verification` or `## References`.
 - **Verification**: the "check" gate binding for `/todo-verify`. If the project has a verification MCP layer, ask for the feature/target name and fill the `## Verification` block — `Feature`, `Run` (the start tool and its arguments, and how to rerun by id), `Gate covers` (which tasks/phases a green run may tick), and optionally `Coverage source` + a `Task↔test map`. If there's no verification layer, delete the section.
-- **Repo**: absolute path to the local codebase (confirmed in Step 3)
+- **Repo**: absolute path to the local codebase (confirmed in Step 3), or
+  `none — hub-only` for a project with no code repo
 - **References**: paths or links to relevant resources
 
 Replace every scaffold placeholder and the scaffold marker. Write with enough detail that
@@ -203,7 +210,8 @@ shown:
 - [ ] **Cold-session test**: for each task ask "would a fresh session need to ask the
   user anything to do this?" If yes, the answer belongs in plan.md Context — add it.
 - [ ] **Repo check**: the Repo path in plan.md was verified on disk this session (you
-  saw the `ls`/git output in Step 3, not remembered it).
+  saw the `ls`/git output in Step 3, not remembered it). A hub-only project passes with
+  `none — hub-only` in plan.md and `-` in the registry.
 
 ## Step 7 — Review the actual plan
 
@@ -260,7 +268,7 @@ registry until the user confirms.
 
 ## Step 8 — Update the registry, once confirmed
 
-- Set `repo` to the confirmed absolute local path.
+- Set `repo` to the confirmed absolute local path, or leave it `-` for a hub-only project.
 - `planning` → set `ready` and stamp `started` = today, overwriting the creation stamp
   `/todo-add` left (`todo-sync` § Date stamping).
 - `ready` or `in-progress` → leave `status` and `started` alone; a replan never demotes

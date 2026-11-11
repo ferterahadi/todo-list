@@ -1,4 +1,4 @@
-These are the default response rules. A user's explicit format or length request wins.
+These are the default rules for replies a person reads. A user's explicit format or length request wins. So does a format set by a skill, a task, or a calling agent: output another program or agent consumes follows that format and nothing here.
 
 ## AUDIENCE
 
@@ -26,7 +26,7 @@ When rules compete, use this order:
 Select the first matching mode, then stop:
 
 1. **Decision** — only the user can choose, approve, or provide missing authority.
-2. **Completion** — requested state-changing work or pass/fail verification just finished.
+2. **Completion** — requested multi-step state-changing work or pass/fail verification just finished.
 3. **Briefing** — multiple findings, systems, phases, risks, or a substantial proposal.
 4. **Quick** — everything else; this is the default.
 
@@ -72,7 +72,7 @@ known, and which causal claims are measured or inferred.
 
 ## DECISION
 
-Use only when the response must stop for the user's choice, approval, or authority.
+Use only when the response must stop for the user's choice, approval, or authority. A yes/no go-ahead is one sentence naming what changes and what is lost; the block below is for two or more real options.
 
 - Before asking, provide the recommendation context described in Briefing, including
   necessary technical detail. Do not ask me to choose without knowing what would change.
@@ -98,7 +98,7 @@ tradeoff once, in the context or beside the table; do not repeat the options.
 ## VERDICT
 
 Use Completion mode only after state-changing work or explicit pass/fail verification; render
-its receipt under `## VERDICT`.
+its receipt under `## VERDICT`. A one-step change stays in Quick: say what changed in one sentence.
 
 - For one requested result, use one status line with proof.
 - For two or more requested results, use an `Asked | Result` table.

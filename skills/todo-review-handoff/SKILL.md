@@ -64,12 +64,14 @@ registry supplied it. Several or none → treat it as standalone; don't ask twic
 
 | | Hub project resolved | Standalone |
 |---|---|---|
-| Document path | `$TODO_HUB/projects/<name>/artifacts/review-handoff.md` | `./review-handoff-<slug>.md` in cwd |
+| Document path | `$TODO_HUB/<project-path>/artifacts/review-handoff.md` — `<project-path>` is the registry row's `path` cell (`projects/<section>/<short-name>`) | `./review-handoff-<slug>.md` in cwd |
 | Fix step | Accepted rows go to `/todo-revise <name>`, which opens the `## Revisions` entries | Second-agent brief inside the document |
 | Linked from | A row in the project's `artifacts/README.md`, plus the Step 6 report | The Step 6 report |
 
 Never overwrite an earlier handoff — it may hold a returned ruling sheet. If the path
 exists, write `review-handoff-<slug>.md` beside it (a fresh slug on the standalone path).
+`<slug>` is `pr-<number>` when a PR is under review, otherwise the branch name with `/`
+replaced by `-`; add today's date if that name is taken.
 
 **Who is ruling?** Ask if it isn't obvious, because it changes the writing:
 
@@ -104,7 +106,9 @@ only reads source cannot produce those claims.
 This step is the skill. A finding is an assertion; a claim is an assertion **someone can
 disprove**. Work through the findings and drop or merge any that won't convert.
 
-Number them `R1…Rn` in severity order, most consequential first, and group them under
+Number them `C1…Cn` in severity order, most consequential first — `C` for claim, never
+`R`, because in a hub project `R<n>` already names a `tasks.md` Revision and "fix R3" must
+mean one thing. Group them under
 short headings that say what the group is about ("the tool reports a write it did not
 make"). Each claim carries exactly these parts:
 
@@ -164,7 +168,7 @@ dev server. Then the per-claim output block:
 
 ```
 ────────────────────────────────────────────────
-R1  Hours tool reports success on a write of nothing
+C1  Hours tool reports success on a write of nothing
 
     CLAIM      applied[] contains "timeOptions" when no record was written
     RAN        <the real call>
@@ -238,7 +242,8 @@ fixes only rows marked *fix now* or *fix later*, and:
 - Records `Fixed` / `Not fixed — reason` per row in the same file.
 
 On the hub path, replace this section with a pointer: accepted rows go to
-`/todo-revise <name>`, which opens the `## Revisions` entries and owns the fix loop. Keep
+`/todo-revise <name>`, which opens the `## Revisions` entries and owns the fix loop. Record
+each mapping in the document as it is opened ("claim C3 → Revision R7"). Keep
 the ignore-the-rejected and stop-on-refuted rules either way.
 
 ### 4.5 Appendix — what's strong

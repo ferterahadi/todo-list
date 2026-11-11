@@ -68,14 +68,20 @@ Read these files in order:
 3. `research/findings.md` if it exists — it grows every run, so never ingest it whole:
    list its headings (`grep -n '^#' research/findings.md`) and read only the sections the
    tasks you are about to run point at (`— see research/findings.md § X`)
-4. `research/superpowers-docs.md` if it exists, then `<repo>/docs/superpowers/plans/` and
-   `<repo>/docs/superpowers/specs/` in the target repo — superpowers skills (brainstorming,
+4. For projects with a target repo, read `research/superpowers-docs.md` if it exists, then
+   `<repo>/docs/superpowers/plans/` and `<repo>/docs/superpowers/specs/` — superpowers skills (brainstorming,
    writing-plans) drop design docs there during target-repo sessions. List them; read the
    ones relevant to this project's tasks. Any relevant doc not yet listed in
    `research/superpowers-docs.md` → add a row to its table now (doc path · source ·
    one-line summary).
 
-If `plan.md` is missing critical info (goal unclear, no repo path, no context), state exactly what's missing and stop — suggest running `/todo-plan <name>` first.
+If `plan.md` is missing critical info (goal, context, or a repo path for work that needs
+one), state what's missing and suggest `/todo-plan <name>`. A confirmed hub-only plan
+does not need a repo path.
+
+If the project names a target repo and that path does not exist on disk, stop here, before
+Step 3 changes anything: report the missing path and suggest `/todo-plan <name>` to correct
+it. A hub-only project (repo `-`) has no path to check.
 
 **Parallel mode branches off here** — jump to [Parallel mode](#parallel-mode).
 
@@ -122,8 +128,11 @@ overwrite your working tree — the usual cause of "my changes vanished."
   `uncommitted=0`, restart the branch at the base inside the same worktree:
   `git -C <repo>-wt/<short-name> switch -C todo/<short-name> origin/<base>`. Any
   `unknown` field → reuse the branch as is and say so.
-- Do not push or merge here — shipping is a separate `/todo-push` the user runs when
-  ready (see Step 7).
+- Inspect uncommitted changes in a reused worktree before starting. Resume changes that
+  clearly belong to an open task. Preserve unrelated changes and report a blocker if they
+  overlap with the task and cannot be safely separated.
+- Commit in the worktree as you go (Step 5), but do not push or merge here — shipping is a
+  separate `/todo-push` the user runs when ready (see Step 7).
 
 ## Step 5 — Execute tasks top to bottom
 
@@ -151,11 +160,16 @@ Work through the tasks one at a time, running this loop for every task:
 3. **Verify with evidence**: run the proof you named in 1 and look at the output. Code
    → run the test/build. Doc/artifact → open it and check it answers the task. No
    runnable proof and no observable output → it is not done; treat as blocked.
-4. **Only now tick the checkbox.** Ticking before step 3 is the failure mode this loop
-   exists to prevent — a checked box is a claim, and claims need evidence first.
-5. **One-line record** of what changed and where (worktree file, artifacts path).
+4. **Commit target-repo changes** in the worktree, on `todo/<short-name>`, one commit per
+   task with repo changes, including only this task's changes. This keeps the branch name
+   through `/todo-push` — which is how `todo-sync`'s evidence helper ties the merged work
+   back to this project. Skip this step for tasks with no repo changes. If the commit fails,
+   leave the task open and report the blocker.
+5. **Only now tick the checkbox.** If a previous run committed the work but left the box
+   open, confirm the commit covers the task and rerun its proof before ticking it.
+6. **One-line record** of what changed and where (worktree file, artifacts path).
 
-Never batch steps 2–4 across multiple tasks. Rules of the road:
+Never batch steps 2–5 across multiple tasks. Rules of the road:
 
 - **Front-load installed process skills per task**
   ([`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Composing with
@@ -225,7 +239,7 @@ Update the active `index.md` row. Shipping is checked first, whether or not `pla
   `<repo>-wt/<short-name>`), then the command from the next two bullets.
 - All tasks complete, shipped or hub-only, and `plan.md` has a `## Verification` block →
   stay `in-progress` and point at `/todo-verify <short-name>` — the verification run is the
-  gate that flips `done`, and it refuses while work is unmerged. Code-complete + unit
+  gate that flips `done`, and it stops before the run while work is unmerged. Code-complete + unit
   tests ≠ done.
 - All tasks complete, shipped or hub-only, no `## Verification` block → set `done`, and
   stamp `completed` = today plus `elapsed (days)` = `completed − started` (`todo-sync`

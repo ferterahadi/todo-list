@@ -8,8 +8,10 @@
 # (convention:
 # <project>/research/superpowers-docs.md).
 #
-# Runs on every session (plugin hook), so drift is caught both in hub sessions
-# and in target-repo sessions where the docs are created.
+# Runs on every session (plugin hook), but stays quiet in unrelated repos, the same
+# way infographic-staleness.sh does: a hub session checks every registered repo; any
+# other session checks only the repo (or its <repo>-wt/* worktree) that contains the
+# session's working directory. A doc in repo A never blocks a turn in repo Z.
 #
 # Output contract (Stop hook): emit {"decision":"block","reason":"..."} to keep
 # the turn going so the agent records the pointers; emit nothing (exit 0) to allow
@@ -29,6 +31,12 @@ case "$payload" in
 esac
 
 [ -f "$INDEX" ] || exit 0
+
+CWD="${CLAUDE_PROJECT_DIR:-$PWD}"
+in_hub=0
+case "$CWD" in
+  "$HUB"|"$HUB"/*) in_hub=1 ;;
+esac
 
 # Collect unique target repos from every project row in either registry (any
 # status — a doc from a completed project still deserves a pointer). Skip
@@ -72,6 +80,13 @@ while IFS='|' read -r _ _shortname _path repo _status _rest; do
   repo="$(trim "$repo")"
   case "$repo" in "~/"*|"/"*) ;; *) continue ;; esac
   repo="${repo/#\~/$HOME}"
+  # Session scope: outside the hub, only the repo this session is working in.
+  if [ "$in_hub" -eq 0 ]; then
+    case "$CWD" in
+      "$repo"|"$repo"/*|"$repo"-wt/*) ;;
+      *) continue ;;
+    esac
+  fi
   [ -d "$repo/docs/superpowers" ] || continue
   grep -Fxq -- "$repo" "$repos_file" 2>/dev/null ||
     printf '%s\n' "$repo" >> "$repos_file"

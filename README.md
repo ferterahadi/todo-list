@@ -92,8 +92,10 @@ export TODO_HUB=~/my/hub/path
 ```
 /todo-triage                              # see what's left across projects
 /todo-refer example-feature             # load its plan + tasks
-/todo-execute example-feature           # work its checklist
 ```
+
+The example project points at a repo that doesn't exist, so it's for reading, not running.
+To do real work, start your own: `/todo-add "<what you want built>"`.
 
 > In Claude Code the commands are prefixed with the plugin name, so `/todo-plan` is really
 > `/todo-list:todo-plan`. In Codex, say `$todo-plan` or just describe what you want.

@@ -35,7 +35,8 @@ server that exposes, in some form, this small contract:
 The tool names used below (`start_run`, `wait_for_result`, `get_result`, `get_coverage`)
 are placeholders for that contract — map them to your server's actual tools. If a project
 has no verification MCP, it simply omits the `## Verification` block in `plan.md` and this
-skill is a no-op for it; the `plan → do → revise` loop still runs without the check gate.
+skill only reports that and names the acceptance path (Step 2); the `plan → do → revise`
+loop still runs without the check gate.
 
 **Pointing it at a concrete server:** register the server with the host as an MCP server,
 list its tools, and pick the one that fills each contract verb above. Record the choice in
@@ -88,14 +89,32 @@ This is the binding to the verification MCP:
   - "Deploy + smoke-test full lifecycle" ⟶ spec: token-lifecycle.spec.ts
 ```
 
-- **No `## Verification` block, or `Feature` unfilled** → stop and report:
-  "<project> has no verification binding — add a `## Verification` block to plan.md
-  (feature name + gate-covered tasks) before running /todo-verify." Do not guess a feature.
+- **No `## Verification` block** → stop, write nothing, and report: "<project> has no
+  verification layer, so acceptance is your review — `/todo-revise <short-name>` to check
+  the delivered work, or `/todo-sync <short-name> done` once it is accepted and shipped.
+  To add a check gate, put a `## Verification` block in plan.md (`/todo-plan`)."
+- **Block present but `Feature` unfilled** → stop and report: "<project>'s
+  `## Verification` block has no feature — fill in the feature name and gate-covered
+  tasks before running /todo-verify." Do not guess a feature.
 - Note the **`Gate covers`** set — the *only* tasks you may ever auto-tick. Anything outside
   it is never ticked by this skill.
 - Note whether **`Coverage source`** is set (enables the coverage-gap → advisory path).
 - Read the **`Task↔test map`** if present — it sharpens which task ticks on which passing
   spec and which task a failure backlinks to. Absent → map coarsely (see Step 5).
+
+## Step 2.5 — Check the work is shipped before spending a run
+
+Run the **Shipping check** defined in Step 6 now, before starting anything:
+
+- **Unshipped** (`unshipped` or `uncommitted` above zero, or `pr=open`) → stop. Start no
+  run and write nothing. Report what is unshipped and the order to finish in:
+  `/todo-push` from `<repo>-wt/<short-name>`, then `/todo-verify <short-name>`. If the
+  user explicitly requests a run before shipping, run Step 3 and report the verdict in
+  Step 7. Skip Steps 4–6 and leave the tasks, revisions, and registry untouched.
+- **Shipped, or hub-only** → continue.
+- **Unknown** → say so and continue; Step 6 holds `done` on an unknown.
+
+Step 6 runs the check again at the flip, because the repo can change during a long run.
 
 ## Step 3 — Drive the gate run (record-only)
 
