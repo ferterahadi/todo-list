@@ -99,7 +99,9 @@ The plugin ships six hooks in [`../hooks/`](../hooks/), registered automatically
   target repo (including its `<repo>-wt/*` worktrees), so old or unrelated staleness stays
   quiet.
 - **`superpowers-doc-sync.sh`** (Stop) — ensures superpowers plans/specs written into a
-  target repo get a pointer row in the project's `research/superpowers-docs.md`.
+  target repo get a pointer row in the project's `research/superpowers-docs.md`. Scoped
+  like the infographic hook: a hub session checks every registered repo, any other session
+  only the repo it is working in.
 
 ## Editing a skill
 

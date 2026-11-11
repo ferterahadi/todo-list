@@ -44,7 +44,7 @@ registry short-name in full — a shortened name resolves to nothing.
 ## How the user invokes this
 
 ```
-/todo-triage                              ← every ready/in-progress project
+/todo-triage                              ← ready/in-progress projects and done rows with open work
 /todo-triage rmq-vertical-scaler-quorum-queue   ← one project
 /todo-triage work                         ← one section (work | self-initiative)
 /todo-triage archive                      ← finished projects from archive.md
@@ -77,7 +77,9 @@ A legacy `## Archive` section still inside `index.md` is not shown here; note th
 
 ## Step 1 — Resolve scope
 
-Read active `$TODO_HUB/index.md` for default and section scopes.
+Read active `$TODO_HUB/index.md` for default and section scopes. For both scopes, also
+run the graph `export` command from the archive view. Include `done` rows with open
+work from either registry, filtered by section when one was requested.
 
 - No argument → every project with status `ready` or `in-progress`. Mention `planning`
   projects only in a footer line ("N projects still in planning — no tasks to triage;
@@ -100,6 +102,10 @@ python3 <todo-graph-skill-dir>/scripts/graph-report.py frontier "$TODO_HUB"
 
 - Gather and model-route full task detail only for in-scope `IN_FLIGHT` and `READY`
   projects.
+- One exception: the helper lists only active `planning` / `ready` / `in-progress` rows,
+  so a `done` or archived project that Step 1 kept in scope for its remaining work never
+  appears there. Gather and route it anyway, tag its card `done — reopened work`, and
+  point at `/todo-sync <short-name> in-progress`.
 - Keep graph-blocked projects on the board as one project-level blocked row with the
   exact unsatisfied prerequisites. Do not spend tokens reading or routing their tasks;
   no model choice can satisfy another project's unfinished dependency.
@@ -137,7 +143,7 @@ surface as tasks.
    terminal tag decides the route, per
    [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Revision tags:
    ```bash
-   grep -inE -A4 '^#{2,3} R[0-9]+[A-Za-z]*([^A-Za-z0-9].*)?\[(open|fixed[^]]*awaiting verify|advisory)[^]]*\][[:space:]]*$' tasks.md
+   grep -inE -A4 '^#{2,3} R[0-9]+[A-Za-z]*([^A-Za-z0-9].*)?\[(open|fixed[^]]*awaiting verify|advisory)[^]]*\][[:space:]]*$' "$TODO_HUB/<project-path>/tasks.md"
    ```
    Keep the heading and the first `Gap:` line of each match.
    - `[open]`, `[OPEN]`, `[open — note]` → an **open revision**, fixed by

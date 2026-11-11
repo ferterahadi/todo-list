@@ -1,13 +1,13 @@
 # Every todo-list style pack that has shipped, so `agent-style.sh status` can name the
 # version a global instruction file holds. One row per distinct file: sha256, the pack
 # (claude = assets/CLAUDE.md, codex = assets/AGENTS.md), the first plugin version that
-# shipped it, and the commit. "-pre" marks content that reached main under a version
-# number but was replaced before that version was tagged.
+# shipped it, and its commit or release tag. "-pre" marks content that reached main
+# under a version number but was replaced before that version was tagged.
 #
 # When you change a pack, add its row here in the same change; tests/style-contract.sh
 # fails until the shipped packs and every historical one are listed.
 #
-# sha256	pack	version	commit
+# sha256	pack	version	source ref
 1fbe91b7b67d1eca96cc4af60082ac056369658b10533f6e881cd2e95c2ddfd7	claude	1.7.0	7314468
 8e9f68bdf8b4d6db121fce94943cea877038cd61c3d1653d98a563bce46a9df3	codex	1.7.0	7314468
 99b165bc7ba9247afd3368c7207986a046fdb7143e5ccc008d37a610df3d65fe	claude	1.7.1	5bcfed6
@@ -36,3 +36,5 @@ f3b77a98e61733082e28a94ee9117f6ff27c59ccbc6462c8750b94de4ab9bdc9	claude	1.11.4	f
 e8776bc30ad038e8eddfb6b14f14a8e3a7b3a5c1017fb6175fdde607d517abd1	codex	1.11.7	9a8366b
 a0c89805d1b98b5a8299f5f44f713c39781cb9cfec48375c981963f3ea79817a	claude	1.15.2	e56b785
 1edf0142ff785a740d90f531d8c6188b66d13d8dcb91c35932f637b5abdc2937	codex	1.15.2	e56b785
+688070dae619d4ea0e1ad8408073fc03c03fc85229e1b954e4ffa2ed161f59ef	claude	1.17.0	v1.17.0
+07c6ef20891caeddc21ad98b24b5e923c49688160df77eec475ecc8f27ccc8a4	codex	1.17.0	v1.17.0

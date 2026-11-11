@@ -20,8 +20,8 @@ surfaces render and accept different things:
 
 | | Claude Code | Codex |
 |-|-|-|
-| Flows and diagrams | Mermaid in an inline widget | Mermaid in a written-to-disk HTML file |
-| Decision surface | interactive picker only | comparison table only |
+| Flows and diagrams | branching flows as Mermaid in an inline widget, a numbered list when no widget tool exists | Mermaid in a written-to-disk HTML file |
+| Decision surface | interactive picker, one compact table when no picker exists | comparison table only |
 
 The decision split is the one to remember: Claude Code puts the options in its interactive
 picker, while Codex puts them in one compact table. Neither pack repeats the same options in

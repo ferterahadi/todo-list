@@ -1,4 +1,4 @@
-These are the default response rules. A user's explicit format or length request wins.
+These are the default rules for replies a person reads. A user's explicit format or length request wins. So does a format set by a skill, a task, or a calling agent: output another program or agent consumes follows that format and nothing here.
 
 ## AUDIENCE
 
@@ -28,7 +28,7 @@ When rules compete, use this order:
 Select the first matching mode, then stop:
 
 1. **Decision** — only the user can choose, approve, or provide missing authority.
-2. **Completion** — requested state-changing work or pass/fail verification just finished.
+2. **Completion** — requested multi-step state-changing work or pass/fail verification just finished.
 3. **Briefing** — multiple findings, systems, phases, risks, or a substantial proposal.
 4. **Quick** — everything else; this is the default.
 
@@ -74,7 +74,7 @@ known, and which causal claims are measured or inferred.
 
 ## DECISION
 
-Use only when the response must stop for the user's choice, approval, or authority.
+Use only when the response must stop for the user's choice, approval, or authority. A yes/no go-ahead is one sentence naming what changes and what is lost; the block below is for two or more real options.
 
 - Before asking, provide the recommendation context described in Briefing, including
   necessary technical detail. Do not ask me to choose without knowing what would change.
@@ -84,7 +84,7 @@ Use only when the response must stop for the user's choice, approval, or authori
 - Use one decision surface only; do not add a comparison table or option cards before the picker.
 - Fire the harness's interactive picker as the final action, with the recommendation first and
   marked `(Recommended)`.
-- If no picker exists, fall back to the Codex comparison-table form.
+- If no picker exists, end with one table of two or three option rows (tag, action, outcome, main cost), the recommended tag in bold, then stop.
 
 After the context, show this decision prompt, then fire the picker:
 
@@ -98,7 +98,7 @@ Explain the recommendation and decisive tradeoff once in the context. Nothing fo
 ## VERDICT
 
 Use Completion mode only after state-changing work or explicit pass/fail verification; render
-its receipt under `## VERDICT`.
+its receipt under `## VERDICT`. A one-step change stays in Quick: say what changed in one sentence.
 
 - For one requested result, use one status line with proof.
 - For two or more requested results, use an `Asked | Result` table.
@@ -115,16 +115,16 @@ Use the smallest visual that makes the relationship easier to understand:
 One fact          → labelled sentence
 Several points   → bullets
 Comparison       → table
-Flow or 3+ steps → Mermaid flowchart in an inline widget
+Sequential steps → numbered list
+Branching flow   → Mermaid flowchart in an inline widget
 Hierarchy        → inline tree
 Complex system   → HTML/SVG artifact widget
 ```
 
-- Use tables for several comparable items;
-  compact Decision and Verdict tables are intentional exceptions.
+- Use tables for several comparable items; compact Decision and Verdict tables are intentional exceptions.
 - Choose only useful rows and columns; never add filler to satisfy a minimum.
 - Use a widget when requested or interaction helps; otherwise prefer the smallest readable visual.
-- Draw flows as Mermaid in a widget; never ASCII boxes or a raw mermaid fence in chat.
+- Draw branching flows as Mermaid in a widget; never ASCII boxes or a raw mermaid fence in chat. With no widget tool, use a numbered list with the branches named.
 - An artifact must be self-contained and theme-aware; its only external script is Mermaid.
 - Introduce a meaningful visual with one sentence stating its takeaway.
 - Do not rely on color or an icon alone; pair status symbols with plain text.

@@ -766,14 +766,22 @@ write_lines "$docs_repo/docs/superpowers/plans/bad\"name.md" \
   '# Untracked design'
 mkdir -p "$docs_hub/projects"
 
-docs_hook_output="$(
+run_docs_hook() {
   printf '{}\n' |
-    TODO_HUB="$docs_hub" bash "$repo_root/hooks/superpowers-doc-sync.sh"
-)"
-case "$docs_hook_output" in
-  *'"decision":"block"'*'bad\"name.md'*) ;;
-  *) fail "doc-sync must support archived repo paths with spaces and JSON-escape quotes" ;;
-esac
+    TODO_HUB="$docs_hub" CLAUDE_PROJECT_DIR="$1" bash "$repo_root/hooks/superpowers-doc-sync.sh"
+}
+for docs_cwd in "$docs_hub" "$docs_repo" "$docs_repo/docs" "$docs_repo-wt/cold-docs"; do
+  case "$(run_docs_hook "$docs_cwd")" in
+    *'"decision":"block"'*'bad\"name.md'*) ;;
+    *) fail "doc-sync must support archived repo paths with spaces and JSON-escape quotes (cwd: $docs_cwd)" ;;
+  esac
+done
 printf 'ok - archived doc-sync paths and JSON escaping\n'
+
+expect_equal "doc-sync stays silent in an unrelated repo" "" \
+  "$(run_docs_hook "$fixture_root/unrelated-repo")"
+expect_equal "doc-sync does not match a sibling repo by prefix" "" \
+  "$(run_docs_hook "$docs_repo-other")"
+printf 'ok - doc-sync is scoped to the hub and the session repo\n'
 
 printf 'archive contract tests passed\n'
