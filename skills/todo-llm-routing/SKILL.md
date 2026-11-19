@@ -13,9 +13,9 @@ keep using the four tiers.
 
 | Tier | Claude Code | Codex | Use for |
 |---|---|---|---|
-| `frontier` | `Fable 5.1`, high effort | `gpt-6-astra`, high effort | Security, payments, data integrity, concurrency, multi-repo architecture |
-| `deep` | `Opus 5.5`, high effort | `gpt-6.1-sol`, high effort | Ambiguous design, unknown-cause debugging, cross-file refactors |
-| `balanced` | `Sonnet 5.5`, medium effort | `gpt-6.1-sol`, medium effort | Well-scoped implementation, verification, visual generation |
+| `frontier` | `Fable 5.1`, high effort | `gpt-6.2-astra`, high effort | Security, payments, data integrity, concurrency, multi-repo architecture |
+| `deep` | `Opus 5.5`, high effort | `gpt-6.2-sol`, high effort | Ambiguous design, unknown-cause debugging, cross-file refactors |
+| `balanced` | `Sonnet 5.5`, medium effort | `gpt-6.2-sol`, medium effort | Well-scoped implementation, verification, visual generation |
 | `fast` | `Haiku 4.5`, default settings (no effort parameter) | `gpt-6-luna`, low effort | Mechanical edits, formatting, state updates, routine Git operations |
 
 These are workload defaults, not cross-provider accuracy equivalences. Use `balanced`
@@ -38,19 +38,20 @@ at `deep` or `frontier` when ambiguity or the cost of a wrong result warrants it
 
 ### Price reference
 
-Reviewed 2026-09-23. USD per million uncached input / output tokens, standard direct API
+OpenAI rates reviewed 2026-11-19, Claude rates last reviewed 2026-09-23.
+USD per million uncached input / output tokens, standard direct API
 processing; OpenAI figures below use short-context rates. These are price references,
 not Codex or Claude Code subscription-quota multipliers.
 
 | Tier | Claude input / output | OpenAI input / output |
 |---|---|---|
-| `frontier` | $10 / $50 | $10 / $50 |
+| `frontier` | $10 / $50 | $8 / $40 |
 | `deep` | $4 / $20 | $2 / $10 |
 | `balanced` | $2 / $10 | $2 / $10 |
 | `fast` | $1 / $5 | $0.10 / $0.50 |
 
 At equal uncached token counts, Sonnet costs 50% less than Opus for both input and
-output. On OpenAI, `deep` and `balanced` share `gpt-6.1-sol`, so effort is the only cost
+output. On OpenAI, `deep` and `balanced` share `gpt-6.2-sol`, so effort is the only cost
 lever between them there. Actual task savings and accuracy on this repository are
 **unmeasured**. Token counts, reasoning, cache reuse, long-context rates, retries, and
 plan-specific limits can change the economics. For subscription users, use observed quota
@@ -79,7 +80,8 @@ price increase.
    host availability, or observed task outcomes change. Use comparable local outcomes
    (accepted results, retries, elapsed time, and cost or quota) to tune these defaults.
 
-Capability sources: [Codex model guidance](https://learn.chatgpt.com/docs/models),
+Capability sources: [GPT-6.2 release announcement](https://openai.com/index/introducing-gpt-6-2-astra-sol/),
+[Codex model guidance](https://learn.chatgpt.com/docs/models),
 [Claude model comparison](https://platform.claude.com/docs/en/models/fable-5-1/overview),
 and [Claude effort support](https://platform.claude.com/docs/en/build-with-claude/effort).
 The tier assignments are routing judgments based on this guidance, not measured

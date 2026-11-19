@@ -38,7 +38,7 @@ are always edited in the hub, never in a target-repo worktree.
 
 Task IDs are positional — [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md)
 § Task IDs and phases: `2.3` is the third task under Phase 2, `4` the fourth task outside any phase,
-`R2` a Revisions checkbox. Resolve them with the graph helper (Step 5), never by counting.
+`R2` a Revisions checkbox. Resolve them with the graph helper before choosing an execution mode.
 
 ## Step 1 — Resolve the project path
 
@@ -59,6 +59,25 @@ status-flip gate **before loading full project context**. It is cheap, and runni
 first is the point: a refusal stops the run before you have read the plan, changed a
 status, or created a worktree. Graph corruption makes execution order untrustworthy, so it
 stops the run too.
+
+### Select the tasks for this run
+
+For both modes, validate the short-name and read the canonical task listing before
+any hub edit, repo setup, or dispatch:
+
+```bash
+python3 <todo-graph-skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" "<short-name>"
+```
+
+With `tasks <ids>`, select only open ordinary `TASK` rows whose IDs the user named,
+once each, in file order. Report missing or completed IDs. For an explicitly named
+revision, route by its tag to `todo-revise` or `todo-verify` per `todo-conventions`
+§ Revision tags. If the subset contains no eligible ordinary rows, report the result
+and end execution here. An empty or invalid subset never means “all.”
+
+Without a subset, select every open ordinary task in file order. Keep each selected
+ID and its text together through orientation, grouping, any sequential fallback, and
+reconciliation. An unmet prerequisite outside the selection is a blocker.
 
 ## Step 2 — Orient yourself
 
@@ -136,22 +155,9 @@ overwrite your working tree — the usual cause of "my changes vanished."
 
 ## Step 5 — Execute tasks top to bottom
 
-With a `tasks <ids>` subset, resolve the IDs before touching anything:
-
-```bash
-python3 <todo-graph-skill-dir>/scripts/graph-report.py tasks "$TODO_HUB" <short-name> --open
-```
-
-Validate `<short-name>` first (`todo-conventions` § Placeholder safety). It prints
-`TASK\t<id>\topen\t<line>\t<text>` per open task. Work only the requested lines, in file
-order; name any ID that is missing or already done, and skip it. Without a subset, work
-every open task outside `## Revisions` top to bottom.
-
-An `R<n>` ID is a Revisions checkbox, and its tag lifecycle belongs to `todo-revise`: hand
-an `[open]` entry to `/todo-revise <short-name> R<n>` (a fully specified entry goes straight
-to the fix), and skip a `[fixed — awaiting verify]` entry — it waits on `/todo-verify`.
-
-Work through the tasks one at a time, running this loop for every task:
+Work through the selected rows one at a time. Before acting on a row or ticking it,
+confirm it is still open and its ID and text match the selection. Skip a completed row
+and report a changed identity instead of acting on the task that now occupies its position.
 
 1. **Define done first**: read the task line + the plan.md section it belongs to, and
    state in one line what evidence will prove this task is done (a passing test, a file
@@ -272,15 +278,14 @@ not. Activate the row exactly as Step 3 does.
 
 ## Step P1 — Partition tasks into features
 
-Group the unchecked tasks (outside `## Revisions` — `R<n>` IDs route as in Step 5) into
+Group only the rows selected before orientation into
 **file-disjoint features**: tasks that touch the same files, or depend on each other's
 output, go in the same feature (they run sequentially inside one agent). Judge overlap
 from plan.md scope notes and a quick read of the repo.
 
 - 1 feature after grouping → parallelism buys nothing; say so and run the sequential
-  mode (steps 3–7) instead.
-- State the grouping (feature → task IDs and lines, from `graph-report.py tasks` as in
-  Step 5) before spawning so it's on record.
+  mode (steps 3–7) with the same selection.
+- State the grouping (feature → selected task IDs and lines) before spawning.
 
 **Gate A — before spawning, all three:**
 
@@ -356,7 +361,9 @@ and stop that feature — same rule as sequential Step 6, but the blocker lands 
 
 ## Step P4 — Review wave (no model pin — inherited session model)
 
-The moment a feature's implement agent returns, spawn its review agent — pipeline,
+Check each implement return against its feature assignment. A `tasks_covered` ID
+outside the assignment blocks that feature before review or shipping. For an
+in-scope implemented feature, spawn its review agent — pipeline,
 don't wait for the other features. Spawn review subagents yourself on the inherited
 session model without a model override, same as the implement wave. Review prompt
 slots:
@@ -417,17 +424,21 @@ exit code; never hand-roll the rebase, push, or merge:
 
 - exit 0 → merged; the next PR may go.
 - exit 10 → merge blocked (protection, required review, required checks) → skip it,
-  finish the queue, and record the blocker from the JSON.
+  finish the queue, and record the PR, its JSON error and any more specific reason
+  from the helper's stderr.
 - exit 11 → rebase conflict, already aborted → skip it, finish the queue, and open a
   Revisions entry in tasks.md naming the conflicting files.
 - any other exit → stop the queue and report; nothing after it lands.
 
 **Gate B — before each land, per PR:**
 
-- [ ] The previous PR's `land.sh` returned exit 0 in this queue round (JSON seen).
+- [ ] No land attempt is in flight. For the first PR, proceed to its checks. For each
+  later PR, read the previous attempt's exit code and JSON first. A merge (0) or a
+  recorded blocker (10 or 11) allows the next independent PR to proceed. If the
+  outcome is unexpected or cannot be established, stop the queue.
 - [ ] This PR's checks are green on its current head (`gh pr checks <pr_url>`, output
   seen). Red → it skips the queue and gets a Revisions entry.
-- [ ] `land.sh` runs now, after the previous merge, so its rebase is this round's. Checks
+- [ ] `land.sh` runs against the current base after this PR's checks. Checks
   on the rebased head are the repo's required checks, which `land.sh` reports as exit 10;
   Gate A's disjoint file sets are what make the rebase itself safe.
 
@@ -448,8 +459,9 @@ Skipped features keep their worktree and branch for the follow-up.
 ## Step P7 — Reconcile hub state and report
 
 Only now, and only you: tick the task lines named in each merged feature's
-`tasks_covered` — resolve every ID to its line with `graph-report.py tasks` (Step 5) before
-the first edit — write every return's `blockers` into `artifacts/blockers.md`, and set the
+`tasks_covered` — re-list the tasks and match the IDs and text to the original assignment
+before ticking them. Report any mismatch and leave that row alone. Write every return's
+`blockers` into `artifacts/blockers.md`, and set the
 active registry status per sequential Step 7 (a `## Verification` block in plan.md means
 stay `in-progress` and point at `/todo-verify` — merged PRs + unit tests ≠ done).
 

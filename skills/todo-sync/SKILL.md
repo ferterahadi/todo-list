@@ -160,8 +160,21 @@ revision entry's wording belongs to `/todo-revise <short-name> R<n>`. Report
 2. When `plan.md` has a `## Verification` block, `/todo-verify <short-name>` is the path
    to `done` — it runs the checks and sets `done` itself when they pass. Say so, and flip
    here only if the user confirms they are skipping it.
-3. Run the status-flip gate (below). A refusal writes nothing.
-4. Tick every listed open task, then set `status: done` in the owning row with its date
+3. Check shipping before any completion edit, including when the user skips verification.
+   For a hub-only project (registry `repo` is `-`), proceed to the graph gate.
+   For a code project, validate the repo path and short-name, then run:
+
+   ```bash
+   bash <todo-sync-skill-dir>/scripts/repo-evidence.sh "<repo>" "<short-name>" --fetch --hub "$TODO_HUB"
+   ```
+
+   Use this project's `SUMMARY` and the shared **Shipped work** rule in
+   [todo-conventions](../todo-conventions/SKILL.md). Require a successful fetch,
+   known evidence, `unshipped=0`, `uncommitted=0`, and `pr=none` or `pr=merged`.
+   If a PR is open, report its URL from the matching `PR` row. On unshipped work,
+   missing evidence or a helper error, stop before changing any checkbox, row or date.
+4. Run the status-flip gate (below). A refusal writes nothing.
+5. Tick every listed open task, then set `status: done` in the owning row with its date
    stamps, in one pass.
 
 **"Not done" / "reopen"** — the user will usually mean the status, not unchecking every
@@ -170,7 +183,8 @@ destructive to recorded progress.
 
 **Change status only** (`<status>`) — update the owning row's `status` column to one of
 `planning` / `ready` / `in-progress` / `done`; an archived row follows the reopen rule
-below.
+below. A status-only request for `done` still runs the completion checks above
+before writing the row. Preserve the checkboxes for a status-only request.
 
 Before a flip to `in-progress` or `done`, run the gate from
 [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § The status-flip gate. A
@@ -202,7 +216,8 @@ its owning registry row and its task completion should tell the same story. When
 otherwise disagree, reconcile — and say what you did:
 
 - All tasks now checked and no open revisions, but status isn't `done` → offer to set it
-  `done` (or just set it and report, if the user already said "mark done").
+  `done`. If the user already requested project completion, use the Step S3 completion
+  path before any edits for that request.
 - A task got unchecked or added on a project marked `done` → it's no longer truly done;
   flag it and offer `/todo-sync <short-name> in-progress` (for an archived row, that
   reopens it).

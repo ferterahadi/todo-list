@@ -176,6 +176,10 @@ attributes only this project's branches and worktrees — `todo/<short-name>`, t
 `<repo>-wt/<short-name>` worktree, and parallel-mode `feat/…` branches that name the
 project — never every `feat/*`. `BRANCH`, `WORKTREE`, and `PR` rows carry the detail;
 the closing `SUMMARY` gives `branch`, `pr`, `worktree`, `unshipped`, and `uncommitted`.
+For each dirty `WORKTREE` row, inspect `git -C "<worktree>" status --short` and the
+relevant staged, unstaged or untracked content there. Compare it with the task text
+or revision's accepted fix before recommending shipping. Separate mixed or
+unattributed edits in the digest.
 
 No `--fetch`: resume stays read-only on the repo too, so remote refs are as of the last
 fetch; PR state from `gh` is live. Exit 2 is a refused input — report the row. Exit 3 or
@@ -211,16 +215,16 @@ whole response; do not dump unrelated journal history.
 Goal: move order events from Redis pub/sub to RabbitMQ quorum queues
 Status: in-progress · ▓▓▓▓▓▓░░░░ 12/20 tasks · 1 open revision
 
-Last recorded work: R3 closed 2026-07-08 — consumer retry backoff (journal.md)
+Last recorded work: R3 accepted and awaiting verification — consumer retry backoff (tasks.md)
 In flight:
 - 🔄 worktree <repo>-wt/queue-migration exists · branch todo/queue-migration
 - 🔄 3 commits unshipped (ahead of origin/main) · no open PR
-- ⚠️ uncommitted changes in src/consumers/ (2 files)
+- ⚠️ 2 uncommitted files in src/consumers/ belong to accepted fix R3
 Blockers:
 - ❌ staging RabbitMQ creds missing (blockers.md, 2026-07-05)
 Next open task: 4.2 dead-letter exchange for poison messages
 
-▶ Next: /todo-push from <repo>-wt/queue-migration to ship the 3 commits   (then /todo-execute queue-migration)
+▶ Next: /todo-push from <repo>-wt/queue-migration to ship R3 and the 3 commits
 ```
 
 The `▶ Next` line is resume mode's deliverable — the first matching row is the primary
@@ -230,6 +234,7 @@ recommendation, with at most one alternative:
 |---|---|
 | Unsatisfied project dependency | `/todo-graph why <short-name>` |
 | Status `planning`, `total=0`, or no `tasks.md` | `/todo-plan <short-name>` |
+| `uncommitted` above zero, even with zero unshipped commits | Name the dirty `WORKTREE` path and match its changed files to the task or revision. For a completed, accepted change recommend `/todo-push` there first. For unfinished work name the task for `/todo-execute` or the revision for `/todo-revise`. If ownership or readiness is unclear, identify what needs inspection before shipping. |
 | `unshipped` above zero or `pr=open` | `/todo-push` (from the worktree) |
 | An `[open…]` revision | `/todo-revise <short-name> R<n>` |
 | A `[fixed — awaiting verify]` revision | `/todo-verify <short-name>` |
