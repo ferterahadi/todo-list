@@ -20,7 +20,7 @@ surfaces render and accept different things:
 
 | | Claude Code | Codex |
 |-|-|-|
-| Flows and diagrams | branching flows as Mermaid in an inline widget, a numbered list when no widget tool exists | Mermaid in a written-to-disk HTML file |
+| Sequences and branches | numbered steps in the reply, a widget for a branching diagram when available | numbered steps in the reply, linked HTML when a branching flow needs a diagram |
 | Decision surface | interactive picker, one compact table when no picker exists | comparison table only |
 
 The decision split is the one to remember: Claude Code puts the options in its interactive

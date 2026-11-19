@@ -8,6 +8,14 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.18.2] — 2026-11-19
+
+### Changed
+- **The optional response style leads with the action and its decisive tradeoff.** Simple sequences stay in the reply as numbered steps.
+
+### Fixed
+- **The quick start explains how to create the example hub on first use.** Codex users can review the startup hook and rerun it in a fresh session.
+
 ## [1.18.1] — 2026-11-19
 
 ### Fixed
