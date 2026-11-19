@@ -8,6 +8,11 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.18.1] — 2026-11-19
+
+### Fixed
+- **Codex shows three suggested prompts.** The project overview includes status, ready work, and blockers. Planning and resuming each keep their own prompt.
+
 ## [1.18.0] — 2026-11-19
 
 ### Changed

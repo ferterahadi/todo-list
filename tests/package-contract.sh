@@ -109,6 +109,18 @@ for json_file in "${json_files[@]}"; do
     fail "invalid JSON: ${json_file#"$repo_root"/}"
 done
 
+python3 - "$repo_root/.codex-plugin/plugin.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as manifest:
+    prompts = json.load(manifest)["interface"].get("defaultPrompt")
+if not isinstance(prompts, list) or not 1 <= len(prompts) <= 3:
+    sys.exit("Codex requires one to three suggested prompts to display them")
+if any(not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 512 for prompt in prompts):
+    sys.exit("Each Codex suggested prompt must contain text and fit within 512 characters")
+PY
+
 codex_version="$(
   python3 -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["version"])' \
     "$repo_root/.codex-plugin/plugin.json" 2>/dev/null
