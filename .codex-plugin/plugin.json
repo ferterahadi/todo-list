@@ -1,6 +1,6 @@
 {
   "name": "todo-list",
-  "version": "1.18.0",
+  "version": "1.18.1",
   "description": "An evidence-backed work-loop and typed project-graph hub built from Markdown skills.",
   "author": {
     "name": "The todo-list contributors",
@@ -19,8 +19,7 @@
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://github.com/ferterahadi/todo-list",
     "defaultPrompt": [
-      "Show my tracked projects and their status.",
-      "Show the ready frontier and dependency blockers in my todo hub.",
+      "Show my projects, their status, and which are ready or blocked.",
       "Plan the next project in my todo hub.",
       "Resume the highest-priority unfinished project."
     ]
