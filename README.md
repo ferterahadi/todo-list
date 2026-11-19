@@ -1,281 +1,151 @@
 # todo-list
 
-**A project tracker that Claude Code or Codex actually works through for you.** Tell it
-about a project once. It writes the plan, works the checklist, checks whether the result
-holds up, and fixes what didn't. It's all plain markdown you can open and edit yourself —
-nothing to build, nothing to run, no database.
-
-## The concept
-
-There's one hub — a single folder (`~/todo` by default) that tracks *all* your projects,
-kept separate from the repos where your actual code lives:
-
-```
-~/todo/
-  index.md                     ← active projects, one row each
-  archive.md                   ← finished rows, kept rather than deleted
-  REGISTRY.md                  ← what each registry column means
-  .todo-list/                  ← plugin bookkeeping (drift-notice marker); safe to ignore
-  projects/
-    work/api-rate-limiting/
-      plan.md                       goal, scope, decisions
-      tasks.md                      the checklist the agent works through
-      artifacts/                    things the agent produces
-```
-
-Each project folder just points at wherever its code actually lives. Your repos aren't
-touched until you ask the agent to go and do the work.
-
-Four of the skills make up a `plan → do → check → revise` loop:
-
-```
-/todo-plan  ──▶  /todo-execute  ──▶  /todo-verify  ──▶  /todo-revise
-  plan             do (build)         check (gate)       fix the gaps
-                                                              │
-                                          loops back until accepted
-```
-
-Here's a whole project, start to finish:
-
-```
-/todo-add "add rate limiting to the API"   # set it up and register it
-/todo-plan api-rate-limiting               # look into it and write the plan
-/todo-execute api-rate-limiting            # work the checklist
-/todo-verify api-rate-limiting             # run verification and record the result
-/todo-revise api-rate-limiting             # fix whatever the check caught
-```
-
-`/todo-add` creates a planning scaffold. `/todo-plan` inspects the target repo, records
-the current and proposed behavior in `plan.md`, then writes short, checkable tasks in
-`tasks.md`. A project remains `planning` until that plan is reviewed and confirmed.
-
-Stopped halfway through? `/todo-refer api-rate-limiting resume` works out where you left
-off and picks it back up.
-
-If one project is waiting on another, say so once and the agent plans around it:
-
-```
-/todo-graph link api-migration depends-on auth-foundation "consumes its token contract"
-/todo-graph                                # what's ready to start right now
-```
+**Pick up a project in a new Claude Code or Codex session and ask, “Where did I leave off?”**
+The agent reads your saved plan and checklist, shows what’s done, and identifies the next
+task. When you’re ready, ask it to do the work and verify the result.
 
 ## Install
 
-**Claude Code** — two commands. This repo doubles as its own marketplace:
+Run the two commands for your client in a terminal, then start a new session.
+
+**Claude Code**
 
 ```bash
 claude plugin marketplace add ferterahadi/todo-list
-```
-```
-/plugin install todo-list@todo-list
+claude plugin install todo-list@todo-list --scope user
 ```
 
-Next time you start a session, the `/todo-*` skills show up and a hub gets created at
-`~/todo` with one example project in it. If you already have a hub there, it's left alone.
+**Codex**
 
-**Just the skills, for Claude Code and Codex** — one command. No hooks, and it won't set
-up a hub for you:
+```bash
+codex plugin marketplace add ferterahadi/todo-list
+codex plugin add todo-list@todo-list
+```
+
+Your **hub** is the folder where both clients read and write your project notes. It
+defaults to `~/todo`. To choose another folder, set `TODO_HUB` in your shell profile
+before opening the new session.
+
+### Try it
+
+The plugin’s startup hook seeds a new hub with `example-feature`, a fictional API
+project. Ask about it before connecting a real repository.
+
+| Client | Enter in the new session |
+|---|---|
+| Claude Code | `/todo-list:todo-refer example-feature` |
+| Codex | `$todo-list:todo-refer example-feature` |
+
+A fresh example has **0 of 10 tasks done**. Its plan gives each API token a bucket of
+100 tokens, refilling at 100 per minute. An empty bucket returns HTTP 429 with a
+`Retry-After` header.
+
+Codex also offers three starting prompts:
+
+- Show my projects, their status, and which are ready or blocked.
+- Plan the next project in my todo hub.
+- Resume the highest-priority unfinished project.
+
+## Track your own project
+
+Start in your repository and tell the agent what you want to achieve. For example:
+
+| When | What to ask |
+|---|---|
+| Starting out | “Create a project called search-filters for this repo and plan how to add a date filter to search.” |
+| After you approve the plan | “Work on the first task in search-filters.” |
+| Returning in a new session | “Where did I leave off with search-filters?” |
+| Checking the result | “Verify search-filters against the plan.” |
+
+Each project has a `plan.md` for its goal and decisions and a `tasks.md` for its checklist.
+You can edit both as plain Markdown. Code changes go in the linked repository. Research
+and writing projects can live entirely in the hub.
+
+## The 16 commands
+
+Use plain language or choose a skill by name. In Claude Code, use `/todo-list:todo-plan`
+for `todo-plan`. In Codex, use `$todo-list:todo-plan`.
+
+| Skill | Use it to… |
+|---|---|
+| `todo-add` | Register a project in the hub. |
+| `todo-plan` | Turn a goal into a plan and a checklist for approval. |
+| `todo-execute` | Work through approved tasks, sequentially or in parallel. |
+| `todo-review` | Compare changes with the plan and flag gaps. |
+| `todo-verify` | Look up a test result or explicitly run verification. |
+| `todo-revise` | Fix a finding and check the result. |
+| `todo-push` | Open a pull request and merge it when repository rules allow. |
+| `todo-refer` | Read one project’s context or resume where you stopped. |
+| `todo-triage` | See what’s left across projects and what to work on next. |
+| `todo-graph` | Record dependencies and see which projects are ready or blocked. |
+| `todo-sync` | Update a project’s recorded status or audit it against Git. |
+| `todo-archive` | Move finished work into the archive. |
+| `todo-review-handoff` | Give a reviewer the findings that need their decision. |
+| `todo-infographic` | Turn a plan into a one-page HTML graphic. |
+| `todo-learn` | Save a correction for future sessions in that repo. |
+| `todo-style` | Preview, install, or restore an optional response style. |
+
+`revise` = the result is wrong · `learn` = the agent's habit is wrong.
+
+Older names and internal skills also appear in the [skill reference](skills/README.md).
+
+| Skill | Purpose |
+|---|---|
+| `todo-state` | Renamed to `todo-sync`. |
+| `todo-list` | Formerly a separate command. Use `todo-triage`. |
+| `todo-conventions` | Internal rules for reading and updating the hub. |
+| `todo-llm-routing` | Internal model and reasoning-effort settings. |
+
+## Update
+
+**Claude Code** — refresh the marketplace, update the plugin, then restart Claude Code.
+Check the installed version with `claude plugin list`.
+
+```bash
+claude plugin marketplace update todo-list
+claude plugin update todo-list@todo-list --scope user
+```
+
+**Codex** — refresh the marketplace and install its current version. Check the result
+with `codex plugin list --marketplace todo-list --json`.
+
+```bash
+codex plugin marketplace upgrade todo-list
+codex plugin add todo-list@todo-list
+```
+
+If your Codex marketplace is pinned to an older tag, refreshes keep that pin. To switch
+to a specific release, use its tag in the following commands:
+
+```bash
+codex plugin marketplace remove todo-list
+codex plugin marketplace add ferterahadi/todo-list --ref v1.18.1
+codex plugin add todo-list@todo-list
+```
+
+## Other installation options
+
+**Skills only.** If you already manage your own hub, install the skills without the
+startup hooks:
 
 ```bash
 npx skills add ferterahadi/todo-list --agent claude-code --agent codex --global --yes
 ```
 
-**Want the hub somewhere else?** Set `TODO_HUB` in your shell profile *before* you run
-anything:
+**Permissions.** The skills read your project files and use shell tools such as Git.
+Asking `todo-push` to ship authorizes a merge without a second confirmation. Repository
+branch protections still apply. [Installer scanner reports](https://skills.sh/ferterahadi/todo-list)
 
-```bash
-export TODO_HUB=~/my/hub/path
-```
+**Optional response style.** Use `todo-style diff` to preview the global instructions
+that `todo-style install` will replace. The installer backs up your current file first.
+Use `todo-style restore` to recover it. To adopt a newer style after a plugin update,
+run `todo-style install` again. [Response-style guide](skills/todo-style/SKILL.md)
 
-### Try it
+**Uninstall.** Removing the plugin leaves your project notes in the hub.
 
-```
-/todo-triage                              # see what's left across projects
-/todo-refer example-feature             # load its plan + tasks
-```
-
-The example project points at a repo that doesn't exist, so it's for reading, not running.
-To do real work, start your own: `/todo-add "<what you want built>"`.
-
-> In Claude Code the commands are prefixed with the plugin name, so `/todo-plan` is really
-> `/todo-list:todo-plan`. In Codex, say `$todo-plan` or just describe what you want.
-
-## Why the installer shows risk warnings
-
-`npx skills add` prints a risk table from three independent scanners — Gen Agent Trust
-Hub, Socket, and Snyk. Some rows come back amber. None of the three found malware,
-credential harvesting, or malicious install behavior; Socket's own summary of `todo-push`
-is that it "does exactly what it claims using official git/GitHub tooling."
-
-The amber rows are the scanners noticing capabilities this pack grants on purpose:
-
-| What they flag | Which skills | Why it's there |
+| Client | Remove plugin | Remove marketplace |
 |---|---|---|
-| Runs shell commands | add, execute, graph, refer, sync, triage | `python3` for the graph helper, `grep`/`awk` for task counts, `git`/`gh` for repo evidence |
-| Reads text someone else wrote | most of them | `plan.md`, `tasks.md`, `index.md` are the input. A planning tool that won't read your plans is not a planning tool |
-| Publishes and merges code | push, execute | `/todo-push` exists to branch, commit, push, open a PR, and merge. That authority is the feature |
-| Hands work to subagents | execute, triage | Parallel execution and fast-tier gathering |
+| Claude Code | `claude plugin uninstall todo-list@todo-list` | `claude plugin marketplace remove todo-list` |
+| Codex | `codex plugin remove todo-list@todo-list` | `codex plugin marketplace remove todo-list` |
 
-Two things worth knowing before you install:
-
-- **`/todo-push` merges without asking.** Point it at a repo and it will land the change on
-  your default branch. It refuses to force-merge past a conflict and never uses `--admin`,
-  but it does not stop for confirmation at the merge itself.
-- **Every skill validates names before they reach a command line.** Project short-names,
-  branch names, and repo paths read out of your registry are checked against a strict
-  pattern first; a value carrying a shell metacharacter stops the command and gets reported
-  instead of being interpolated.
-
-Every finding is readable in full at
-[skills.sh/ferterahadi/todo-list](https://skills.sh/ferterahadi/todo-list) — open any
-skill, then its Socket, Snyk, or Agent Trust Hub page.
-
-## Update
-
-Because this is a third-party marketplace, auto-update is **off** by default — new
-releases won't just turn up. Updating takes two commands, and you need both. The first
-fetches what's new, the second actually moves you onto it:
-
-```bash
-claude plugin marketplace update todo-list   # fetch the new releases
-claude plugin update todo-list               # switch to the newest one
-claude plugin list | grep -A1 todo-list      # check which version you're on now
-```
-
-Restart Claude Code afterwards and the new version is live. If you'd rather not do this by
-hand, you can turn auto-update on for this marketplace in `/plugin` → Marketplaces →
-todo-list.
-
-One thing worth knowing: updating only refreshes the plugin's own files. If you use the
-[response-style pack](#optional-the-response-style-pack), run `/todo-style install` again
-afterwards — that's a separate step, and it's the one that rewrites your own instruction
-file.
-
-## The 16 commands
-
-**Loop** — plan the work, do it, check it, fix it, ship it
-
-|Skill|Use it when|
-|-|-|
-|`todo-add`|You start tracking something new — sets up the folder and the index row|
-|`todo-plan`|A project needs a plan — looks into the repo, then writes `plan.md` and `tasks.md`|
-|`todo-execute`|You want the checklist worked; `parallel` splits tasks across git worktree agents|
-|`todo-verify`|Ask whether a test passed to read its existing result. Ask to run verification to check the project and update its tasks.|
-|`todo-revise`|The result is wrong — fixes what the check or you caught, then checks again|
-|`todo-push`|You want it shipped: branch → commit → push → PR → merge|
-
-**Context**
-
-|Skill|Use it when|
-|-|-|
-|`todo-refer`|You pick a project back up — loads its plan from any repo; `resume` says where things stopped|
-|`todo-triage`|You ask what's left, in one project or all of them, with a suggested model per task; `archive` lists finished projects|
-
-**Housekeeping**
-
-|Skill|Use it when|
-|-|-|
-|`todo-sync`|You tick tasks or change status by hand; `audit` checks the records against git|
-|`todo-archive`|Files get long or projects finish — moves history aside losslessly; `sort` ranks the index|
-
-**Review**
-
-|Skill|Use it when|
-|-|-|
-|`todo-review`|You check a diff against the plan — did it drift, is anything unproven|
-|`todo-review-handoff`|Someone else must rule on a review, e.g. the PR's author — claims, what to check, a sheet to fill in|
-
-**Extras**
-
-|Skill|Use it when|
-|-|-|
-|`todo-graph`|Only when one project must wait for another — record the link, then ask what's ready or blocked|
-|`todo-learn`|The agent's habit is wrong — turns "don't do that again" into a standing rule in that repo|
-|`todo-infographic`|You want a plan as a one-page HTML infographic|
-|`todo-style`|You want the bundled response style for Claude Code and Codex (backs your file up first)|
-
-`revise` = the result is wrong · `learn` = the agent's habit is wrong · `conventions` = the plugin's own rulebook, not a command.
-
-**Internal** — hidden from the command menu; other skills read them
-
-|Skill|Purpose|
-|-|-|
-|`todo-conventions`|The hub contract every skill follows — where files live, how a project is looked up, what gets checked before a status changes|
-|`todo-llm-routing`|The shared settings that decide which model each skill asks for|
-
-**Renamed in 1.16.0** — the old names keep working until 2.0.0
-
-|Skill|Now|
-|-|-|
-|`todo-state`|Renamed to `todo-sync`|
-|`todo-list`|Renamed: merged into `todo-triage` (sorting moved to `todo-archive sort`)|
-
-All of these work in both Claude Code and Codex.
-
-Projects move through `planning → ready → in-progress → done`. If you want the full rules
-for a skill, they're in [`skills/`](skills/).
-
-**It works with your other skills rather than replacing them.** If you've got skills like
-superpowers brainstorming, test-driven-development, code-review or dataviz installed, the
-todo skills hand the thinking over to those. If you don't have any of them, each todo
-skill falls back to doing it itself.
-
-## Optional: the response-style pack
-
-Every other skill here organises your *work*. `/todo-style` is the one that changes how
-the agent *talks* to you. It's written for people who know their stuff but don't have much
-time: pick one response shape, say what something means before showing evidence, use the
-smallest useful visual, and reserve completion receipts for changed or verified work.
-
-```
-/todo-style            # what's installed now vs what ships
-/todo-style diff       # exactly which lines would change
-/todo-style install    # back up, then swap in
-/todo-style restore    # put your old file back — or remove the pack if there was none
-/todo-style backups    # every saved copy, restore point marked
-```
-
-It writes to your **global** agent instruction file — `~/.claude/CLAUDE.md` for Claude
-Code, `~/.codex/AGENTS.md` for Codex (same rules, written for each one). Three things
-protect you, because that file is usually one you've tuned yourself:
-
-- It swaps the whole file out and never merges the two. `/todo-style diff` shows you that
-  before anything happens.
-- Your current file is copied to `$TODO_HUB/backups/agent-instructions/` and checked byte
-  for byte **before** anything is written over. If the copy doesn't come out right, the
-  install stops.
-- Nothing in that folder is ever deleted. `restore` returns to the file you had before the
-  first install (or removes the pack if you had none), and running it twice changes nothing.
-
-Installing the plugin doesn't do this to you — `/todo-style install` is the only thing
-that writes to that file, and updating the plugin later won't rewrite it either. Run
-`/todo-style install` again when you want the newer wording. See [Update](#update).
-
-It's entirely up to you — no hook runs it, no other skill calls it, and everything else in
-the plugin works the same whether you install it or not.
-
-## Remove it
-
-```bash
-claude plugin uninstall todo-list@todo-list      # remove the plugin (skills + hooks)
-claude plugin marketplace remove todo-list       # remove the marketplace entry
-```
-
-That leaves the hub behind, which is your own plans and notes. Delete it whenever you
-want:
-
-```bash
-rm -rf ~/todo    # or wherever TODO_HUB points
-```
-
-## More
-
-- [CHANGELOG.md](CHANGELOG.md) — what changed in each release. See [Update](#update) for
-  how to move onto a new one.
-- [`skills/todo-verify/SKILL.md`](skills/todo-verify/SKILL.md) — `/todo-verify` can drive
-  any MCP (Model Context Protocol) test server that meets a small contract. Haven't got
-  one? Leave the `## Verification` block out of `plan.md` and the rest of the loop still
-  works.
-- [CONTRIBUTING.md](CONTRIBUTING.md) — issues and pull requests welcome.
-
-MIT licensed — see [LICENSE](LICENSE).
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
