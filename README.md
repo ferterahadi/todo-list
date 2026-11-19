@@ -6,7 +6,8 @@ task. When you’re ready, ask it to do the work and verify the result.
 
 ## Install
 
-Run the two commands for your client in a terminal, then start a new session.
+Start with Claude Code or Codex installed and signed in. Run the two commands for
+your client in a terminal.
 
 **Claude Code**
 
@@ -24,12 +25,21 @@ codex plugin add todo-list@todo-list
 
 Your **hub** is the folder where both clients read and write your project notes. It
 defaults to `~/todo`. To choose another folder, set `TODO_HUB` in your shell profile
-before opening the new session.
+before starting the client.
 
 ### Try it
 
-The plugin’s startup hook seeds a new hub with `example-feature`, a fictional API
-project. Ask about it before connecting a real repository.
+On first use, the plugin creates a new hub with `example-feature`, a fictional API project.
+
+- **Claude Code:** Start a new session with `claude`. Its startup hook creates the hub.
+- **Codex:** Start `codex`. At **Hooks need review**, choose **Review hooks → SessionStart →
+  Bootstrapping the todo hub** from `todo-list@todo-list`. Press **t** to trust that hook,
+  then start a new Codex session so it runs. If you skipped the prompt, type `/hooks` to reopen it.
+
+Now ask about the example. If the client asks to run `graph-report.py tasks`, that
+helper reads the checklist to count tasks. If the client looks in the wrong folder,
+include your hub’s full path in the request. In an existing hub you can use your
+own project name instead.
 
 | Client | Enter in the new session |
 |---|---|
@@ -119,7 +129,7 @@ to a specific release, use its tag in the following commands:
 
 ```bash
 codex plugin marketplace remove todo-list
-codex plugin marketplace add ferterahadi/todo-list --ref v1.18.1
+codex plugin marketplace add ferterahadi/todo-list --ref v1.18.2
 codex plugin add todo-list@todo-list
 ```
 
