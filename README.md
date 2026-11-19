@@ -41,7 +41,7 @@ Here's a whole project, start to finish:
 /todo-add "add rate limiting to the API"   # set it up and register it
 /todo-plan api-rate-limiting               # look into it and write the plan
 /todo-execute api-rate-limiting            # work the checklist
-/todo-verify api-rate-limiting             # did it actually pass?
+/todo-verify api-rate-limiting             # run verification and record the result
 /todo-revise api-rate-limiting             # fix whatever the check caught
 ```
 
@@ -160,7 +160,7 @@ file.
 |`todo-add`|You start tracking something new — sets up the folder and the index row|
 |`todo-plan`|A project needs a plan — looks into the repo, then writes `plan.md` and `tasks.md`|
 |`todo-execute`|You want the checklist worked; `parallel` splits tasks across git worktree agents|
-|`todo-verify`|You want the check: runs the tests, ticks tasks, opens Revisions for failures, marks done once green and shipped|
+|`todo-verify`|Ask whether a test passed to read its existing result. Ask to run verification to check the project and update its tasks.|
 |`todo-revise`|The result is wrong — fixes what the check or you caught, then checks again|
 |`todo-push`|You want it shipped: branch → commit → push → PR → merge|
 

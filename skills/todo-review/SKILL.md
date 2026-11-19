@@ -44,8 +44,8 @@ Plain language counts too: "review this against the plan", "did the parallel age
 
 Resolve an explicit short-name per
 [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project.
-With no name, match the current repo only against active `index.md` rows first;
-search `archive.md` only when no active row matches. One match → use it and say which
+With no name, resolve a linked checkout to its primary repo and look for matching
+active `index.md` rows. Search `archive.md` only when no active row matches. One match → use it and say which
 registry supplied it; several or none → ask.
 
 Load the grounding the way `todo-refer` does: `plan.md` in full (Goal, Scope,
@@ -57,32 +57,45 @@ the latest recorded stretch of work. Step 3 builds the claimed-done set from the
 
 ## Step 2 — Establish the diff
 
-Review the changes the user means, wherever they live:
+Use the resolved project's registered repo as the Git/gh context, including when the
+command was invoked from the hub. Validate paths and refs per
+[`todo-conventions`](../todo-conventions/SKILL.md) § Placeholder safety.
+
+**Explicit PR or range** — review just that patch and go to Step 3. Run
+`gh pr diff <number>` from the registered repo, or `git -C "<repo>" diff "<range>" --`.
+Use a digits-only PR number. Each endpoint of a two-dot or three-dot range must
+match `^[A-Za-z0-9._/~^-]+$`, must not start with a dash, and must resolve to a
+commit in the registered repo. An explicit review excludes all local edits.
+
+**Current work** — list checkouts with `git -C "<repo>" worktree list --porcelain`.
+Use the user's named checkout or the current checkout if it belongs to this project.
+From the hub, select the project's linked worktree by its branch/path. For parallel
+worktrees, use the project's attributed `WORKTREE` rows from the read-only
+`repo-evidence.sh` lookup in `todo-refer` Step 5. Ask which checkout if several
+fit. With no linked project worktree, inspect the registered checkout if its branch
+and changes belong to the requested project.
+
+From that worktree, inspect the content of each layer:
 
 ```bash
-git -C <repo> symbolic-ref refs/remotes/origin/HEAD    # find <base>
-git status --short                                      # uncommitted work counts too
-git diff origin/<base>...HEAD --stat                    # committed-but-unlanded
+git -C "<worktree>" status --short --untracked-files=all
+git -C "<worktree>" symbolic-ref --short refs/remotes/origin/HEAD
+git -C "<worktree>" diff "origin/<base>...HEAD" --  # committed branch work
+git -C "<worktree>" diff --cached --                # staged
+git -C "<worktree>" diff --                         # unstaged
+git -C "<worktree>" ls-files --others --exclude-standard
 ```
 
-First match wins:
+Read the relevant untracked files from that worktree and trace findings against the
+current file content so an unstaged correction to a staged change is accounted for.
+If the base ref is unavailable, identify it from repo evidence or report the missing
+comparison. Local edits can still be reviewed.
 
-- **A PR or range was named** → that, landed or not: `gh pr diff <pr>` for a PR,
-  `git diff <range>` for a range. `<pr>` is digits only; each side of `<range>` matches
-  `^[A-Za-z0-9._/~^-]+$`. Anything else fails closed per
-  [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Placeholder safety.
-- In a `todo/<short-name>` or `feat/*` worktree → the whole branch diff vs `origin/<base>`.
-- On the base branch with local changes → the working-tree diff.
-- **On the base branch, clean** — the usual state after `/todo-execute parallel` merged its
-  PRs → review what landed instead of stopping. List the recent landings
-  (`git log --first-parent --format='%h %s' -15 origin/<base>`, or
-  `gh pr list --state merged --base <base> --limit 15`), say which look like this
-  project's, and ask the user to confirm the oldest and newest. Then review
-  `<oldest>^..<newest>` — the pre-wave base to the last merge.
-- None of these finds changes → say there's nothing to review and stop; suggest
-  `/todo-refer <name> resume` if the user expected work to be here.
-
-State what you're reviewing (branch, commit range, file count) before judging it.
+On a clean base checkout with no project diff, list recent landings from the registered
+repo (`git -C "<repo>" log --first-parent --format='%h %s' -15 "origin/<base>"`).
+Confirm the project’s oldest and newest landing with the user before reviewing the
+range. If nothing matches, say so. Report the checkout, branch or explicit range,
+and the distinct files reviewed before giving findings.
 
 ## Step 3 — Plan-compliance review (what generic review can't see)
 

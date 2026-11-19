@@ -127,6 +127,9 @@ case "${1:-} ${2:-}" in
   "pr view")
     printf '%s\n' "${GH_STUB_MERGE_STATE:-CLEAN}"
     ;;
+  "pr checks")
+    printf 'fixture-ci\tpass\n'
+    ;;
   "pr merge")
     case "${GH_STUB_MERGE:-ok}" in
       blocked)
@@ -802,7 +805,28 @@ expect_text_contains "no open PR names the reason" "$(field error <<< "$run_out"
 run bash "$land" --merge-existing --branch feat/elsewhere --base main
 expect_equal "--merge-existing runs only on the branch's own checkout" 12 "$run_code"
 
+# Exercise the serial queue from todo-execute P5. An independent, green PR still
+# needs owner approval; record its blocked outcome before checking the queued PR.
+waiting_wt="$work/waiting-wt"
+git -C "$sigma" worktree add -q -b feat/waiting "$waiting_wt" origin/main
+cd "$waiting_wt"
+printf 'waiting\n' > waiting.txt
+git add waiting.txt
+git commit -qm 'waiting for owner review'
+git push -q origin feat/waiting
+before_waiting="$(remote_tip "$sigma" main)"
+gh pr checks https://github.com/acme/demo/pull/6 > /dev/null
+run env GH_STUB_PR_LIST='[{"number":6,"url":"https://github.com/acme/demo/pull/6"}]' GH_STUB_MERGE=blocked GH_STUB_MERGE_STATE=BLOCKED \
+  bash "$land" --merge-existing --branch feat/waiting --base main
+expect_equal "queue records the owner-review blocker" 10 "$run_code"
+expect_equal "blocked PR was not merged" false "$(field merged <<< "$run_out")"
+expect_text_contains "the JSON records the blocked state" "$(field error <<< "$run_out")" "BLOCKED"
+expect_text_contains "the blocker names the required review" "$run_err" "reviewed by a code owner"
+expect_equal "blocked attempt preserves the base" "$before_waiting" "$(remote_tip "$sigma" main)"
+
+cd "$sigma_wt"
 : > "$GH_STUB_LOG"
+gh pr checks https://github.com/acme/demo/pull/7 > /dev/null
 run env GH_STUB_PR_LIST='[{"number":7,"url":"https://github.com/acme/demo/pull/7"}]' \
   bash "$land" --merge-existing --branch feat/queued --base main
 expect_equal "--merge-existing merges the open PR" 0 "$run_code"
@@ -814,6 +838,12 @@ expect_equal "--merge-existing reports the merge" true "$(field merged <<< "$run
 expect_equal "--merge-existing detects the strategy like preflight" merge \
   "$(field strategy <<< "$run_out")"
 gh_calls="$(cat "$GH_STUB_LOG")"
+expect_text_contains "independent PR got its own checks" "$gh_calls" "pr checks https://github.com/acme/demo/pull/7"
+landed_tip="$(remote_tip "$sigma" main)"
+git -C "$sigma" cat-file -e "$landed_tip:queued.txt" || fail "second PR did not land"
+if git -C "$sigma" cat-file -e "$landed_tip:waiting.txt" 2>/dev/null; then
+  fail "second PR landed the first PR's blocked changes"
+fi
 expect_text_contains "--merge-existing merged the branch's PR" "$gh_calls" \
   "pr merge feat/queued --merge"
 expect_text_lacks "--merge-existing never deletes the branch" "$gh_calls" "--delete-branch"

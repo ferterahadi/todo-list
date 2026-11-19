@@ -8,6 +8,23 @@ All notable changes to this plugin are documented here. The format follows
 Entries are one line per user-visible change. Why a change was made lives in its pull
 request; how it works lives in the diff.
 
+## [1.18.0] — 2026-11-19
+
+### Changed
+- **Codex routing uses GPT-6.2 Astra for frontier work and GPT-6.2 Sol for deep and balanced work.**
+- **`/todo-triage` keeps different reasoning efforts separate** when generating session commands.
+
+### Fixed
+- **`/todo-execute` resolves requested task IDs before activation** and carries the same selection through parallel execution and sequential fallback.
+- **`/todo-verify` closes only revisions whose source tasks the run proves.**
+- **`/todo-sync` checks shipping before marking code projects done**, including manual completion.
+- **Review handoffs execute only “fix now” rows.** Deferred claims stay on the ruling sheet.
+- **Test-result questions read the existing run** without starting verification or updating the hub.
+- **Current-work reviews include local edits in the project's worktree**, even when invoked from the hub.
+- **The parallel merge queue continues after a blocked PR** once the blocker is recorded and the next independent PR passes its checks.
+- **Resume identifies unfinished or ready-to-ship worktree edits** before recommending verification.
+- **Project creation and planning reuse supplied answers**, including a confirmed hub-only scope on a later replan.
+
 ## [1.17.0] — 2026-11-11
 
 ### Added

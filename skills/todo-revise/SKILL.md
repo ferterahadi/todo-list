@@ -194,7 +194,7 @@ expected?" with options
 - **Accepted** → re-confirm the source task's state via the same checkbox logic `todo-sync` uses (re-check it if it had been reopened). Then close by the project's gate:
   - `plan.md` has a `## Verification` block → tag the heading `[fixed — awaiting verify]`
     and leave its `- [ ]` unticked. `/todo-verify` ticks it, tags it `[done]`, and archives
-    it on a green run; a red run sends it back to `[open]`.
+    it when the run proves its source task. A failure for the same gap reopens it.
   - no `## Verification` block → the user's acceptance is the verification: tick `- [x]`,
     tag the heading `[done]`, and archive the entry's detail (see "Archival rule" below).
 - **Rejected / still off** → the user gives a new gap. Return to Step 3 with it (a fresh revision entry, or refine the existing one). This is the loop — repeat until accepted or the user stops.
@@ -211,7 +211,7 @@ unshipped or awaiting verification — hand off instead:
 
 - **Unshipped fixes** in `<repo>-wt/<short-name>` → `/todo-push` from that worktree first.
 - **Then** `/todo-verify <short-name>` when `plan.md` has a `## Verification` block — it
-  closes the awaiting-verify entries and flips `done` — otherwise
+  closes the fixes the run proves and checks whether the project can be marked `done` — otherwise
   `/todo-sync <short-name> done`, which runs the graph gate and stamps the dates.
 - **Hub-only fixes, no `## Verification` block**, every revision closed and every task
   `[x]` → run the gate from

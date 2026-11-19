@@ -22,9 +22,8 @@ user already has — see
 skills. Here that means:
 
 - **Discovery/design** — if `superpowers:brainstorming` is installed, run it first; it
-  explores intent, requirements, and design better than a question list. Step 2's seven
-  questions then become the *coverage checklist*: after brainstorming, ask only what it
-  didn't surface. Not installed → run Step 2 yourself.
+  starts from the existing plan and answers already supplied. Use Step 2 to identify
+  the remaining material questions. Not installed → run Step 2 yourself.
 - **Task breakdown** — if `superpowers:writing-plans` is installed and the work is a
   multi-step code change, let it draft the implementation plan, then translate the result
   into the hub format (Steps 5–6). Any doc it writes into the target repo
@@ -56,9 +55,9 @@ Resolve the project per
 [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Resolving a project,
 recording the `path`, `repo`, owning registry, and section.
 
-A short-name in neither registry is not a dead end here: offer to scaffold it with
-`todo-add` now — its single prompt covers short-name and work vs self-initiative — then
-continue planning the new row in the same run.
+If the short-name is missing from both registries and the user also asked to
+create it, run `todo-add`. Otherwise offer to scaffold it. Carry the supplied
+answers into planning in the same run.
 
 ## Step 2 — Establish the starting point
 
@@ -67,16 +66,18 @@ row may contain only the scaffold from `todo-add`; treat placeholder text as mis
 as an answer. On a replan, preserve accepted decisions and completed work, but verify
 current-state claims against the repo before carrying them forward.
 
-If the row's `repo` is `-` or the path does not exist, ask once for the target repo path,
-offering two other answers: **no code repo** — a hub-only project (research, writing,
-analysis) whose output lives in `artifacts/` — and **not on this machine**. Hub-only keeps
-`repo` as `-`; skip Step 3 and the repo inspection in Step 4, and plan from the user's
-context and any documents they name. Not on this machine → stop with nothing written and
-say the plan needs the repo cloned locally first; never ask for the path twice.
-If the outcome itself is unclear, ask what observable result the user wants. Ask for any
-specific docs, tickets, or other repos they want considered. Defer detailed design
-questions that source inspection can answer. Use structured choices for enumerable
-questions when available, and ask the missing basics in one turn.
+Use the latest explicit repo choice, including one supplied to `todo-add`. A stated
+“no repo”, or a registry `-` paired with `none — hub-only` in the plan’s Repo section,
+settles hub-only scope: keep `repo` as `-`, skip Step 3 and repo inspection, and plan
+from the supplied material. A bare registry `-` on an unfilled scaffold is still
+unknown. Use a supplied or recorded local path in Step 3. If the repo choice remains
+unknown, ask once for the local path, “no code repo”, or “not on this machine”.
+For the last answer, stop until the repo is available locally.
+If the outcome is too ambiguous to draft, ask what observable result the user wants.
+When a named deliverable is clear enough to propose a plan, draft from the known facts
+and label assumptions for the final plan review. Put missing inputs, such as source
+documents for an annual review, in the plan as collection tasks. Bundle only questions
+whose answers would materially change the draft.
 
 ## Step 3 — Verify the repo
 
@@ -133,7 +134,6 @@ Fill in the project's `plan.md`:
   small change may need one paragraph; a multi-service change needs the boundary and
   sequence an executor would otherwise have to rediscover. Keep agreed design here,
   not solely in a distant artifact.
-- **Key Decisions**: choices already made so the next agent doesn't re-litigate them. Number them `D1`, `D2`, … — `todo-infographic` and the feedback loop reference decisions by ID. If the architecture/approach is still genuinely open (the user couldn't answer "how"), don't pad this section with guesses — check for an installed brainstorming/architecture skill (e.g. from superpowers) and offer to run it to converge on the decision first; otherwise record the open question explicitly as a decision-to-make task. If such a skill writes its output into the target repo (`docs/superpowers/…`), immediately record a pointer in `research/superpowers-docs.md` and under plan.md References — a doc that lives only in the target repo is lost to the hub
 - **Key Decisions**: choices already made so the next agent doesn't re-litigate them. Number them `D1`, `D2`, … — `todo-infographic` and the feedback loop reference decisions by ID. If the approach is open, use an installed brainstorming/architecture skill when applicable to develop a recommendation; ask the user only for a material choice they own. Otherwise make the unresolved choice a decision task that gates implementation. Do not pad this section with guesses. If another skill writes into the target repo (`docs/superpowers/…`), immediately record a pointer in `research/superpowers-docs.md` and under plan.md References — a doc that lives only in the target repo is lost to the hub
 - **Trade-offs**: planning-time knowledge the infographic renders later — capture it now or it's lost. Three parts, per the template: one `**D<n>** — gain: … · cost: …` row per Key Decision; **Forgone** — alternatives you and the user considered and rejected (plus scope deliberately cut), one clause of why each; **Known gaps** — limitations the build deliberately accepts. Record rejected alternatives *as they're rejected* during discovery, not reconstructed afterwards. If a part is genuinely empty, delete its stub line rather than padding it.
 - **Relationships**: the canonical typed project graph. Write one row per explicit

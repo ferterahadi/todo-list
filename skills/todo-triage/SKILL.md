@@ -290,7 +290,8 @@ The fast row shows the effort the routing skill lists for the host running the t
 - Number rows by the helper's IDs so commands target them directly:
   `/todo-execute <short-name> tasks <id,id,…>` for tasks,
   `/todo-revise <short-name> R<n>` for an open revision — the `R` is part of the handle —
-  and `/todo-verify <short-name>` for awaiting-verify rows; one verify run covers them all.
+  and `/todo-verify <short-name>` for awaiting-verify rows covered by the gate.
+  For an uncovered source task, name the missing verification instead of recommending a repeat run.
   A verify row takes `todo-verify`'s own tier (balanced · high), not a rubric pick.
 - `[advisory]` entries go on one `Optional:` line under the table, never in it; they are
   not counted in the card's total or the totals line.
@@ -312,28 +313,28 @@ End with:
    efficiency win this skill can surface).
 3. **Batch hint**: if fast-tier items span projects (state syncs, doc fixes), suggest
    clearing them in one cheap sweep before starting expensive work.
-4. **Session plan** — turn the tiers into commands the user can run as-is. Group the
-   board's items by recommended model, then emit one line per group; a task's model is
-   set by the *session* it runs in, so this is the actionable form of the whole board:
+4. **Session plan** — turn the tiers into commands the user can run as-is. Group items
+   within a project only when their command, resolved model, and reasoning effort match.
+   Two tasks on the same model can need different effort:
 
    ```
    ## ▶ Session plan
 
    now (this session)       dispatch the 5 fast items — say "go" and I'll sweep them
-   <balanced host model>    → /todo-execute rmq-vertical-scaler-quorum-queue tasks 5.3
-   <balanced host model>    → /todo-verify rmq-vertical-scaler-quorum-queue
-   <deep host model>        → /todo-revise rmq-vertical-scaler-quorum-queue R3
-   <frontier host model>    → /todo-execute rmq-vertical-scaler-quorum-queue tasks 5.2
+   <balanced model> medium  → /todo-execute rmq-vertical-scaler-quorum-queue tasks 5.3
+   <balanced model> high    → /todo-verify rmq-vertical-scaler-quorum-queue
+   <deep model> high        → /todo-revise rmq-vertical-scaler-quorum-queue R3
+   <frontier model> high    → /todo-execute rmq-vertical-scaler-quorum-queue tasks 5.2
    ```
 
    Resolve placeholders from `todo-llm-routing/SKILL.md` and show commands only for the current
    host. For example, Claude Code uses `claude --model <name>`; Codex uses
    `codex --model <model-id> -c model_reasoning_effort=<effort>`. Fast items never need
-   a new session when they can be dispatched inline. Emit one line per
-   model × project pair, carrying the full short-name and the exact IDs from the board
+   a new session when they can be dispatched inline. Carry the full short-name and the exact IDs from the board
    (`tasks <id,id,…>` for tasks, `R<n>` for a revision, one revision per `/todo-revise`
-   line, one `/todo-verify <short-name>` line per project with awaiting-verify rows); if the session is already on the right model for a group, say so instead of
-   telling the user to relaunch. Use the host's model picker when available.
+   line, one `/todo-verify <short-name>` line per project with awaiting-verify rows).
+   Reuse the current session when both model and effort match. If only the effort
+   differs, show the effort change in the host's picker or launch command.
 
 ## Notes
 

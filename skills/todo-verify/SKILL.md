@@ -1,6 +1,6 @@
 ---
 name: todo-verify
-description: Use when the user invokes /todo-verify, says "verify this project", "did the e2e pass", "run the verification layer", or names a project and wants its verification result reconciled into the todo. Detection only — reads results, ticks tasks, flips status, opens Revisions on failures and records coverage gaps as advisory; never edits code.
+description: Use when the user asks whether a project's tests passed, invokes /todo-verify, or requests a verification run. Result questions read an existing run; explicit runs reconcile the verdict into the hub. Never edits code.
 ---
 
 # Project Verify Skill
@@ -57,8 +57,18 @@ Resolve every hub path against `$TODO_HUB` — see
 /todo-verify                         ← ask which project, or act on context
 ```
 
-Plain language counts too: "verify the token feature", "did the lifecycle spec pass",
-"run the verification layer on this".
+Choose the mode from the requested action before starting the workflow.
+
+- **Read an existing result** for “did the lifecycle spec pass?”, “what happened in
+  run 7cvh?” or a status request. Use the named run ID, or the latest matching run
+  for the requested target using the server's read/list tools. Resolve the project
+  and its feature from the hub when needed. Check the returned target and, for a
+  named spec, read that spec's result. Report the run ID, target, and observed
+  verdict or current state. If no matching run exists, say so. If lookup is
+  unavailable, say what you could not check. End here with zero starts, reruns,
+  repairs or hub edits.
+- **Run and reconcile** for the command forms above or an explicit “verify”, “run”
+  or “rerun” request. Follow Steps 1–7.
 
 ## Step 1 — Resolve the project
 
@@ -160,20 +170,24 @@ from [`../todo-conventions/SKILL.md`](../todo-conventions/SKILL.md) § Task IDs 
 
 | Verification result | tasks.md | Revisions |
 |---|---|---|
-| Run green, all gate-covered tasks pass | tick covered `[ ]`→`[x]` | close every `[fixed — awaiting verify]` entry: tick its `- [ ]`, tag `[done]`, archive it |
-| Run fails | no tick | one `[open]` entry per failing area, backlinked `⟵ Task <id>`; a `[fixed — awaiting verify]` entry for a failing area goes back to `[open]` with the new Actual |
+| Run green | tick tasks proved by this run (mapping below) | close only waiting revisions proved by this run |
+| Run has failures | leave ordinary task checkboxes as they are | close waiting revisions with mapped passing evidence; record each failing area once, reopening its waiting revision with the new Actual when applicable |
 | Coverage gap (even if run green) | no change | one `[advisory]` entry per gap (gap type named), no checkbox |
 | Run blocked (boot/creds) | no tick | none — report the blocker; coverage path still runs |
 | No verification block | — | (handled in Step 2 — stop) |
 
-**Mapping tasks ↔ tests:**
-- With a `Task↔test map`: tick the mapped task only when its mapped spec/test passes;
-  backlink a failure to the mapped task. On a partial pass, close only the
-  `[fixed — awaiting verify]` entries whose mapped spec now passes.
-- Without a map (coarse fallback): an **all-green** run ticks the entire `Gate covers` set
-  at once; a **partial** pass ticks and closes nothing (you can't tell which task each test
-  proves) — open a Revision noting which tests failed and that a `Task↔test map` would
-  sharpen this.
+**Which tasks did this run prove?** Start with the ordinary task IDs in `Gate covers`.
+With a `Task↔test map`, keep a task only when all its mapped tests ran and passed.
+Missing mappings, skipped tests, and ambiguous matches supply no proof. Without a map,
+an all-green run proves the declared gate set as a group. A partial run without a map
+proves no individual task. Record failing tests in the revision as usual.
+
+For each `[fixed — awaiting verify]` entry, resolve its `⟵ Task <id>` backlink.
+Only a source task in the proved set allows closure: tick the revision, tag it
+`[done]`, then archive it. A mapped failure for the same gap reopens it. Leave
+unrelated or unresolved entries intact and report the missing task binding, test
+result, or gate that covers their source. This applies even if the source task was
+already checked before the run.
 
 **Revisions format** — reuse the exact `## Revisions` schema `todo-revise` consumes, so the
 two skills interlock. Append to (or create) the `## Revisions` block at the bottom of
@@ -275,7 +289,7 @@ Status-first, terse:
 - This is the producer half of the Revisions loop; `todo-revise` is the consumer. Keep the
   schema identical so they interlock — same `### R<n> ⟵ Task <id> — … [open]` + `- [ ]`
   shape. Tags: `[open]` → `[fixed — awaiting verify]` (revise, once the user accepts a fix)
-  → `[done]` (this skill, on a green run); `[advisory]` is coverage-only.
+  → `[done]` (this skill, when the run proves the revision's source task); `[advisory]` is coverage-only.
 - Reconciled state feeds the infographic: the Stop hook (`infographic-staleness.sh`)
   applies count and status refreshes to `artifacts/infographic.html` itself and only
   suggests `/todo-infographic <short-name>` when the page needs a structural rebuild. It

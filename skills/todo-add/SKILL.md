@@ -24,25 +24,20 @@ Resolve every hub path against `$TODO_HUB` — including the new project folder 
 /todo-add                                     ← no description: ask what the project is
 ```
 
-The argument is a free-text feature/project description, not a short-name. You derive the short-name from it.
+The argument is a free-text request and can include an explicit project name, category, repo choice, and a request to plan.
 
-## Step 1 — Derive a short-name and ask once
+## Step 1 — Resolve the name and category
 
-Turn the feature description into a kebab-case slug suitable for a folder name and the `index.md` short-name column:
+Use the supplied short-name when it is valid. If it is invalid, ask for a valid name. When no name was given, turn the feature description into a kebab-case slug suitable for a folder name and the `index.md` short-name column:
 
 - lowercase, words joined by hyphens (e.g. `rabbitmq dead-letter queue support` → `rabbitmq-dlq-support`)
 - keep it concise but recognizable — drop filler words ("the", "a", "support for"), keep the distinguishing terms
 - prefix with a relevant subsystem if it clarifies (matching the existing naming style in `index.md`, e.g. `api-`, `web-`, `queue-`)
 
-Then ask both open questions in **one** prompt — the short-name override and the
-classification, which is never reliably inferable:
-
-> "I'll call this project `rabbitmq-dlq-support` — want a different short-name? And is it
-> a **work** or **self-initiative** project?"
-
-Use the host's structured choice prompt for the classification when available. The answer
-decides whether the folder goes under `projects/work/` or `projects/self-initiative/`, and
-which table in `index.md` gets the new row (`## Work` or `## Self-initiative`).
+Use an explicit **work** or **self-initiative** classification. If it is missing,
+ask which category to use, naming the proposed slug in the same prompt. Validate the
+slug against `todo-conventions` § Placeholder safety before using it as a path.
+The category determines both the folder and the registry section.
 
 If the user gave no description at all, ask what the project is before deriving anything.
 
@@ -62,7 +57,7 @@ Also check that the target folder `projects/<work|self-initiative>/<short-name>/
 
 Create `projects/<work|self-initiative>/<short-name>/` with:
 
-- `plan.md` — copied from `templates/plan.md`, with the `[Name]` placeholder replaced by a human-readable title derived from the description (e.g. "RabbitMQ Dead-Letter Queue Support"). Leave the rest of the template structure intact for `todo-plan` to fill, except for the explicit relationship rule below.
+- `plan.md` — copied from `templates/plan.md`, with the `[Name]` placeholder replaced by a human-readable title derived from the description (e.g. "RabbitMQ Dead-Letter Queue Support"). Under `## Repo`, record an explicit “no repo” as `none — hub-only`, or a supplied local path for `todo-plan` to check. Leave an unknown repo as a placeholder. Preserve the rest of the template apart from the explicit relationship rule below.
 - `tasks.md` — copied from `templates/tasks.md`, with the `[Project Name]` placeholder replaced by the same title. Leave the placeholder tasks for `todo-plan` to replace.
 - `research/` directory with a `.gitkeep` so the empty directory is tracked by git.
 - `artifacts/` directory containing `README.md` — copied from `templates/artifacts-README.md`, with the title placeholder replaced by the same human-readable title. This is the artifact manifest (backtrack hub); it seeds the folder so no `.gitkeep` is needed there.
@@ -123,11 +118,7 @@ was not retained. Never leave a new cycle or ambiguous target in the hub.
 
 ## Step 5 — Confirm and offer to plan
 
-Report plainly what was created: the folder path, the files scaffolded, and the new `index.md` row. Then offer to continue straight into planning:
-
-> "Created `projects/work/rabbitmq-dlq-support/` and registered it in index.md as `planning`. Plan it now?"
-
-On a yes, run `todo-plan` for the new short-name in this session; its discovery asks only
-what this run didn't capture (the short-name, the classification, any seeded relationship).
-On a no, point at `/todo-plan rabbitmq-dlq-support` and stop. Never start executing — that
-is `todo-execute`.
+Report the folder and registry row. When the request includes planning, continue
+straight into `todo-plan` with the resolved short-name, category, supplied repo path
+or explicit “no repo”, stated goal, and any seeded relationships. For a scaffold-only
+request, offer `/todo-plan <short-name>` as the next step.

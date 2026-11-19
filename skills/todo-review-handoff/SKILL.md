@@ -12,7 +12,7 @@ ignore it — and if they aren't an engineer, they can't judge it at all. This s
 converts each finding into a **falsifiable claim** with a verification method, so the
 recipient's own agent proves or refutes it and prints the evidence in plain English. The
 recipient then rules on each claim, including the option to rule that **the reviewer was
-wrong**. Only accepted claims get fixed, by a second agent, from the same document.
+wrong**. The second agent works from the rows the recipient marks *fix now*.
 
 Without this skill the flow is `/code-review` and then a wall of findings pasted into
 chat, where the recipient's only move is to defer to whoever wrote it.
@@ -65,7 +65,7 @@ registry supplied it. Several or none → treat it as standalone; don't ask twic
 | | Hub project resolved | Standalone |
 |---|---|---|
 | Document path | `$TODO_HUB/<project-path>/artifacts/review-handoff.md` — `<project-path>` is the registry row's `path` cell (`projects/<section>/<short-name>`) | `./review-handoff-<slug>.md` in cwd |
-| Fix step | Accepted rows go to `/todo-revise <name>`, which opens the `## Revisions` entries | Second-agent brief inside the document |
+| Fix step | *Fix now* rows go to `/todo-revise <name>`, which opens the `## Revisions` entries | Second-agent brief inside the document |
 | Linked from | A row in the project's `artifacts/README.md`, plus the Step 6 report | The Step 6 report |
 
 Never overwrite an earlier handoff — it may hold a returned ruling sheet. If the path
@@ -154,7 +154,7 @@ One markdown file, five parts, in this order.
 ### 4.1 Header
 
 What the document is, in four sentences: a reviewer made N claims; an agent verifies
-them; the recipient rules; only accepted claims get fixed. Then the target (repo, branch,
+them; the recipient rules; *fix now* selects work for the second agent. Then the target (repo, branch,
 PR link), the base path all file references are relative to, what the code does in plain
 words, and what was reviewed (file and line counts, **including the tests**).
 
@@ -212,7 +212,8 @@ that isn't enough rather than working around it.
 
 One row per claim: the number, the one-line title, an **`Agent verdict`** column the
 first agent fills, then four columns the recipient fills — **fix now · fix later · won't
-fix · reviewer is wrong**.
+fix · reviewer is wrong**. Ask for one ruling per claim. *Fix later* stays on this
+sheet until the owner schedules it. A blank or conflicting ruling leaves the row pending.
 
 The fourth column is mandatory and must be described as real in the surrounding text,
 naming the claims most likely to fall to it (the `inferred` ones). A ruling sheet where
@@ -224,7 +225,7 @@ which rows need an engineer rather than an agent.
 ### 4.4 Instructions for the second agent
 
 Written to be read cold, months later, by an agent that has none of this context. It
-fixes only rows marked *fix now* or *fix later*, and:
+fixes only rows marked *fix now*, and:
 
 - **Ignores *won't fix* and *reviewer is wrong* rows — including any it disagrees with.**
   Those were decided by someone with the authority to decide them. It may note the
@@ -239,12 +240,13 @@ fixes only rows marked *fix now* or *fix later*, and:
 - Does not touch the appendix, and does not tidy adjacent code.
 - **Hands `NEEDS LIVE` and structural rows to a human** — writes the failing test, leaves
   it skipped with the reason, does not implement blind.
-- Records `Fixed` / `Not fixed — reason` per row in the same file.
+- Records `Fixed` / `Not fixed — reason` for each immediate row in the same file.
 
-On the hub path, replace this section with a pointer: accepted rows go to
+On the hub path, replace this section with a pointer: only *fix now* rows go to
 `/todo-revise <name>`, which opens the `## Revisions` entries and owns the fix loop. Record
 each mapping in the document as it is opened ("claim C3 → Revision R7"). Keep
-the ignore-the-rejected and stop-on-refuted rules either way.
+deferred rows on the sheet without opening revisions. Apply the stop-on-refuted and
+ignore-the-rejected rules on both paths.
 
 ### 4.5 Appendix — what's strong
 
@@ -278,11 +280,12 @@ need a live environment, and the covering note ready to paste.
 
 The recipient returns the same file with verdicts and rulings filled in. Then:
 
-- **Hub project** → hand the accepted rows to `/todo-revise <name>`, one gap per row with
+- **Hub project** → hand only *fix now* rows to `/todo-revise <name>`, one gap per row with
   expected-vs-actual taken from the claim. It opens the `## Revisions` entries and runs
   the fix loop; don't write them yourself.
-- **Standalone** → the document's own second-agent section is the brief; run it or pass
-  it on.
+- **Standalone** → pass only *fix now* rows into the document's second-agent fix loop.
+- **Fix later** → retain the ruling on the sheet. If no row is marked *fix now*, report
+  the rulings and finish without starting a fix loop on either path.
 - **Refuted claims** → say so plainly and move on. No re-litigating a claim the
   recipient's own agent disproved; the ledger did its job.
 - **`Reviewer is wrong` on a claim you graded `observed`** → that's a genuine
